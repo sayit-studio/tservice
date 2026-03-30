@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>填寫陳情表單 — 北屯耀進 曾咨耀服務處</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#019858;--green-dark:#017A47;--green-light:#02B86A;
+  --green-pale:#E6F7F0;--green-pale2:#F0FBF6;
+  --gold:#D4A017;--gold-pale:#FFF8E0;
+  --text:#1A2B22;--text-muted:#5A7262;
+  --border:#C8E8D8;--bg:#F4FAF7;--white:#FFFFFF;
+  --error:#C0392B;--error-pale:#FDECEA;
+  --radius:14px;
+  --shadow:0 6px 32px rgba(1,152,88,0.13);
+  --shadow-sm:0 2px 12px rgba(1,152,88,0.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Noto Sans TC',sans-serif;
+  background:var(--bg);color:var(--text);
+  font-size:15px;line-height:1.75;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px)+32px);
+}
+
+/* NAVBAR */
+.navbar{background:var(--green-dark);box-shadow:0 2px 20px rgba(0,80,40,0.3);}
+.nav-inner{
+  max-width:800px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:60px;
+}
+.nav-back{
+  display:flex;align-items:center;gap:8px;
+  text-decoration:none;color:rgba(255,255,255,0.85);
+  font-size:14px;font-weight:500;
+  padding:8px 0;transition:color 0.2s;
+}
+.nav-back:hover{color:var(--white);}
+.nav-title{font-size:15px;font-weight:800;color:var(--white);}
+
+/* HEADER STRIP */
+.form-header{
+  background:linear-gradient(135deg,#015F38,#019858);
+  padding:32px 20px 40px;text-align:center;
+}
+.form-header h1{font-size:22px;font-weight:900;color:var(--white);margin-bottom:6px;}
+.form-header p{font-size:13px;color:rgba(255,255,255,0.80);}
+
+/* MAIN */
+.form-main{
+  max-width:800px;margin:-24px auto 0;
+  padding:0 16px 48px;
+  position:relative;z-index:10;
+}
+
+/* CARD */
+.form-card{
+  background:var(--white);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  border:1px solid var(--border);
+  padding:28px 24px;
+  margin-bottom:16px;
+}
+.form-card-title{
+  font-size:15px;font-weight:700;color:var(--green-dark);
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:22px;padding-bottom:14px;
+  border-bottom:1px solid var(--border);
+}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:560px){.form-row{grid-template-columns:1fr;}}
+.form-group{margin-bottom:18px;}
+.form-label{
+  display:block;font-size:13px;font-weight:600;
+  color:var(--text);margin-bottom:7px;
+}
+.form-label .req{color:var(--error);margin-left:2px;}
+.form-label .opt{color:var(--text-muted);font-weight:400;font-size:12px;margin-left:4px;}
+input[type="text"],input[type="tel"],input[type="email"],textarea,select{
+  width:100%;font-size:16px;
+  font-family:'Noto Sans TC',sans-serif;
+  padding:12px 14px;
+  border:1.5px solid var(--border);border-radius:10px;
+  background:var(--bg);color:var(--text);
+  transition:border 0.2s,box-shadow 0.2s,background 0.2s;
+  -webkit-appearance:none;appearance:none;
+}
+input:focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--green);
+  box-shadow:0 0 0 3px rgba(1,152,88,0.13);
+  background:var(--white);
+}
+textarea{resize:vertical;min-height:120px;}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23019858' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:40px;
+}
+.field-error{font-size:12px;color:var(--error);margin-top:5px;display:none;}
+.field-error.show{display:block;}
+input.invalid,textarea.invalid,select.invalid{
+  border-color:var(--error);box-shadow:0 0 0 3px rgba(192,57,43,0.10);
+}
+.char-count{font-size:11px;color:var(--text-muted);text-align:right;margin-top:4px;}
+.char-count.ok{color:var(--green);font-weight:600;}
+
+/* PRIVACY */
+.privacy-box{
+  background:var(--green-pale);
+  border-radius:10px;padding:16px 18px;
+  font-size:13px;line-height:1.7;
+  color:var(--text);margin-bottom:20px;
+  max-height:180px;overflow-y:auto;
+  border:1px solid var(--border);
+}
+.privacy-box h3{font-size:14px;font-weight:700;color:var(--green-dark);margin-bottom:8px;}
+.privacy-box h4{font-size:13px;font-weight:700;margin:10px 0 4px;}
+.privacy-check{
+  display:flex;align-items:flex-start;gap:10px;
+  font-size:13px;margin-bottom:20px;
+}
+.privacy-check input[type="checkbox"]{
+  width:18px;height:18px;margin-top:2px;
+  accent-color:var(--green);flex-shrink:0;
+}
+.field-error#err-privacy{display:none;}
+.field-error#err-privacy.show{display:block;}
+
+/* BUTTON */
+.btn-submit{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:16px 20px;
+  border-radius:12px;font-size:16px;font-weight:800;
+  font-family:'Noto Sans TC',sans-serif;
+  background:linear-gradient(135deg,var(--green-dark),var(--green-light));
+  color:var(--white);border:none;cursor:pointer;
+  box-shadow:0 4px 18px rgba(1,152,88,0.3);
+  transition:all 0.2s;min-height:52px;
+}
+.btn-submit:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 26px rgba(1,152,88,0.4);}
+.btn-submit:disabled{opacity:0.55;cursor:not-allowed;transform:none;box-shadow:none;}
+.spinner{
+  width:20px;height:20px;
+  border:3px solid rgba(255,255,255,0.35);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin 0.7s linear infinite;display:none;flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.is-loading .spinner{display:block;}
+.is-loading .btn-label{display:none;}
+
+/* SUCCESS */
+.success-box{
+  background:linear-gradient(160deg,#E6F7F0,#F0FBF6);
+  border:1.5px solid #8FD4B4;border-radius:var(--radius);
+  padding:36px 24px;text-align:center;display:none;
+}
+.success-box.show{display:block;animation:fadeUp 0.45s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.success-emoji{font-size:52px;margin-bottom:12px;}
+.success-title{font-size:20px;font-weight:900;color:var(--green-dark);margin-bottom:8px;}
+.success-desc{font-size:14px;color:var(--text-muted);line-height:1.8;margin-bottom:24px;}
+.case-id-box{
+  background:var(--white);border:2px dashed var(--green);
+  border-radius:12px;padding:18px;margin-bottom:16px;
+}
+.case-id-label{font-size:11px;color:var(--text-muted);font-weight:700;margin-bottom:5px;letter-spacing:0.05em;}
+.case-id-val{font-size:26px;font-weight:900;color:var(--green);letter-spacing:0.08em;}
+.copy-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--green-pale);color:var(--green-dark);
+  border:1.5px solid var(--border);border-radius:8px;
+  padding:9px 18px;font-size:13px;font-weight:600;
+  cursor:pointer;font-family:'Noto Sans TC',sans-serif;
+  transition:all 0.2s;min-height:38px;
+}
+.copy-btn:hover{background:var(--green);color:var(--white);border-color:var(--green);}
+.copy-ok{color:var(--green);font-size:12px;font-weight:600;margin-top:8px;display:none;}
+.copy-ok.show{display:block;}
+.btn-back-link{
+  display:inline-flex;align-items:center;gap:6px;
+  margin-top:20px;color:var(--green);text-decoration:none;
+  font-size:14px;font-weight:600;
+}
+
+/* NOTICE */
+.notice{
+  background:var(--gold-pale);border-left:4px solid var(--gold);
+  border-radius:10px;padding:12px 14px;
+  font-size:13px;color:#5C4500;margin-bottom:20px;
+  display:flex;align-items:flex-start;gap:8px;
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="nav-back" href="index.html">← 返回首頁</a>
+    <div class="nav-title">線上陳情表單</div>
+    <div style="width:80px;"></div>
+  </div>
+</nav>
+
+<div class="form-header">
+  <h1>📝 填寫陳情表單</h1>
+  <p>送出後服務處幕僚將主動電話聯繫您 · 請確實填寫聯絡資料</p>
+</div>
+
+<div class="form-main">
+
+  <!-- SUCCESS BOX -->
+  <div class="success-box" id="successBox">
+    <div class="success-emoji">✅</div>
+    <div class="success-title">陳情已成功送出！</div>
+    <div class="success-desc">
+      服務處幕僚收到後將<strong>主動電話聯繫</strong>您。<br>
+      請截圖保存以下案件編號，日後可至首頁查詢辦理進度。
+    </div>
+    <div class="case-id-box">
+      <div class="case-id-label">您的案件編號</div>
+      <div class="case-id-val" id="resultCaseId">—</div>
+    </div>
+    <button class="copy-btn" onclick="copyCaseId()">📋 複製案件編號</button>
+    <div class="copy-ok" id="copyOk">✓ 已複製到剪貼簿</div>
+    <br>
+    <a class="btn-back-link" href="index.html">← 返回首頁查詢進度</a>
+  </div>
+
+  <!-- FORM -->
+  <div id="formWrap">
+    <div class="notice">
+      <span>💡</span>
+      <div>送出後您將取得<strong>案件編號</strong>，服務處幕僚將主動聯繫您。個人資料僅供內部聯繫使用，不對外公開。</div>
+    </div>
+
+    <!-- 案件資訊 -->
+    <div class="form-card">
+      <div class="form-card-title">📋 案件資訊</div>
+
+      <div class="form-group">
+        <label class="form-label" for="caseType">案件類型<span class="req">*</span></label>
+        <select id="caseType">
+          <option value="">請選擇案件類型</option>
+          <option value="交通運輸">交通運輸（道路、停車、號誌）</option>
+          <option value="公共設施">公共設施（公園、路燈、排水）</option>
+          <option value="衛福勞動">衛福勞動（補助、長照、勞資）</option>
+          <option value="文教科技">文教科技（學校、文化、科技）</option>
+          <option value="環境建管">環境建管（噪音、空污、建照）</option>
+          <option value="警消政風">警消政風（治安、消防、政風）</option>
+          <option value="市政議題">市政議題（市府政策、法規）</option>
+          <option value="其他服務">其他服務</option>
+        </select>
+        <div class="field-error" id="err-caseType">請選擇案件類型</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="caseTitle">案件標題<span class="req">*</span></label>
+        <input type="text" id="caseTitle" placeholder="請簡短描述您的問題（例：北屯路路燈故障）" maxlength="50">
+        <div class="field-error" id="err-caseTitle">請填寫案件標題</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="caseArea">案件區域<span class="req">*</span></label>
+        <select id="caseArea">
+          <option value="">請選擇區域</option>
+          <option>中區</option>
+          <option>東區</option>
+          <option>西區</option>
+          <option>南區</option>
+          <option>北區</option>
+          <option>西屯區</option>
+          <option>南屯區</option>
+          <option>北屯區</option>
+          <option>豐原區</option>
+          <option>東勢區</option>
+          <option>大甲區</option>
+          <option>清水區</option>
+          <option>沙鹿區</option>
+          <option>梧棲區</option>
+          <option>后里區</option>
+          <option>神岡區</option>
+          <option>潭子區</option>
+          <option>大雅區</option>
+          <option>新社區</option>
+          <option>石岡區</option>
+          <option>外埔區</option>
+          <option>大安區</option>
+          <option>烏日區</option>
+          <option>大肚區</option>
+          <option>龍井區</option>
+          <option>霧峰區</option>
+          <option>太平區</option>
+          <option>大里區</option>
+          <option>和平區</option>
+        </select>
+        <div class="field-error" id="err-caseArea">請選擇案件區域</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="caseContent">案件內容<span class="req">*</span></label>
+        <textarea id="caseContent" placeholder="請詳細描述問題，包含地點、時間、事件經過等（至少 20 字）" oninput="updateCount()"></textarea>
+        <div class="char-count" id="charCount">0 字</div>
+        <div class="field-error" id="err-caseContent">請填寫案件內容（至少 20 字）</div>
+      </div>
+    </div>
+
+    <!-- 個人資料 -->
+    <div class="form-card">
+      <div class="form-card-title">👤 聯絡資料</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="name">姓名<span class="req">*</span></label>
+          <input type="text" id="name" placeholder="您的姓名">
+          <div class="field-error" id="err-name">請填寫姓名</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="phone">手機號碼<span class="req">*</span></label>
+          <input type="tel" id="phone" placeholder="09xxxxxxxx" maxlength="10">
+          <div class="field-error" id="err-phone">請填寫有效手機號碼（09開頭10碼）</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Email<span class="opt">（選填）</span></label>
+        <input type="email" id="email" placeholder="your@email.com">
+        <div class="field-error" id="err-email">請填寫有效的 Email 格式</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="address">聯絡地址<span class="opt">（選填）</span></label>
+        <input type="text" id="address" placeholder="若問題與地址相關，建議填寫">
+      </div>
+    </div>
+
+    <!-- 隱私權 -->
+    <div class="form-card">
+      <div class="form-card-title">🔒 隱私權保障條款</div>
+      <div class="privacy-box">
+        <h3>個人資料保護聲明</h3>
+        <p>北屯耀進 曾咨耀服務處（以下簡稱本服務處）依據個人資料保護法之規定，向您告知下列事項，當您勾選「我同意」選項時，表示您已閱讀、了解並同意本條款之內容。</p>
+        <h4>一、個人資料蒐集、更新及保管</h4>
+        <p>1. 本服務處蒐集您的個人資料，受到中華民國「個人資料保護法」與相關法規之規範，謹慎蒐集、處理及使用您的個人資料。<br>
+        2. 請提供正確、完整的個人資料，以確保您的權益。</p>
+        <h4>二、蒐集個人資料應告知事項</h4>
+        <p>1. 本服務處蒐集您的個人資料將用於進行選民服務、轉交選民服務相關機關、團體以及追蹤、告知後續處理結果。<br>
+        2. 蒐集個人資料項目：姓名、聯絡電話、電子郵件、聯絡地址。<br>
+        3. 個人資料利用之期間：本服務處及選民服務相關機關、團體因執行業務所必須之保存期間。<br>
+        4. 個人資料利用之對象：本服務處及選民服務相關機關、團體。<br>
+        5. 個人資料利用之方式：個人資料之記錄、編輯、傳送、複製、更正、搜尋、刪除。</p>
+        <h4>三、依據個人資料保護法第三條規定，您對個人資料得行使下列權利：</h4>
+        <p>1. 得向本服務處請求補充或更正。<br>
+        2. 得向本服務處請求停止蒐集、處理或利用及刪除。<br>
+        3. 得向本服務處請求查詢或閱覽。</p>
+      </div>
+      <div class="privacy-check">
+        <input type="checkbox" id="privacyCheck">
+        <label for="privacyCheck">我已閱讀並同意上述<strong>隱私權保障條款</strong>與<strong>服務系統使用說明</strong></label>
+      </div>
+      <div class="field-error" id="err-privacy">請勾選同意隱私權條款才能送出</div>
+
+      <button class="btn-submit" id="submitBtn" onclick="submitForm()">
+        <div class="spinner"></div>
+        <span class="btn-label">📨 送出陳情申請</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer style="background:var(--green-dark);color:rgba(255,255,255,0.7);text-align:center;padding:24px 20px;font-size:13px;margin-top:20px;">
+  <div style="font-weight:800;color:#fff;margin-bottom:6px;">🏛️ 北屯耀進 曾咨耀 線上服務處</div>
+  <div>📍 406 台中市北屯區東山路一段156-6號 ｜ 📞 04-2436-2995</div>
+  <div style="margin-top:4px;opacity:0.4;font-size:11px;">© 2025 北屯耀進 曾咨耀服務處</div>
+</footer>
+
+<script>
+const WEBHOOK_SUBMIT = 'https://drwu.zeabur.app/webhook/petition/submit';
+
+function updateCount() {
+  const len = document.getElementById('caseContent').value.length;
+  const el  = document.getElementById('charCount');
+  el.textContent = len + ' 字';
+  el.className = 'char-count' + (len >= 20 ? ' ok' : '');
+}
+
+function clearErrors() {
+  document.querySelectorAll('.field-error').forEach(e => e.classList.remove('show'));
+  document.querySelectorAll('.invalid').forEach(e => e.classList.remove('invalid'));
+}
+function showErr(id, fieldId) {
+  document.getElementById(id).classList.add('show');
+  if (fieldId) document.getElementById(fieldId)?.classList.add('invalid');
+}
+
+function validateForm() {
+  clearErrors(); let ok = true;
+  if (!document.getElementById('caseType').value)                    { showErr('err-caseType','caseType'); ok=false; }
+  if (!document.getElementById('caseTitle').value.trim())            { showErr('err-caseTitle','caseTitle'); ok=false; }
+  if (!document.getElementById('caseArea').value)                    { showErr('err-caseArea','caseArea'); ok=false; }
+  if (document.getElementById('caseContent').value.trim().length<20) { showErr('err-caseContent','caseContent'); ok=false; }
+  if (!document.getElementById('name').value.trim())                 { showErr('err-name','name'); ok=false; }
+  if (!/^09\d{8}$/.test(document.getElementById('phone').value.trim())) { showErr('err-phone','phone'); ok=false; }
+  const email = document.getElementById('email').value.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))           { showErr('err-email','email'); ok=false; }
+  if (!document.getElementById('privacyCheck').checked)              { showErr('err-privacy',null); ok=false; }
+  return ok;
+}
+
+async function submitForm() {
+  if (!validateForm()) { window.scrollTo({top:0,behavior:'smooth'}); return; }
+  const btn = document.getElementById('submitBtn');
+  btn.classList.add('is-loading'); btn.disabled = true;
+  const payload = {
+    caseType:    document.getElementById('caseType').value,
+    caseTitle:   document.getElementById('caseTitle').value.trim(),
+    caseArea:    document.getElementById('caseArea').value,
+    caseContent: document.getElementById('caseContent').value.trim(),
+    name:        document.getElementById('name').value.trim(),
+    phone:       document.getElementById('phone').value.trim(),
+    email:       document.getElementById('email').value.trim(),
+    address:     document.getElementById('address').value.trim(),
+  };
+  try {
+    const res  = await fetch(WEBHOOK_SUBMIT, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('server error');
+    const data = await res.json();
+    if (!data.success) throw new Error('failed');
+    document.getElementById('resultCaseId').textContent = data.caseId;
+    document.getElementById('formWrap').style.display   = 'none';
+    document.getElementById('successBox').classList.add('show');
+    window.scrollTo({top:0,behavior:'smooth'});
+  } catch(e) {
+    alert('送出失敗，請稍後再試或直接撥打服務處電話：04-2436-2995');
+  } finally {
+    btn.classList.remove('is-loading'); btn.disabled = false;
+  }
+}
+
+function copyCaseId() {
+  const id = document.getElementById('resultCaseId').textContent;
+  navigator.clipboard.writeText(id).then(() => {
+    const el = document.getElementById('copyOk');
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  });
+}
+</script>
+</body>
+</html>
