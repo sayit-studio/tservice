@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>北屯耀進 曾咨耀 線上服務處</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #019858;
+  --green-dark: #017A47;
+  --green-light: #02B86A;
+  --green-pale: #E6F7F0;
+  --green-pale2: #F0FBF6;
+  --gold: #D4A017;
+  --gold-pale: #FFF8E0;
+  --text: #1A2B22;
+  --text-muted: #5A7262;
+  --border: #C8E8D8;
+  --bg: #F4FAF7;
+  --white: #FFFFFF;
+  --error: #C0392B;
+  --error-pale: #FDECEA;
+  --radius: 14px;
+  --shadow: 0 6px 32px rgba(1,152,88,0.13);
+  --shadow-sm: 0 2px 12px rgba(1,152,88,0.08);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Noto Sans TC',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  font-size:15px;
+  line-height:1.75;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
+}
+
+/* ── NAVBAR ── */
+.navbar{
+  background:var(--green-dark);
+  position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 20px rgba(0,80,40,0.3);
+}
+.nav-inner{
+  max-width:1100px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:64px;
+}
+.nav-brand{
+  display:flex;align-items:center;gap:12px;
+  text-decoration:none;color:var(--white);
+}
+.nav-brand-icon{
+  width:40px;height:40px;
+  background:rgba(255,255,255,0.15);
+  border:1.5px solid rgba(255,255,255,0.3);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+}
+.nav-brand-text{font-size:15px;font-weight:800;line-height:1.3;letter-spacing:0.03em;}
+.nav-links{display:flex;align-items:center;gap:4px;}
+.nav-link{
+  color:rgba(255,255,255,0.82);
+  text-decoration:none;
+  font-size:14px;font-weight:500;
+  padding:8px 14px;border-radius:8px;
+  transition:all 0.2s;
+  white-space:nowrap;
+}
+.nav-link:hover,.nav-link.active{
+  background:rgba(255,255,255,0.15);
+  color:var(--white);
+}
+.nav-cta{
+  background:var(--gold);
+  color:#2C1A00!important;
+  font-weight:700!important;
+  border-radius:8px;
+}
+.nav-cta:hover{background:#FFD055!important;color:#2C1A00!important;}
+
+/* ── HERO ── */
+.hero{
+  background:linear-gradient(135deg,#015F38 0%,#019858 50%,#02C272 100%);
+  padding:60px 20px 80px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.hero::before{
+  content:'';
+  position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.hero-inner{position:relative;max-width:700px;margin:0 auto;}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,0.15);
+  border:1px solid rgba(255,255,255,0.25);
+  color:rgba(255,255,255,0.9);
+  font-size:12px;font-weight:500;
+  padding:5px 14px;border-radius:20px;
+  margin-bottom:20px;
+  backdrop-filter:blur(4px);
+}
+.hero h1{
+  font-size:clamp(26px,5vw,42px);
+  font-weight:900;
+  color:var(--white);
+  line-height:1.25;
+  letter-spacing:0.02em;
+  margin-bottom:14px;
+}
+.hero-sub{
+  font-size:15px;
+  color:rgba(255,255,255,0.80);
+  margin-bottom:36px;
+  font-weight:400;
+}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn-hero-primary{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--white);
+  color:var(--green-dark);
+  font-size:15px;font-weight:800;
+  padding:14px 28px;border-radius:12px;
+  text-decoration:none;
+  box-shadow:0 4px 20px rgba(0,0,0,0.15);
+  transition:all 0.2s;
+  min-height:48px;
+}
+.btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,0.2);}
+.btn-hero-outline{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.12);
+  color:var(--white);
+  font-size:15px;font-weight:600;
+  padding:14px 28px;border-radius:12px;
+  text-decoration:none;
+  border:1.5px solid rgba(255,255,255,0.35);
+  backdrop-filter:blur(4px);
+  transition:all 0.2s;
+  min-height:48px;
+}
+.btn-hero-outline:hover{background:rgba(255,255,255,0.22);}
+
+/* ── STATS ── */
+.stats-section{
+  max-width:1100px;margin:-40px auto 0;
+  padding:0 20px;
+  position:relative;z-index:10;
+}
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+}
+.stat-card{
+  background:var(--white);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:24px 20px;
+  text-align:center;
+  border:1px solid var(--border);
+  transition:transform 0.2s;
+  text-decoration:none;
+  display:block;
+}
+.stat-card:hover{transform:translateY(-3px);}
+.stat-icon{font-size:28px;margin-bottom:10px;}
+.stat-num{
+  font-size:clamp(28px,4vw,40px);
+  font-weight:900;
+  color:var(--green);
+  line-height:1;
+  margin-bottom:6px;
+  font-variant-numeric:tabular-nums;
+}
+.stat-label{font-size:13px;color:var(--text-muted);font-weight:500;}
+
+/* ── PAGE SECTIONS ── */
+.page-section{display:none;}
+.page-section.active{display:block;}
+
+/* ── SECTION WRAPPER ── */
+.section-wrap{
+  max-width:1100px;margin:0 auto;
+  padding:48px 20px 60px;
+}
+.section-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:28px;flex-wrap:wrap;gap:12px;
+}
+.section-title{
+  font-size:22px;font-weight:900;color:var(--text);
+  display:flex;align-items:center;gap:10px;
+}
+.section-title::before{
+  content:'';
+  width:4px;height:24px;
+  background:var(--green);
+  border-radius:2px;
+  display:inline-block;
+}
+
+/* ── SERVICE INTRO ── */
+.service-intro{
+  background:var(--green-pale);
+  border-left:4px solid var(--green);
+  border-radius:10px;
+  padding:16px 20px;
+  font-size:14px;
+  color:var(--green-dark);
+  margin-bottom:24px;
+  line-height:1.8;
+}
+.service-intro strong{font-weight:700;}
+
+/* ── SUBMIT BTN ── */
+.submit-petition-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--green-dark),var(--green-light));
+  color:var(--white);
+  font-size:15px;font-weight:800;
+  padding:14px 28px;border-radius:12px;
+  text-decoration:none;
+  box-shadow:0 4px 18px rgba(1,152,88,0.3);
+  transition:all 0.2s;
+  min-height:48px;
+  margin-bottom:28px;
+  font-family:'Noto Sans TC',sans-serif;
+  border:none;cursor:pointer;
+}
+.submit-petition-btn:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(1,152,88,0.4);}
+
+/* ── CATEGORY TABS ── */
+.cat-tabs{
+  display:flex;flex-wrap:wrap;gap:8px;
+  margin-bottom:16px;
+}
+.cat-tab{
+  padding:7px 14px;
+  border-radius:20px;
+  font-size:13px;font-weight:500;
+  border:1.5px solid var(--border);
+  background:var(--white);
+  color:var(--text-muted);
+  cursor:pointer;
+  transition:all 0.18s;
+  font-family:'Noto Sans TC',sans-serif;
+  white-space:nowrap;
+}
+.cat-tab:hover{border-color:var(--green);color:var(--green);}
+.cat-tab.active{
+  background:var(--green);
+  border-color:var(--green);
+  color:var(--white);
+  font-weight:700;
+}
+
+/* ── FILTER BAR ── */
+.filter-bar{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:20px;flex-wrap:wrap;
+}
+.filter-label{font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap;}
+.filter-select{
+  font-size:14px;font-family:'Noto Sans TC',sans-serif;
+  padding:8px 36px 8px 14px;
+  border:1.5px solid var(--border);
+  border-radius:8px;
+  background:var(--white);
+  color:var(--text);
+  cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23019858' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  transition:border 0.2s;
+}
+.filter-select:focus{outline:none;border-color:var(--green);}
+
+/* ── TABLE ── */
+.table-wrap{
+  background:var(--white);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);
+  overflow:hidden;
+}
+.petition-table{width:100%;border-collapse:collapse;}
+.petition-table th{
+  background:var(--green-pale);
+  color:var(--green-dark);
+  font-size:12px;font-weight:700;
+  padding:12px 16px;
+  text-align:left;
+  letter-spacing:0.05em;
+  border-bottom:1.5px solid var(--border);
+}
+.petition-table td{
+  padding:14px 16px;
+  font-size:14px;
+  border-bottom:1px solid var(--bg);
+  vertical-align:middle;
+}
+.petition-table tr:last-child td{border-bottom:none;}
+.petition-table tr:hover td{background:var(--green-pale2);}
+.petition-table .td-id{
+  font-size:12px;color:var(--text-muted);
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.petition-table .td-title{
+  font-weight:500;
+  max-width:340px;
+}
+.petition-table .td-date{
+  font-size:13px;color:var(--text-muted);
+  white-space:nowrap;
+}
+
+/* ── STATUS BADGE ── */
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:12px;
+  font-size:12px;font-weight:700;white-space:nowrap;
+}
+.badge-處理中{background:#E6F7F0;color:#017A47;}
+.badge-已結案{background:#F2F3F4;color:#626567;}
+.badge-不受理{background:#FDECEA;color:#C0392B;}
+
+/* ── TYPE BADGE ── */
+.type-badge{
+  display:inline-block;
+  padding:3px 10px;border-radius:10px;
+  font-size:12px;font-weight:600;
+  background:var(--green-pale);
+  color:var(--green-dark);
+  white-space:nowrap;
+}
+
+/* ── PAGINATION ── */
+.pagination{
+  display:flex;align-items:center;justify-content:center;
+  gap:6px;padding:24px 16px;
+}
+.page-btn{
+  width:36px;height:36px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:8px;
+  font-size:14px;font-weight:600;
+  border:1.5px solid var(--border);
+  background:var(--white);
+  color:var(--text);
+  cursor:pointer;
+  transition:all 0.18s;
+  font-family:'Noto Sans TC',sans-serif;
+}
+.page-btn:hover{border-color:var(--green);color:var(--green);}
+.page-btn.active{background:var(--green);border-color:var(--green);color:var(--white);}
+.page-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.page-info{font-size:13px;color:var(--text-muted);padding:0 8px;}
+
+/* ── LOADING / EMPTY ── */
+.loading-row,.empty-row{
+  text-align:center;
+  padding:48px 20px;
+  color:var(--text-muted);
+  font-size:14px;
+}
+.loading-spinner{
+  width:32px;height:32px;
+  border:3px solid var(--border);
+  border-top-color:var(--green);
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  margin:0 auto 12px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── OTHER PAGES ── */
+.coming-soon{
+  text-align:center;padding:80px 20px;
+  color:var(--text-muted);
+}
+.coming-soon .cs-icon{font-size:48px;margin-bottom:16px;}
+.coming-soon h2{font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px;}
+
+/* ── FOOTER ── */
+.site-footer{
+  background:var(--green-dark);
+  color:rgba(255,255,255,0.75);
+  padding:36px 20px;
+  margin-top:60px;
+}
+.footer-inner{
+  max-width:1100px;margin:0 auto;
+  display:grid;grid-template-columns:1fr auto;
+  gap:32px;align-items:start;
+}
+.footer-name{font-size:17px;font-weight:800;color:var(--white);margin-bottom:10px;}
+.footer-info{font-size:13px;line-height:2.2;}
+.footer-info a{color:rgba(255,255,255,0.85);text-decoration:none;}
+.footer-social{display:flex;gap:10px;margin-top:14px;}
+.footer-social a{
+  width:38px;height:38px;
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.2);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;
+  text-decoration:none;
+  transition:background 0.2s;
+}
+.footer-social a:hover{background:rgba(255,255,255,0.22);}
+.footer-copy{
+  font-size:11px;opacity:0.4;
+  margin-top:24px;text-align:center;
+  max-width:1100px;margin:24px auto 0;
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .nav-links .nav-link:not(.nav-cta){display:none;}
+  .footer-inner{grid-template-columns:1fr;}
+  .petition-table th:nth-child(2),
+  .petition-table td:nth-child(2){display:none;}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .stat-num{font-size:28px;}
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(16px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.fade-up{animation:fadeUp 0.4s ease both;}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="nav-brand" href="#" onclick="showPage('home')">
+      <div class="nav-brand-icon">🏛️</div>
+      <div class="nav-brand-text">北屯耀進<br>曾咨耀服務處</div>
+    </a>
+    <div class="nav-links">
+      <a class="nav-link active" href="#" onclick="showPage('home');return false;">首頁</a>
+      <a class="nav-link" href="#" onclick="showPage('services');return false;">陳情服務</a>
+      <a class="nav-link" href="#" onclick="showPage('inspection');return false;">地方會勘</a>
+      <a class="nav-link" href="#" onclick="showPage('interpellation');return false;">國會質詢</a>
+      <a class="nav-link" href="#" onclick="showPage('proposal');return false;">國會提案</a>
+      <a class="nav-link nav-cta" href="form.html">📝 我要陳情</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ HOME PAGE ══ -->
+<section class="page-section active" id="page-home">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">🏙️ 台中市北屯區 第三選區</div>
+      <h1>北屯耀進<br>曾咨耀 為您服務</h1>
+      <p class="hero-sub">傾聽每一個聲音，解決每一個問題<br>讓北屯區的每一天都更美好</p>
+      <div class="hero-btns">
+        <a class="btn-hero-primary" href="form.html">📝 填寫陳情表單</a>
+        <a class="btn-hero-outline" href="#" onclick="showPage('services');return false;">🔍 查詢案件進度</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <a class="stat-card fade-up" href="#" onclick="showPage('services');return false;" style="animation-delay:0.05s">
+        <div class="stat-icon">📋</div>
+        <div class="stat-num" id="stat-petitions">—</div>
+        <div class="stat-label">選服陳情案件</div>
+      </a>
+      <a class="stat-card fade-up" href="#" onclick="showPage('inspection');return false;" style="animation-delay:0.1s">
+        <div class="stat-icon">🔍</div>
+        <div class="stat-num" id="stat-inspections">—</div>
+        <div class="stat-label">地方會勘建設</div>
+      </a>
+      <a class="stat-card fade-up" href="#" onclick="showPage('interpellation');return false;" style="animation-delay:0.15s">
+        <div class="stat-icon">🎤</div>
+        <div class="stat-num" id="stat-interpellations">—</div>
+        <div class="stat-label">國會質詢</div>
+      </a>
+      <a class="stat-card fade-up" href="#" onclick="showPage('proposal');return false;" style="animation-delay:0.2s">
+        <div class="stat-icon">📜</div>
+        <div class="stat-num" id="stat-proposals">—</div>
+        <div class="stat-label">國會提案</div>
+      </a>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══ SERVICES PAGE ══ -->
+<section class="page-section" id="page-services">
+  <div class="section-wrap">
+    <div class="section-head">
+      <div class="section-title">陳情服務</div>
+      <a class="submit-petition-btn" href="form.html">📝 填寫陳情表單</a>
+    </div>
+
+    <div class="service-intro">
+      <strong>如何使用線上陳情服務？</strong><br>
+      1. 點擊「填寫陳情表單」，填寫您的問題與聯絡資訊後送出。<br>
+      2. 送出後您將取得一組<strong>案件編號</strong>，請截圖保存。<br>
+      3. 服務處幕僚收到後將<strong>主動電話聯繫</strong>您，並在下方列表更新辦理進度。<br>
+      4. 您可隨時回到此頁，透過分類或進度篩選查詢案件狀態。
+    </div>
+
+    <!-- 分類 TABS -->
+    <div class="cat-tabs" id="catTabs">
+      <button class="cat-tab active" data-cat="" onclick="setCat(this,'')">全部</button>
+      <button class="cat-tab" data-cat="交通運輸" onclick="setCat(this,'交通運輸')">交通運輸 <span id="cnt-交通運輸">0</span></button>
+      <button class="cat-tab" data-cat="公共設施" onclick="setCat(this,'公共設施')">公共設施 <span id="cnt-公共設施">0</span></button>
+      <button class="cat-tab" data-cat="衛福勞動" onclick="setCat(this,'衛福勞動')">衛福勞動 <span id="cnt-衛福勞動">0</span></button>
+      <button class="cat-tab" data-cat="文教科技" onclick="setCat(this,'文教科技')">文教科技 <span id="cnt-文教科技">0</span></button>
+      <button class="cat-tab" data-cat="環境建管" onclick="setCat(this,'環境建管')">環境建管 <span id="cnt-環境建管">0</span></button>
+      <button class="cat-tab" data-cat="警消政風" onclick="setCat(this,'警消政風')">警消政風 <span id="cnt-警消政風">0</span></button>
+      <button class="cat-tab" data-cat="市政議題" onclick="setCat(this,'市政議題')">市政議題 <span id="cnt-市政議題">0</span></button>
+      <button class="cat-tab" data-cat="其他服務" onclick="setCat(this,'其他服務')">其他服務 <span id="cnt-其他服務">0</span></button>
+    </div>
+
+    <!-- 進度篩選 -->
+    <div class="filter-bar">
+      <span class="filter-label">處理進度狀態</span>
+      <select class="filter-select" id="statusFilter" onchange="setStatus()">
+        <option value="">全部</option>
+        <option value="處理中">處理中</option>
+        <option value="已結案">已結案</option>
+        <option value="不受理">不受理</option>
+      </select>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <table class="petition-table">
+        <thead>
+          <tr>
+            <th>案件編號</th>
+            <th>案件類型</th>
+            <th>主旨</th>
+            <th>時間</th>
+            <th>進度</th>
+          </tr>
+        </thead>
+        <tbody id="petitionTbody">
+          <tr><td colspan="5"><div class="loading-row"><div class="loading-spinner"></div>載入中…</div></td></tr>
+        </tbody>
+      </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ INSPECTION PAGE ══ -->
+<section class="page-section" id="page-inspection">
+  <div class="section-wrap">
+    <div class="section-title" style="margin-bottom:32px;">地方會勘建設</div>
+    <div class="coming-soon">
+      <div class="cs-icon">🔍</div>
+      <h2>地方會勘紀錄</h2>
+      <p>內容建置中，敬請期待</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ INTERPELLATION PAGE ══ -->
+<section class="page-section" id="page-interpellation">
+  <div class="section-wrap">
+    <div class="section-title" style="margin-bottom:32px;">國會質詢</div>
+    <div class="coming-soon">
+      <div class="cs-icon">🎤</div>
+      <h2>國會質詢紀錄</h2>
+      <p>內容建置中，敬請期待</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ PROPOSAL PAGE ══ -->
+<section class="page-section" id="page-proposal">
+  <div class="section-wrap">
+    <div class="section-title" style="margin-bottom:32px;">國會提案</div>
+    <div class="coming-soon">
+      <div class="cs-icon">📜</div>
+      <h2>國會提案紀錄</h2>
+      <p>內容建置中，敬請期待</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-name">🏛️ 北屯耀進 曾咨耀 線上服務處</div>
+      <div class="footer-info">
+        <div>📍 406 台中市北屯區東山路一段156-6號</div>
+        <div>📞 <a href="tel:0424362995">04-2436-2995</a></div>
+        <div>🕐 週一至週五 09:00–18:00</div>
+      </div>
+      <div class="footer-social">
+        <a href="https://www.facebook.com/OnlyTseng/" target="_blank" title="Facebook">📘</a>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <a href="form.html" style="display:inline-flex;align-items:center;gap:8px;background:var(--green);color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700;font-size:14px;">📝 我要陳情</a>
+    </div>
+  </div>
+  <div class="footer-copy">© 2025 北屯耀進 曾咨耀服務處 · All rights reserved.</div>
+</footer>
+
+<script>
+/* ══ CONFIG ══ */
+const WEBHOOK_STATS = 'https://drwu.zeabur.app/webhook/petition/stats';
+const WEBHOOK_LIST  = 'https://drwu.zeabur.app/webhook/petition/list';
+
+/* ══ STATE ══ */
+let currentCat    = '';
+let currentStatus = '';
+let currentPage   = 1;
+
+/* ══ PAGE SWITCH ══ */
+function showPage(name) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const links = document.querySelectorAll('.nav-link');
+  links.forEach(l => { if (l.getAttribute('onclick') && l.getAttribute('onclick').includes(name)) l.classList.add('active'); });
+  window.scrollTo({top:0,behavior:'smooth'});
+  if (name === 'services') loadList();
+}
+
+/* ══ STATS ══ */
+async function loadStats() {
+  try {
+    const res  = await fetch(WEBHOOK_STATS);
+    const data = await res.json();
+    if (data.success) {
+      animateNum('stat-petitions',      data.petitions);
+      animateNum('stat-inspections',    data.inspections);
+      animateNum('stat-interpellations',data.interpellations);
+      animateNum('stat-proposals',      data.proposals);
+    }
+  } catch(e) {
+    ['stat-petitions','stat-inspections','stat-interpellations','stat-proposals']
+      .forEach(id => document.getElementById(id).textContent = '—');
+  }
+}
+
+function animateNum(id, target) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const dur = 1200, start = performance.now();
+  const step = (now) => {
+    const p = Math.min((now - start) / dur, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.floor(ease * target).toLocaleString();
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = target.toLocaleString();
+  };
+  requestAnimationFrame(step);
+}
+
+/* ══ LIST ══ */
+async function loadList() {
+  const tbody = document.getElementById('petitionTbody');
+  tbody.innerHTML = '<tr><td colspan="5"><div class="loading-row"><div class="loading-spinner"></div>載入中…</div></td></tr>';
+  document.getElementById('pagination').innerHTML = '';
+  try {
+    const params = new URLSearchParams({page: currentPage});
+    if (currentCat)    params.append('category', currentCat);
+    if (currentStatus) params.append('status',   currentStatus);
+    const res  = await fetch(WEBHOOK_LIST + '?' + params.toString());
+    const data = await res.json();
+    if (!data.success) throw new Error('failed');
+    updateCatCounts(data.categories);
+    renderTable(data.items);
+    renderPagination(data.page, data.totalPages, data.total);
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-row">⚠️ 載入失敗，請稍後再試</div></td></tr>';
+  }
+}
+
+function updateCatCounts(cats) {
+  Object.keys(cats).forEach(k => {
+    const el = document.getElementById('cnt-' + k);
+    if (el) el.textContent = cats[k] > 0 ? '(' + cats[k] + ')' : '';
+  });
+}
+
+function renderTable(items) {
+  const tbody = document.getElementById('petitionTbody');
+  if (!items || items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-row">📭 目前沒有符合條件的案件</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(item => `
+    <tr>
+      <td class="td-id">${item.caseId || '—'}</td>
+      <td><span class="type-badge">${item.caseType || '—'}</span></td>
+      <td class="td-title">${escHtml(item.title || '—')}</td>
+      <td class="td-date">${item.date || '—'}</td>
+      <td><span class="badge badge-${item.status}">${item.status || '—'}</span></td>
+    </tr>
+  `).join('');
+}
+
+function renderPagination(page, totalPages, total) {
+  const el = document.getElementById('pagination');
+  if (totalPages <= 1) { el.innerHTML = `<span class="page-info">共 ${total} 筆</span>`; return; }
+  let html = '';
+  html += `<button class="page-btn" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>‹</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    if (totalPages > 7 && i > 2 && i < totalPages - 1 && Math.abs(i - page) > 1) {
+      if (i === 3 || i === totalPages - 2) html += `<span class="page-info">…</span>`;
+      continue;
+    }
+    html += `<button class="page-btn ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" onclick="goPage(${page+1})" ${page>=totalPages?'disabled':''}>›</button>`;
+  html += `<span class="page-info">共 ${total} 筆</span>`;
+  el.innerHTML = html;
+}
+
+function goPage(p) { currentPage = p; loadList(); window.scrollTo({top:400,behavior:'smooth'}); }
+
+function setCat(btn, cat) {
+  document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentCat = cat; currentPage = 1; loadList();
+}
+
+function setStatus() {
+  currentStatus = document.getElementById('statusFilter').value;
+  currentPage = 1; loadList();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ══ INIT ══ */
+loadStats();
+</script>
+</body>
+</html>
