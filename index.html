@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>北屯耀進 曾咨耀服務處</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#019858;--green-dark:#017A47;--green-deep:#013D28;
+  --green-light:#02B86A;--green-pale:#E6F7F0;--green-pale2:#F0FBF6;
+  --gold:#D4A017;--gold-light:#FFD055;
+  --text:#1A2B22;--text-muted:#5A7262;
+  --border:#C8E8D8;--bg:#F4FAF7;--white:#FFFFFF;
+  --line-green:#06C755;
+  --radius:16px;
+  --shadow:0 8px 40px rgba(1,61,40,0.18);
+  --shadow-sm:0 2px 12px rgba(1,152,88,0.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Noto Sans TC',sans-serif;
+  background:var(--bg);color:var(--text);
+  font-size:15px;line-height:1.75;
+  overflow-x:hidden;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px)+20px);
+}
+
+/* ══ NAVBAR ══ */
+.navbar{
+  background:rgba(1,61,40,0.97);
+  backdrop-filter:blur(10px);
+  position:sticky;top:0;z-index:300;
+  box-shadow:0 2px 24px rgba(0,40,20,0.4);
+}
+.nav-inner{
+  max-width:1280px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:58px;
+}
+.nav-brand{
+  text-decoration:none;color:var(--white);
+  font-size:15px;font-weight:800;letter-spacing:0.05em;white-space:nowrap;
+}
+.nav-links{display:flex;align-items:center;gap:2px;}
+.nav-link{
+  color:rgba(255,255,255,0.80);text-decoration:none;
+  font-size:13px;font-weight:500;
+  padding:7px 12px;border-radius:8px;
+  transition:all 0.2s;white-space:nowrap;
+}
+.nav-link:hover,.nav-link.active{background:rgba(255,255,255,0.14);color:var(--white);}
+.nav-cta{
+  background:var(--gold);color:#2C1A00!important;
+  font-weight:700!important;margin-left:8px;
+}
+.nav-cta:hover{background:var(--gold-light)!important;}
+.hamburger{
+  display:none;flex-direction:column;gap:5px;
+  background:none;border:none;cursor:pointer;padding:6px;
+}
+.hamburger span{display:block;width:22px;height:2px;background:var(--white);border-radius:2px;transition:all 0.3s;}
+.mobile-nav{display:none;background:var(--green-deep);padding:8px 16px 20px;}
+.mobile-nav.open{display:block;}
+.mobile-nav .nav-link{display:block;padding:13px 16px;border-radius:8px;margin-bottom:3px;font-size:15px;}
+.mobile-nav .nav-cta{display:block;text-align:center;margin-top:8px;padding:14px;border-radius:10px;font-size:15px;}
+
+/* ══ HERO-STATS ONE UNIT ══ */
+.hero-unit{
+  background:
+    url('./hero_desktop.png')
+    center center / cover no-repeat;
+  background-color:var(--green-deep);
+  position:relative;overflow:hidden;
+  min-height:760px;
+  display:flex;flex-direction:column;
+}
+.hero-unit::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:linear-gradient(
+    to right,
+    rgba(1,25,12,0.20) 0%,
+    rgba(1,25,12,0.05) 45%,
+    rgba(1,25,12,0.30) 100%
+  );
+}
+.hero-unit::after{content:none;}
+
+/* 主內容：左人物 右文字+卡片 */
+.hero-body{
+  position:relative;z-index:2;
+  max-width:1280px;margin:0 auto;width:100%;
+  display:flex;align-items:flex-end;
+  padding:0 40px;
+  flex:1;
+}
+
+/* 左側留空（人物已在背景圖中） */
+.hero-left{
+  flex-shrink:0;
+  width:42%;
+  min-width:300px;
+}
+@keyframes heroIn{
+  from{opacity:0;transform:translateY(30px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* 右側：標語 + 數字卡片 */
+.hero-right{
+  flex:1;
+  padding:48px 40px 36px 20px;
+  display:flex;flex-direction:column;
+  justify-content:flex-start;
+  align-items:flex-start;
+  min-height:640px;
+}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.22);
+  color:rgba(255,255,255,0.92);
+  font-size:12px;font-weight:600;
+  padding:5px 14px;border-radius:20px;
+  margin-bottom:16px;letter-spacing:0.06em;
+}
+.hero-name{
+  font-size:clamp(28px,4vw,50px);
+  font-weight:900;color:var(--white);
+  line-height:1.2;letter-spacing:0.03em;
+  margin-bottom:8px;
+}
+.hero-name .gold{color:var(--gold-light);}
+.hero-sub{
+  font-size:clamp(13px,1.5vw,16px);
+  color:rgba(255,255,255,0.75);
+  margin-bottom:28px;line-height:1.8;
+}
+.hero-btns{
+  display:flex;gap:12px;flex-wrap:wrap;
+  margin-bottom:36px;
+}
+.btn-gold{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--gold);color:#2C1A00;
+  font-size:14px;font-weight:800;
+  padding:12px 24px;border-radius:10px;
+  text-decoration:none;
+  box-shadow:0 4px 18px rgba(212,160,23,0.35);
+  transition:all 0.2s;min-height:44px;white-space:nowrap;
+}
+.btn-gold:hover{background:var(--gold-light);transform:translateY(-2px);}
+.btn-ghost{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.10);color:var(--white);
+  font-size:14px;font-weight:600;
+  padding:12px 24px;border-radius:10px;
+  text-decoration:none;
+  border:1.5px solid rgba(255,255,255,0.28);
+  transition:all 0.2s;min-height:44px;white-space:nowrap;
+}
+.btn-ghost:hover{background:rgba(255,255,255,0.18);}
+
+/* 數字卡片群 */
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:14px;
+  width:100%;
+  padding-bottom:36px;
+}
+.stat-card{
+  background:rgba(1,40,22,0.75);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:var(--radius);
+  padding:22px 20px;
+  text-decoration:none;
+  transition:all 0.2s;
+  display:block;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 4px 24px rgba(0,0,0,0.25);
+}
+.stat-card::before{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--green-light),var(--gold));
+  opacity:0.8;
+}
+.stat-card:hover{
+  background:rgba(1,60,32,0.85);
+  transform:translateY(-3px);
+  box-shadow:0 10px 36px rgba(0,0,0,0.35);
+}
+.stat-card-top{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.stat-card-label{
+  font-size:13px;font-weight:600;
+  color:rgba(255,255,255,0.65);
+  letter-spacing:0.04em;
+}
+.stat-card-icon{
+  width:32px;height:32px;
+  background:rgba(255,255,255,0.08);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+}
+.stat-card-num{
+  font-size:clamp(52px,5.5vw,72px);
+  font-weight:900;color:var(--white);
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-0.01em;
+}
+.stat-card-arrow{
+  position:absolute;bottom:16px;right:18px;
+  font-size:18px;color:rgba(255,255,255,0.25);
+  transition:all 0.2s;
+}
+.stat-card:hover .stat-card-arrow{
+  color:var(--gold-light);
+  transform:translateX(4px);
+}
+
+/* ══ SECTIONS ══ */
+.page-section{display:none;}
+.page-section.active{display:block;}
+.section-wrap{max-width:1100px;margin:0 auto;padding:52px 20px 64px;}
+.section-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:28px;flex-wrap:wrap;gap:12px;
+}
+.section-title{
+  font-size:22px;font-weight:900;color:var(--text);
+  display:flex;align-items:center;gap:10px;
+}
+.section-title::before{
+  content:'';width:4px;height:26px;
+  background:var(--green);border-radius:2px;display:inline-block;
+}
+
+/* ══ LINE OA ══ */
+.line-section{
+  background:linear-gradient(135deg,#012C18 0%,#018A50 100%);
+  padding:56px 20px;
+}
+.line-inner{
+  max-width:900px;margin:0 auto;
+  display:flex;align-items:center;gap:48px;
+}
+.line-icon-wrap{
+  flex-shrink:0;width:90px;height:90px;
+  background:var(--line-green);border-radius:22px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:48px;
+  box-shadow:0 8px 32px rgba(6,199,85,0.4);
+}
+.line-content{flex:1;}
+.line-title{font-size:clamp(17px,2.5vw,24px);font-weight:900;color:var(--white);margin-bottom:10px;}
+.line-desc{font-size:14px;color:rgba(255,255,255,0.78);margin-bottom:22px;line-height:1.8;}
+.btn-line{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--line-green);color:var(--white);
+  font-size:15px;font-weight:800;
+  padding:13px 26px;border-radius:11px;text-decoration:none;
+  box-shadow:0 4px 18px rgba(6,199,85,0.35);
+  transition:all 0.2s;min-height:48px;
+}
+.btn-line:hover{background:#05B04C;transform:translateY(-2px);}
+
+/* ══ PETITION ══ */
+.petition-section{background:var(--white);padding:56px 20px;}
+.petition-inner{max-width:900px;margin:0 auto;}
+.petition-title{
+  font-size:clamp(20px,3vw,28px);font-weight:900;color:var(--text);
+  margin-bottom:8px;display:flex;align-items:center;gap:10px;
+}
+.petition-title::before{content:'';width:5px;height:28px;background:var(--green);border-radius:3px;}
+.petition-sub{font-size:14px;color:var(--text-muted);margin-bottom:32px;line-height:1.8;padding-left:15px;}
+.petition-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:36px;}
+.step-card{
+  background:var(--green-pale2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:22px 18px;text-align:center;
+}
+.step-num{
+  width:32px;height:32px;background:var(--green);color:var(--white);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;margin:0 auto 12px;
+}
+.step-icon{font-size:28px;margin-bottom:8px;display:block;}
+.step-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.step-desc{font-size:12px;color:var(--text-muted);line-height:1.7;}
+.petition-btns{display:flex;gap:14px;flex-wrap:wrap;}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--green-dark),var(--green-light));
+  color:var(--white);font-size:15px;font-weight:800;
+  padding:14px 28px;border-radius:12px;text-decoration:none;
+  box-shadow:0 4px 18px rgba(1,152,88,0.28);
+  transition:all 0.2s;min-height:50px;flex:1;
+  justify-content:center;max-width:280px;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(1,152,88,0.40);}
+.btn-outline{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--white);color:var(--green-dark);
+  font-size:15px;font-weight:700;
+  padding:14px 28px;border-radius:12px;text-decoration:none;
+  border:2px solid var(--green);
+  transition:all 0.2s;min-height:50px;flex:1;
+  justify-content:center;max-width:280px;
+}
+.btn-outline:hover{background:var(--green-pale);}
+
+/* ══ SERVICE PAGE ══ */
+.submit-petition-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--green-dark),var(--green-light));
+  color:var(--white);font-size:15px;font-weight:800;
+  padding:13px 26px;border-radius:11px;text-decoration:none;
+  box-shadow:0 4px 16px rgba(1,152,88,0.28);
+  transition:all 0.2s;min-height:46px;white-space:nowrap;
+  font-family:'Noto Sans TC',sans-serif;border:none;cursor:pointer;
+}
+.submit-petition-btn:hover{transform:translateY(-2px);}
+.service-intro{
+  background:var(--green-pale);border-left:4px solid var(--green);
+  border-radius:10px;padding:14px 18px;font-size:14px;
+  color:var(--green-dark);margin-bottom:22px;line-height:1.8;
+}
+.cat-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.cat-tab{
+  padding:7px 14px;border-radius:20px;font-size:13px;font-weight:500;
+  border:1.5px solid var(--border);background:var(--white);color:var(--text-muted);
+  cursor:pointer;transition:all 0.18s;font-family:'Noto Sans TC',sans-serif;white-space:nowrap;
+}
+.cat-tab:hover{border-color:var(--green);color:var(--green);}
+.cat-tab.active{background:var(--green);border-color:var(--green);color:var(--white);font-weight:700;}
+.filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.filter-label{font-size:13px;color:var(--text-muted);font-weight:500;white-space:nowrap;}
+.filter-select{
+  font-size:14px;font-family:'Noto Sans TC',sans-serif;
+  padding:8px 36px 8px 14px;border:1.5px solid var(--border);
+  border-radius:8px;background:var(--white);color:var(--text);
+  cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23019858' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+}
+.table-wrap{
+  background:var(--white);border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);border:1px solid var(--border);overflow:hidden;
+}
+.petition-table{width:100%;border-collapse:collapse;}
+.petition-table th{
+  background:var(--green-pale);color:var(--green-dark);
+  font-size:12px;font-weight:700;padding:12px 16px;
+  text-align:left;letter-spacing:0.05em;border-bottom:1.5px solid var(--border);
+}
+.petition-table td{
+  padding:14px 16px;font-size:14px;
+  border-bottom:1px solid var(--bg);vertical-align:middle;
+}
+.petition-table tr:last-child td{border-bottom:none;}
+.petition-table tr:hover td{background:var(--green-pale2);}
+.td-id{font-size:12px;color:var(--text-muted);white-space:nowrap;}
+.td-title{font-weight:500;max-width:320px;}
+.td-date{font-size:13px;color:var(--text-muted);white-space:nowrap;}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap;}
+.badge-處理中{background:#E6F7F0;color:#017A47;}
+.badge-已結案{background:#F2F3F4;color:#626567;}
+.badge-不受理{background:#FDECEA;color:#C0392B;}
+.type-badge{display:inline-block;padding:3px 10px;border-radius:10px;font-size:12px;font-weight:600;background:var(--green-pale);color:var(--green-dark);white-space:nowrap;}
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:22px 16px;}
+.page-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;font-weight:600;border:1.5px solid var(--border);background:var(--white);color:var(--text);cursor:pointer;transition:all 0.18s;font-family:'Noto Sans TC',sans-serif;}
+.page-btn:hover{border-color:var(--green);color:var(--green);}
+.page-btn.active{background:var(--green);border-color:var(--green);color:var(--white);}
+.page-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.page-info{font-size:13px;color:var(--text-muted);padding:0 8px;}
+.loading-row,.empty-row{text-align:center;padding:48px 20px;color:var(--text-muted);font-size:14px;}
+.loading-spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.coming-soon{text-align:center;padding:80px 20px;color:var(--text-muted);}
+.coming-soon .cs-icon{font-size:48px;margin-bottom:16px;}
+.coming-soon h2{font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px;}
+
+/* ══ FOOTER ══ */
+.site-footer{background:#011810;}
+.footer-social{
+  max-width:1280px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(4,1fr);
+  border-bottom:1px solid rgba(255,255,255,0.07);
+}
+.footer-social-card{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:36px 20px;text-decoration:none;
+  border-right:1px solid rgba(255,255,255,0.07);
+  transition:background 0.2s;
+}
+.footer-social-card:last-child{border-right:none;}
+.footer-social-card:hover{background:rgba(255,255,255,0.04);}
+.fsicon{width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:4px;}
+.icon-fb{background:#1877F2;}
+.icon-line{background:var(--line-green);}
+.icon-ig{background:linear-gradient(135deg,#F58529,#DD2A7B,#8134AF);}
+.icon-yt{background:#FF0000;}
+.footer-social-name{font-size:13px;font-weight:700;color:var(--white);}
+.footer-social-handle{font-size:11px;color:rgba(255,255,255,0.40);}
+.footer-info-wrap{
+  max-width:1280px;margin:0 auto;
+  padding:28px 24px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+}
+.footer-info-name{font-size:15px;font-weight:800;color:var(--white);margin-bottom:6px;}
+.footer-info-detail{font-size:13px;color:rgba(255,255,255,0.50);line-height:2.2;}
+.footer-info-detail a{color:rgba(255,255,255,0.70);text-decoration:none;}
+.footer-copy{text-align:center;padding:14px;font-size:11px;color:rgba(255,255,255,0.20);border-top:1px solid rgba(255,255,255,0.05);}
+
+/* ══ RWD ══ */
+@media(max-width:1024px){
+  .hero-left{min-width:200px;width:38%;}
+  .stat-card-num{font-size:clamp(44px,5vw,60px);}
+}
+@media(max-width:768px){
+  .nav-links{display:none;}
+  .hamburger{display:flex;}
+  .hero-tag{display:none;}
+
+  /* 手機版 Hero：背景換手機圖 */
+  .hero-unit{
+    min-height:auto;
+    background-image:url('./hero_phine.png');
+    background-position:top center;
+  }
+  .hero-body{
+    flex-direction:column;
+    align-items:stretch;
+    padding:0 16px;
+  }
+  .hero-left{
+    display:none;
+  }
+  .hero-right{
+    min-height:auto;
+    padding:220px 0 28px 0;
+    align-items:center;
+    text-align:center;
+    width:100%;
+  }
+  .hero-btns{justify-content:center;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .stat-card{padding:16px 14px;}
+  .stat-card-num{font-size:clamp(44px,10vw,56px);}
+  .line-inner{flex-direction:column;text-align:center;gap:20px;}
+  .petition-steps{grid-template-columns:1fr;}
+  .petition-btns{flex-direction:column;}
+  .btn-primary,.btn-outline{max-width:100%;}
+  .footer-social{grid-template-columns:repeat(2,1fr);}
+  .footer-social-card:nth-child(2){border-right:none;}
+  .footer-social-card:nth-child(3){border-top:1px solid rgba(255,255,255,0.07);}
+  .footer-social-card:nth-child(4){border-right:none;border-top:1px solid rgba(255,255,255,0.07);}
+  .petition-table th:nth-child(2),.petition-table td:nth-child(2){display:none;}
+}
+@media(max-width:480px){
+  .stat-card-num{font-size:40px;}
+  .hero-right{padding-top:180px;}
+}
+
+/* ══ QUERY BOX ══ */
+.query-box{
+  background:var(--white);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow-sm);
+  padding:24px 20px;
+  margin-bottom:24px;
+}
+.query-box-title{
+  font-size:15px;font-weight:700;color:var(--green-dark);
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:16px;
+}
+.query-row{display:flex;gap:10px;}
+.query-row input{
+  flex:1;font-size:16px;font-family:'Noto Sans TC',sans-serif;
+  padding:12px 16px;
+  border:1.5px solid var(--border);border-radius:10px;
+  background:var(--bg);color:var(--text);
+  transition:border 0.2s,box-shadow 0.2s;
+  text-transform:uppercase;letter-spacing:0.04em;
+}
+.query-row input:focus{
+  outline:none;border-color:var(--green);
+  box-shadow:0 0 0 3px rgba(1,152,88,0.13);
+  background:var(--white);
+}
+.btn-query{
+  flex-shrink:0;
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--green);color:var(--white);
+  font-size:14px;font-weight:700;
+  padding:12px 22px;border-radius:10px;
+  border:none;cursor:pointer;
+  font-family:'Noto Sans TC',sans-serif;
+  transition:all 0.2s;min-height:48px;white-space:nowrap;
+}
+.btn-query:hover{background:var(--green-dark);transform:translateY(-1px);}
+.btn-query:disabled{opacity:0.55;cursor:not-allowed;transform:none;}
+.btn-query .spinner{
+  width:18px;height:18px;
+  border:2.5px solid rgba(255,255,255,0.35);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  display:none;
+}
+.btn-query.is-loading .spinner{display:block;}
+.btn-query.is-loading .qlabel{display:none;}
+
+/* 查詢結果卡片 */
+.query-result{display:none;margin-top:16px;}
+.query-result.show{display:block;animation:fadeUp 0.4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.qr-card{
+  background:var(--green-pale2);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:22px 20px;
+}
+.qr-top{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;margin-bottom:16px;
+}
+.qr-id{font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:3px;}
+.qr-title{font-size:17px;font-weight:800;color:var(--text);}
+.qr-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:12px;margin-bottom:18px;
+}
+.qr-meta{background:var(--white);border-radius:10px;padding:12px 14px;border:1px solid var(--border);}
+.qr-meta-label{font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:4px;letter-spacing:0.04em;}
+.qr-meta-val{font-size:14px;font-weight:600;}
+.qr-section{margin-bottom:16px;}
+.qr-section-title{
+  font-size:12px;font-weight:700;color:var(--green-dark);
+  letter-spacing:0.05em;margin-bottom:8px;
+  padding-bottom:6px;border-bottom:1px solid var(--border);
+}
+.qr-text{font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap;}
+.qr-text.empty{color:var(--text-muted);font-style:italic;}
+.qr-images{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+.qr-images img{
+  width:calc(50% - 5px);max-width:240px;
+  border-radius:10px;object-fit:cover;
+  border:1px solid var(--border);
+  aspect-ratio:4/3;
+}
+.query-error{
+  background:#FDECEA;border:1px solid #F5AFAF;
+  border-radius:10px;padding:16px 18px;
+  font-size:14px;color:#C0392B;
+  margin-top:12px;text-align:center;display:none;
+}
+.query-error.show{display:block;}
+@media(max-width:600px){
+  .query-row{flex-direction:column;}
+  .btn-query{width:100%;justify-content:center;}
+  .qr-grid{grid-template-columns:1fr 1fr;}
+  .qr-images img{width:100%;max-width:100%;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="nav-brand" href="#" onclick="showPage('home');return false;">北屯耀進 曾咨耀服務處</a>
+    <div class="nav-links">
+      <a class="nav-link active" href="#" onclick="showPage('home');return false;">首頁</a>
+      <a class="nav-link" href="#" onclick="showPage('services');return false;">陳情服務</a>
+      <a class="nav-link" href="#" onclick="showPage('inspection');return false;">地方會勘</a>
+      <a class="nav-link" href="#" onclick="showPage('interpellation');return false;">國會質詢</a>
+      <a class="nav-link" href="#" onclick="showPage('proposal');return false;">國會提案</a>
+      <a class="nav-link nav-cta" href="form.html">📝 我要陳情</a>
+    </div>
+    <button class="hamburger" onclick="toggleMenu()" aria-label="選單">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="mobile-nav" id="mobileNav">
+    <a class="nav-link" href="#" onclick="showPage('home');toggleMenu();return false;">🏠 首頁</a>
+    <a class="nav-link" href="#" onclick="showPage('services');toggleMenu();return false;">📋 陳情服務</a>
+    <a class="nav-link" href="#" onclick="showPage('inspection');toggleMenu();return false;">🔍 地方會勘</a>
+    <a class="nav-link" href="#" onclick="showPage('interpellation');toggleMenu();return false;">🎤 國會質詢</a>
+    <a class="nav-link" href="#" onclick="showPage('proposal');toggleMenu();return false;">📜 國會提案</a>
+    <a class="nav-link nav-cta" href="form.html">📝 我要陳情</a>
+  </div>
+</nav>
+
+<!-- ══ HOME PAGE ══ -->
+<section class="page-section active" id="page-home">
+
+  <!-- HERO + STATS 一體 -->
+  <div class="hero-unit">
+    <div class="hero-body">
+
+      <!-- 左：人物照片 -->
+      <!-- 左側留空，人物已整合在背景圖中 -->
+      <div class="hero-left"></div>
+
+      <!-- 右：標語 + 數字卡片 -->
+      <div class="hero-right">
+        <div class="hero-tag">🏙️ 台中市北屯區 第三選區</div>
+        <div class="hero-name">
+          北屯耀進<br><span class="gold">曾咨耀</span> 為您服務
+        </div>
+        <div class="hero-sub">
+          傾聽每一個聲音，解決每一個問題<br>讓北屯區的每一天都更美好
+        </div>
+        <div class="hero-btns">
+          <a class="btn-gold" href="form.html">📝 填寫陳情表單</a>
+          <a class="btn-ghost" href="#" onclick="showPage('services');return false;">🔍 查詢案件進度</a>
+        </div>
+
+        <!-- 數字卡片 -->
+        <div class="stats-grid">
+          <a class="stat-card" href="#" onclick="showPage('services');return false;">
+            <div class="stat-card-top">
+              <span class="stat-card-label">選服陳情案件</span>
+              <span class="stat-card-icon">📋</span>
+            </div>
+            <div class="stat-card-num" id="stat-petitions">0</div>
+            <span class="stat-card-arrow">→</span>
+          </a>
+          <a class="stat-card" href="#" onclick="showPage('inspection');return false;">
+            <div class="stat-card-top">
+              <span class="stat-card-label">地方會勘建設</span>
+              <span class="stat-card-icon">🔍</span>
+            </div>
+            <div class="stat-card-num" id="stat-inspections">0</div>
+            <span class="stat-card-arrow">→</span>
+          </a>
+          <a class="stat-card" href="#" onclick="showPage('interpellation');return false;">
+            <div class="stat-card-top">
+              <span class="stat-card-label">國會質詢</span>
+              <span class="stat-card-icon">🎤</span>
+            </div>
+            <div class="stat-card-num" id="stat-interpellations">0</div>
+            <span class="stat-card-arrow">→</span>
+          </a>
+          <a class="stat-card" href="#" onclick="showPage('proposal');return false;">
+            <div class="stat-card-top">
+              <span class="stat-card-label">國會提案</span>
+              <span class="stat-card-icon">📜</span>
+            </div>
+            <div class="stat-card-num" id="stat-proposals">0</div>
+            <span class="stat-card-arrow">→</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LINE OA -->
+  <div class="line-section">
+    <div class="line-inner">
+      <div class="line-icon-wrap">💬</div>
+      <div class="line-content">
+        <div class="line-title">加入 LINE 官方帳號，即時掌握服務進度</div>
+        <div class="line-desc">加入曾咨耀服務處的 LINE 官方帳號，第一時間接收服務處最新消息、活動通知，以及您的陳情案件辦理進度更新。</div>
+        <a class="btn-line" href="https://lin.ee/Q9cWSP5" target="_blank">💬 立即加入 LINE 官方帳號</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 陳情說明 -->
+  <div class="petition-section">
+    <div class="petition-inner">
+      <div class="petition-title">有問題，找咨耀</div>
+      <div class="petition-sub">三步驟輕鬆完成線上陳情，讓您的聲音直達服務處</div>
+      <div class="petition-steps">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <span class="step-icon">📝</span>
+          <div class="step-title">填寫陳情表單</div>
+          <div class="step-desc">選擇案件類型，填寫問題描述與聯絡資料，送出後立即取得案件編號</div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <span class="step-icon">📞</span>
+          <div class="step-title">幕僚主動聯繫</div>
+          <div class="step-desc">服務處幕僚收到通知後，將主動電話聯繫您，了解案件詳情</div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <span class="step-icon">🔍</span>
+          <div class="step-title">即時查詢進度</div>
+          <div class="step-desc">憑案件編號隨時查詢辦理進度，透明公開每一個處理步驟</div>
+        </div>
+      </div>
+      <div class="petition-btns">
+        <a class="btn-primary" href="form.html">📝 立即填寫陳情表單</a>
+        <a class="btn-outline" href="#" onclick="showPage('services');return false;">🔍 查詢案件進度</a>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══ SERVICES ══ -->
+<section class="page-section" id="page-services">
+  <div class="section-wrap">
+    <div class="section-head">
+      <div class="section-title">陳情服務</div>
+    </div>
+    <div class="service-intro">
+      <strong>如何使用線上陳情服務？</strong><br>
+      1. 點擊「填寫陳情表單」，填寫問題與聯絡資料後送出，取得案件編號。<br>
+      2. 服務處幕僚收到後將<strong>主動電話聯繫</strong>您，並在下方列表更新辦理進度。<br>
+      3. 您可隨時透過分類或進度篩選查詢案件目前狀態，或直接輸入案件編號查詢詳情。
+    </div>
+
+    <!-- 案件編號查詢 -->
+    <div class="query-box">
+      <div class="query-box-title">🔍 輸入案件編號查詢辦理進度</div>
+      <div class="query-row">
+        <input type="text" id="queryInput" placeholder="SVC-YYYYMMDD-XXXX"
+          maxlength="22"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')queryCase()">
+        <button class="btn-query" id="queryBtn" onclick="queryCase()">
+          <div class="spinner"></div>
+          <span class="qlabel">查詢</span>
+        </button>
+      </div>
+      <div class="query-error" id="queryError">查無此案件編號，請確認編號是否正確（格式：SVC-YYYYMMDD-XXXX）</div>
+
+      <!-- 查詢結果 -->
+      <div class="query-result" id="queryResult">
+        <div class="qr-card">
+          <div class="qr-top">
+            <div>
+              <div class="qr-id" id="qr-id">—</div>
+              <div class="qr-title" id="qr-title">—</div>
+            </div>
+            <span class="badge" id="qr-status">—</span>
+          </div>
+          <div class="qr-grid">
+            <div class="qr-meta">
+              <div class="qr-meta-label">案件類型</div>
+              <div class="qr-meta-val" id="qr-type">—</div>
+            </div>
+            <div class="qr-meta">
+              <div class="qr-meta-label">案件區域</div>
+              <div class="qr-meta-val" id="qr-area">—</div>
+            </div>
+            <div class="qr-meta">
+              <div class="qr-meta-label">受理日期</div>
+              <div class="qr-meta-val" id="qr-date">—</div>
+            </div>
+          </div>
+          <div class="qr-section" id="qr-summary-wrap">
+            <div class="qr-section-title">📌 辦理說明</div>
+            <div class="qr-text" id="qr-summary">—</div>
+          </div>
+          <div class="qr-section" id="qr-reply-wrap">
+            <div class="qr-section-title">✅ 服務處回覆</div>
+            <div class="qr-text" id="qr-reply">—</div>
+          </div>
+          <div class="qr-section" id="qr-images-wrap" style="display:none;">
+            <div class="qr-section-title">📷 改善前後對比</div>
+            <div class="qr-images" id="qr-images"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 填寫陳情按鈕 -->
+    <div style="margin-bottom:24px;">
+      <a class="submit-petition-btn" href="form.html" style="font-size:15px;padding:15px 32px;width:100%;justify-content:center;display:inline-flex;border-radius:12px;">
+        📝 填寫陳情表單 — 讓您的聲音直達服務處
+      </a>
+    </div>
+
+    <!-- 分隔線 -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+      <span style="font-size:12px;color:var(--text-muted);font-weight:600;white-space:nowrap;">案件列表</span>
+      <div style="flex:1;height:1px;background:var(--border);"></div>
+    </div>
+
+    <div class="cat-tabs">
+      <button class="cat-tab active" onclick="setCat(this,'')">全部</button>
+      <button class="cat-tab" onclick="setCat(this,'交通運輸')">交通運輸 <span id="cnt-交通運輸"></span></button>
+      <button class="cat-tab" onclick="setCat(this,'公共設施')">公共設施 <span id="cnt-公共設施"></span></button>
+      <button class="cat-tab" onclick="setCat(this,'衛福勞動')">衛福勞動 <span id="cnt-衛福勞動"></span></button>
+      <button class="cat-tab" onclick="setCat(this,'文教科技')">文教科技 <span id="cnt-文教科技"></span></button>
+      <button class="cat-tab" onclick="setCat(this,'環境建管')">環境建管 <span id="cnt-環境建管"></span></button>
+      <button class="cat-tab" onclick="setCat(this,'警消政風')">警消政風 <span id="cnt-警消政風"></span></button>
+      <button class="cat-tab" onclick="setCat(this,'市政議題')">市政議題 <span id="cnt-市政議題"></span></button>
+      <button class="cat-tab" onclick="setCat(this,'其他服務')">其他服務 <span id="cnt-其他服務"></span></button>
+    </div>
+    <div class="filter-bar">
+      <span class="filter-label">處理進度狀態</span>
+      <select class="filter-select" id="statusFilter" onchange="setStatus()">
+        <option value="">全部</option>
+        <option value="處理中">處理中</option>
+        <option value="已結案">已結案</option>
+        <option value="不受理">不受理</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table class="petition-table">
+        <thead>
+          <tr>
+            <th>案件編號</th><th>案件類型</th><th>主旨</th><th>時間</th><th>進度</th>
+          </tr>
+        </thead>
+        <tbody id="petitionTbody">
+          <tr><td colspan="5"><div class="loading-row"><div class="loading-spinner"></div>載入中…</div></td></tr>
+        </tbody>
+      </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</section>
+
+<section class="page-section" id="page-inspection">
+  <div class="section-wrap"><div class="section-title" style="margin-bottom:32px;">地方會勘建設</div><div class="coming-soon"><div class="cs-icon">🔍</div><h2>地方會勘紀錄</h2><p>內容建置中，敬請期待</p></div></div>
+</section>
+<section class="page-section" id="page-interpellation">
+  <div class="section-wrap"><div class="section-title" style="margin-bottom:32px;">國會質詢</div><div class="coming-soon"><div class="cs-icon">🎤</div><h2>國會質詢紀錄</h2><p>內容建置中，敬請期待</p></div></div>
+</section>
+<section class="page-section" id="page-proposal">
+  <div class="section-wrap"><div class="section-title" style="margin-bottom:32px;">國會提案</div><div class="coming-soon"><div class="cs-icon">📜</div><h2>國會提案紀錄</h2><p>內容建置中，敬請期待</p></div></div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-social">
+    <a class="footer-social-card" href="https://www.facebook.com/OnlyTseng/" target="_blank">
+      <div class="fsicon icon-fb">📘</div>
+      <div class="footer-social-name">Facebook</div>
+      <div class="footer-social-handle">北屯耀進 曾咨耀</div>
+    </a>
+    <a class="footer-social-card" href="https://lin.ee/Q9cWSP5" target="_blank">
+      <div class="fsicon icon-line">💬</div>
+      <div class="footer-social-name">LINE 官方帳號</div>
+      <div class="footer-social-handle">加入好友</div>
+    </a>
+    <a class="footer-social-card" href="https://www.instagram.com/ty.tseng406/" target="_blank">
+      <div class="fsicon icon-ig">📷</div>
+      <div class="footer-social-name">Instagram</div>
+      <div class="footer-social-handle">@ty.tseng406</div>
+    </a>
+    <a class="footer-social-card" href="https://www.youtube.com/@曾咨耀406" target="_blank">
+      <div class="fsicon icon-yt">▶️</div>
+      <div class="footer-social-name">YouTube</div>
+      <div class="footer-social-handle">曾咨耀406</div>
+    </a>
+  </div>
+  <div class="footer-info-wrap">
+    <div>
+      <div class="footer-info-name">🏛️ 北屯耀進 曾咨耀 線上服務處</div>
+      <div class="footer-info-detail">
+        <div>📍 406 台中市北屯區東山路一段 156-6 號</div>
+        <div>📞 <a href="tel:0424362995">04-2436-2995</a></div>
+        <div>🕐 週一至週五 09:00–18:00</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-copy">© 2025 北屯耀進 曾咨耀服務處 · All rights reserved.</div>
+</footer>
+
+<script>
+const WEBHOOK_STATS='https://drwu.zeabur.app/webhook/petition/stats';
+const WEBHOOK_LIST='https://drwu.zeabur.app/webhook/petition/list';
+const WEBHOOK_QUERY='https://drwu.zeabur.app/webhook/petition/query';
+
+function toggleMenu(){document.getElementById('mobileNav').classList.toggle('open');}
+
+function showPage(name){
+  document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l=>{
+    if(l.getAttribute('onclick')&&l.getAttribute('onclick').includes("'"+name+"'"))l.classList.add('active');
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(name==='services')loadList();
+}
+
+async function loadStats(){
+  try{
+    const res=await fetch(WEBHOOK_STATS);
+    const data=await res.json();
+    if(data.success){
+      animateNum('stat-petitions',data.petitions);
+      animateNum('stat-inspections',data.inspections);
+      animateNum('stat-interpellations',data.interpellations);
+      animateNum('stat-proposals',data.proposals);
+    }
+  }catch(e){
+    ['stat-petitions','stat-inspections','stat-interpellations','stat-proposals']
+      .forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='—';});
+  }
+}
+function animateNum(id,target){
+  const el=document.getElementById(id);
+  if(!el||!target)return;
+  const dur=1600,start=performance.now();
+  const step=(now)=>{
+    const p=Math.min((now-start)/dur,1);
+    const ease=1-Math.pow(1-p,3);
+    el.textContent=Math.floor(ease*target).toLocaleString();
+    if(p<1)requestAnimationFrame(step);
+    else el.textContent=target.toLocaleString();
+  };
+  requestAnimationFrame(step);
+}
+
+let currentCat='',currentStatus='',currentPage=1;
+async function loadList(){
+  const tbody=document.getElementById('petitionTbody');
+  tbody.innerHTML='<tr><td colspan="5"><div class="loading-row"><div class="loading-spinner"></div>載入中…</div></td></tr>';
+  document.getElementById('pagination').innerHTML='';
+  try{
+    const params=new URLSearchParams({page:currentPage});
+    if(currentCat)params.append('category',currentCat);
+    if(currentStatus)params.append('status',currentStatus);
+    const res=await fetch(WEBHOOK_LIST+'?'+params.toString());
+    const data=await res.json();
+    if(!data.success)throw new Error();
+    updateCatCounts(data.categories);
+    renderTable(data.items);
+    renderPagination(data.page,data.totalPages,data.total);
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="5"><div class="empty-row">⚠️ 載入失敗，請稍後再試</div></td></tr>';
+  }
+}
+function updateCatCounts(cats){
+  Object.keys(cats).forEach(k=>{
+    const el=document.getElementById('cnt-'+k);
+    if(el)el.textContent=cats[k]>0?'('+cats[k]+')':'';
+  });
+}
+function renderTable(items){
+  const tbody=document.getElementById('petitionTbody');
+  if(!items||items.length===0){tbody.innerHTML='<tr><td colspan="5"><div class="empty-row">📭 目前沒有符合條件的案件</div></td></tr>';return;}
+  tbody.innerHTML=items.map(item=>`
+    <tr>
+      <td class="td-id">${item.caseId||'—'}</td>
+      <td><span class="type-badge">${item.caseType||'—'}</span></td>
+      <td class="td-title">${escHtml(item.title||'—')}</td>
+      <td class="td-date">${item.date||'—'}</td>
+      <td><span class="badge badge-${item.status}">${item.status||'—'}</span></td>
+    </tr>`).join('');
+}
+function renderPagination(page,totalPages,total){
+  const el=document.getElementById('pagination');
+  if(totalPages<=1){el.innerHTML=`<span class="page-info">共 ${total} 筆</span>`;return;}
+  let html=`<button class="page-btn" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>‹</button>`;
+  for(let i=1;i<=totalPages;i++){
+    if(totalPages>7&&i>2&&i<totalPages-1&&Math.abs(i-page)>1){if(i===3||i===totalPages-2)html+=`<span class="page-info">…</span>`;continue;}
+    html+=`<button class="page-btn ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html+=`<button class="page-btn" onclick="goPage(${page+1})" ${page>=totalPages?'disabled':''}>›</button>`;
+  html+=`<span class="page-info">共 ${total} 筆</span>`;
+  el.innerHTML=html;
+}
+function goPage(p){currentPage=p;loadList();window.scrollTo({top:400,behavior:'smooth'});}
+function setCat(btn,cat){document.querySelectorAll('.cat-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentCat=cat;currentPage=1;loadList();}
+function setStatus(){currentStatus=document.getElementById('statusFilter').value;currentPage=1;loadList();}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function queryCase(){
+  const input=document.getElementById('queryInput').value.trim().toUpperCase();
+  const errEl=document.getElementById('queryError');
+  const resultEl=document.getElementById('queryResult');
+  errEl.classList.remove('show');
+  resultEl.classList.remove('show');
+
+  if(!input){errEl.textContent='請輸入案件編號';errEl.classList.add('show');return;}
+
+  const btn=document.getElementById('queryBtn');
+  btn.classList.add('is-loading');btn.disabled=true;
+
+  try{
+    const res=await fetch(WEBHOOK_QUERY+'?caseId='+encodeURIComponent(input));
+    const data=await res.json();
+    if(!data.found){
+      errEl.textContent='查無此案件編號，請確認編號是否正確（格式：SVC-YYYYMMDD-XXXX）';
+      errEl.classList.add('show');return;
+    }
+    // 填入資料
+    document.getElementById('qr-id').textContent=data.caseId||'—';
+    document.getElementById('qr-title').textContent=data.title||'—';
+    document.getElementById('qr-type').textContent=data.caseType||'—';
+    document.getElementById('qr-area').textContent=data.caseArea||'—';
+    document.getElementById('qr-date').textContent=data.date||'—';
+
+    const statusEl=document.getElementById('qr-status');
+    statusEl.textContent=data.status||'—';
+    statusEl.className='badge badge-'+(data.status||'');
+
+    const summaryEl=document.getElementById('qr-summary');
+    summaryEl.textContent=data.summary||'';
+    summaryEl.className='qr-text'+(data.summary?'':' empty');
+    if(!data.summary)summaryEl.textContent='辦理說明更新中，請耐心等候';
+
+    const replyEl=document.getElementById('qr-reply');
+    replyEl.textContent=data.reply||'';
+    replyEl.className='qr-text'+(data.reply?'':' empty');
+    document.getElementById('qr-reply-wrap').style.display=data.reply?'block':'none';
+
+    // 圖片
+    const allImgs=[...(data.beforeImages||[]),...(data.afterImages||[])];
+    const imgWrap=document.getElementById('qr-images-wrap');
+    const imgContainer=document.getElementById('qr-images');
+    if(allImgs.length>0){
+      imgContainer.innerHTML=allImgs.map(url=>`<img src="${url}" alt="案件圖片" loading="lazy">`).join('');
+      imgWrap.style.display='block';
+    }else{
+      imgWrap.style.display='none';
+    }
+
+    resultEl.classList.add('show');
+    resultEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){
+    errEl.textContent='查詢失敗，請稍後再試';errEl.classList.add('show');
+  }finally{
+    btn.classList.remove('is-loading');btn.disabled=false;
+  }
+}
+
+loadStats();
+</script>
+</body>
+</html>
