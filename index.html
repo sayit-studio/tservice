@@ -119,18 +119,16 @@ body{
 /* 左側人物 */
 .hero-left{
   flex-shrink:0;
-  width:380px;
+  width:520px;
   display:flex;align-items:flex-end;
   position:relative;
-  margin-right:-20px; /* 讓人物稍微重疊右側 */
+  margin-right:-40px; /* 讓人物稍微重疊右側 */
   z-index:3;
 }
-.hero-left img{
-  width:100%;max-width:380px;
-  object-fit:contain;object-position:bottom;
-  filter:drop-shadow(0 12px 40px rgba(0,0,0,0.4));
-  animation:heroIn 0.9s cubic-bezier(0.22,1,0.36,1) both;
-  display:block;
+.hero-left img {
+  width: 100%;
+  max-width: 520px;
+  margin-left: -40px;
 }
 @keyframes heroIn{
   from{opacity:0;transform:translateY(30px);}
@@ -460,18 +458,18 @@ body{
   .hamburger{display:flex;}
 
   /* 手機版 Hero：人物上方，文字+卡片下方 */
-  .hero-unit{min-height:auto;}
+.hero-unit {
+  min-height: 760px;
+}
   .hero-body{
     flex-direction:column;
     align-items:center;
     padding:0 20px;
   }
-  .hero-left{
-    width:200px;
-    margin-right:0;
-    margin-bottom:-20px;
-    z-index:3;
-  }
+.hero-left {
+  width: 280px;
+  margin-bottom: -10px;
+}
   .hero-left img{max-height:260px;object-fit:contain;}
   .hero-right{
     min-height:auto;
