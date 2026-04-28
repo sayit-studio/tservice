@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>曾辦任務管理後台</title>
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <link rel="stylesheet" href="../css/zcy-console.css" />
+  </head>
+  <body>
+    <main class="login-view" id="loginView">
+      <section class="login-panel" aria-labelledby="loginTitle">
+        <div>
+          <p class="eyebrow">工作人員登入</p>
+          <h1 id="loginTitle">曾辦任務管理後台</h1>
+        </div>
+        <form id="loginForm" class="form-stack">
+          <label class="field">
+            <span>帳號</span>
+            <input name="account" autocomplete="username" required />
+          </label>
+          <label class="field">
+            <span>密碼</span>
+            <input name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <button class="primary-button" type="submit">登入</button>
+          <p class="form-note" id="loginMessage">請使用工作人員資料庫中的帳號與密碼登入。</p>
+        </form>
+      </section>
+    </main>
+
+    <div class="app-view" id="appView" hidden>
+      <aside class="sidebar">
+        <div class="brand-block">
+          <span class="brand-mark">曾</span>
+          <div>
+            <strong>任務管理後台</strong>
+            <small id="roleLabel">未登入</small>
+          </div>
+        </div>
+        <nav class="side-nav" aria-label="後台導覽">
+          <button class="nav-item is-active" type="button" data-view="cases">陳情案件</button>
+          <button class="nav-item" type="button" data-view="events">活動管理</button>
+          <button class="nav-item" type="button" data-view="legal">法扶諮詢</button>
+          <button class="nav-item admin-only" type="button" data-view="staff">人員管理</button>
+        </nav>
+        <button class="ghost-button" id="logoutButton" type="button">登出</button>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <h2 id="viewTitle">陳情案件</h2>
+          </div>
+          <div class="top-actions">
+            <span class="sync-pill" id="syncStatus">尚未同步</span>
+            <button class="secondary-button" id="refreshButton" type="button">重新整理</button>
+          </div>
+        </header>
+
+        <section class="view-panel is-active" id="casesView" data-title="陳情案件">
+          <div class="toolbar">
+            <label class="search-field">
+              <span>搜尋</span>
+              <input id="caseSearch" placeholder="案件、陳情人、案號" />
+            </label>
+            <label class="select-field">
+              <span>狀態</span>
+              <select id="caseStatusFilter">
+                <option value="">全部狀態</option>
+                <option>新案件</option>
+                <option>進行中</option>
+                <option>追蹤中</option>
+                <option>未完成案件</option>
+                <option>已完成案件</option>
+              </select>
+            </label>
+            <button class="primary-button compact" id="addCaseButton" type="button">新增案件</button>
+          </div>
+          <div class="data-layout">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>案件</th>
+                    <th>負責人員</th>
+                    <th>狀態</th>
+                    <th>陳情人</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="casesTable"></tbody>
+              </table>
+            </div>
+            <article class="detail-pane" id="caseDetail"></article>
+          </div>
+          <div class="pager" id="casePager"></div>
+        </section>
+
+        <section class="view-panel" id="eventsView" data-title="活動管理">
+          <div class="toolbar">
+            <label class="select-field">
+              <span>月份</span>
+              <input id="eventMonth" type="month" />
+            </label>
+            <label class="select-field">
+              <span>狀態</span>
+              <select id="eventStatusFilter">
+                <option value="">全部狀態</option>
+                <option>籌備中</option>
+                <option>進行中</option>
+                <option>已完成</option>
+              </select>
+            </label>
+            <button class="primary-button compact" id="addEventButton" type="button">新增活動</button>
+            <button class="secondary-button compact" id="eventRegistrationButton" type="button">產生報名網址</button>
+          </div>
+          <div class="calendar-layout">
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <article class="detail-pane" id="eventDetail"></article>
+          </div>
+          <div class="pager" id="eventPager"></div>
+        </section>
+
+        <section class="view-panel" id="legalView" data-title="法扶諮詢">
+          <div class="toolbar">
+            <label class="search-field">
+              <span>搜尋</span>
+              <input id="legalSearch" placeholder="預約編號、姓名、電話、1999案號" />
+            </label>
+            <label class="select-field">
+              <span>狀態</span>
+              <select id="legalStatusFilter">
+                <option value="">全部狀態</option>
+                <option value="confirmed">已預約</option>
+                <option value="cancelled">已取消</option>
+              </select>
+            </label>
+            <label class="select-field">
+              <span>法扶項目</span>
+              <select id="legalCategoryFilter">
+                <option value="">全部項目</option>
+              </select>
+            </label>
+          </div>
+          <div class="data-layout">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>預約</th>
+                    <th>姓名</th>
+                    <th>法扶項目</th>
+                    <th>預約時間</th>
+                    <th>狀態</th>
+                  </tr>
+                </thead>
+                <tbody id="legalTable"></tbody>
+              </table>
+            </div>
+            <article class="detail-pane" id="legalDetail"></article>
+          </div>
+          <div class="pager" id="legalPager"></div>
+        </section>
+
+        <section class="view-panel" id="staffView" data-title="人員管理">
+          <div class="toolbar">
+            <label class="search-field">
+              <span>搜尋</span>
+              <input id="staffSearch" placeholder="人員名稱、帳號、權限" />
+            </label>
+            <span></span>
+            <button class="primary-button compact" id="addStaffButton" type="button">新增人員</button>
+          </div>
+          <div class="table-wrap full">
+            <table>
+              <thead>
+                <tr>
+                  <th>人員名稱</th>
+                  <th>帳號</th>
+                  <th>身分</th>
+                  <th>權限設定</th>
+                </tr>
+              </thead>
+              <tbody id="staffTable"></tbody>
+            </table>
+          </div>
+          <div class="pager" id="staffPager"></div>
+        </section>
+      </section>
+    </div>
+
+    <div class="modal-layer" id="modalLayer" hidden>
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <header class="modal-head">
+          <h3 id="modalTitle">編輯</h3>
+          <button class="icon-button" id="modalCloseButton" type="button" aria-label="關閉">×</button>
+        </header>
+        <form class="modal-body" id="modalForm"></form>
+      </section>
+    </div>
+
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/zcy-console.js"></script>
+  </body>
+</html>

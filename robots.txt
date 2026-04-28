@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /zcy-staff-console-406/
+Disallow: /n8n/

@@ -17,7 +17,7 @@
   }
 
   const mock = {
-    users: [{ id: "u1", account: "admin", password: "admin", name: "系統管理者", role: "管理員", permissions: ["all"] }],
+    users: [],
     cases: [],
     events: [],
     legal: [],
