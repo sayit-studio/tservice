@@ -1,6 +1,6 @@
 ﻿window.APP_CONFIG = {
   siteBaseUrl: "https://tseng-service.pages.dev",
-  liffId: "請填入_LINE_LIFF_ID",
+  liffId: "2009640939-vwvDFasL",
   webhookBaseUrl: "https://drwu.zeabur.app/webhook/legal-consultation",
   teamLineTarget: "請填入_TEAM_LINE_USER_OR_GROUP_ID",
   bookingStartHour: 15,

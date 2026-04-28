@@ -1,5 +1,5 @@
 window.APP_CONFIG = {
-  liffId: "請填入_LINE_LIFF_ID",
+  liffId: "2009640939-vwvDFasL",
   webhookBaseUrl: "https://your-n8n-domain.example/webhook/legal-consultation",
   teamLineTarget: "營運團隊_LINE_USER_OR_GROUP_ID",
   bookingStartHour: 15,
