@@ -1,0 +1,442 @@
+﻿{
+    "name":  "Public Event Registration",
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "event-registration",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "event-registration-webhook",
+                      "name":  "Event Registration Webhook",
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -980,
+                                       0
+                                   ],
+                      "webhookId":  "event-registration"
+                  },
+                  {
+                      "parameters":  {
+                                         "rules":  {
+                                                       "values":  [
+                                                                      {
+                                                                          "conditions":  {
+                                                                                             "options":  {
+                                                                                                             "caseSensitive":  true,
+                                                                                                             "leftValue":  "",
+                                                                                                             "typeValidation":  "strict"
+                                                                                                         },
+                                                                                             "conditions":  [
+                                                                                                                {
+                                                                                                                    "leftValue":  "={{ $json.body.action }}",
+                                                                                                                    "rightValue":  "event.register",
+                                                                                                                    "operator":  {
+                                                                                                                                     "type":  "string",
+                                                                                                                                     "operation":  "equals"
+                                                                                                                                 }
+                                                                                                                }
+                                                                                                            ],
+                                                                                             "combinator":  "and"
+                                                                                         },
+                                                                          "renameOutput":  true,
+                                                                          "outputKey":  "event.register"
+                                                                      }
+                                                                  ]
+                                                   },
+                                         "options":  {
+                                                         "fallbackOutput":  "extra"
+                                                     }
+                                     },
+                      "id":  "event-registration-route",
+                      "name":  "Route Action",
+                      "type":  "n8n-nodes-base.switch",
+                      "typeVersion":  3,
+                      "position":  [
+                                       -760,
+                                       0
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const body = $(\u0027Event Registration Webhook\u0027).first().json.body || {};\nconst data = body.data || {};\nconst required = [\u0027eventId\u0027, \u0027name\u0027, \u0027phone\u0027];\nconst missing = required.filter((key) =\u003e !String(data[key] || \u0027\u0027).trim());\nif (missing.length) {\n  return [{ json: { ok: false, statusCode: 400, message: `蝻箏?敹?甈?嚗?{missing.join(\u0027, \u0027)}` } }];\n}\nconst companions = Number(data.companions || 0);\nif (!Number.isFinite(companions) || companions \u003c 0) {\n  return [{ json: { ok: false, statusCode: 400, message: \u0027??鈭箸?澆??航炊\u0027 } }];\n}\nreturn [{ json: {\n  ok: true,\n  eventId: String(data.eventId).trim(),\n  name: String(data.name).trim(),\n  phone: String(data.phone).trim(),\n  companions,\n  note: String(data.note || \u0027\u0027).trim(),\n  lineUserId: String(data.lineUserId || \u0027\u0027).trim(),\n  lineDisplayName: String(data.lineDisplayName || \u0027\u0027).trim(),\n  liffLanguage: String(data.liffLanguage || \u0027\u0027).trim(),\n  liffOS: String(data.liffOS || \u0027\u0027).trim(),\n  isInClient: Boolean(data.isInClient),\n  submittedAt: body.submittedAt || new Date().toISOString()\n} }];"
+                                     },
+                      "id":  "event-registration-validate",
+                      "name":  "Validate Payload",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       -540,
+                                       -120
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "resource":  "databasePage",
+                                         "operation":  "getAll",
+                                         "databaseId":  {
+                                                            "__rl":  true,
+                                                            "mode":  "id",
+                                                            "value":  "2cab3ad1d1cd804aa922caf1a7621f78"
+                                                        },
+                                         "returnAll":  true,
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "event-registration-query-events",
+                      "name":  "Query Events",
+                      "type":  "n8n-nodes-base.notion",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       -300,
+                                       -120
+                                   ],
+                      "credentials":  {
+                                          "notionApi":  {
+                                                            "id":  "",
+                                                            "name":  "Notion account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "resource":  "databasePage",
+                                         "operation":  "getAll",
+                                         "databaseId":  {
+                                                            "__rl":  true,
+                                                            "mode":  "id",
+                                                            "value":  "350b3ad1d1cd8094aaa3fb6bbf6c6d34"
+                                                        },
+                                         "returnAll":  true,
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "event-registration-query-registrations",
+                      "name":  "Query Existing Registrations",
+                      "type":  "n8n-nodes-base.notion",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       -60,
+                                       -120
+                                   ],
+                      "credentials":  {
+                                          "notionApi":  {
+                                                            "id":  "",
+                                                            "name":  "Notion account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "jsCode":  "const input = $(\u0027Validate Payload\u0027).first().json;\nif (!input.ok) return [{ json: input }];\nfunction textFromValue(value) {\n  if (value == null) return \u0027\u0027;\n  if (typeof value === \u0027string\u0027 || typeof value === \u0027number\u0027 || typeof value === \u0027boolean\u0027) return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join(\u0027,\u0027);\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.date) return value.date.start || \u0027\u0027;\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.number != null) return String(value.number);\n  if (value.url) return String(value.url);\n  return \u0027\u0027;\n}\nfunction prop(json, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (json[name] != null) return textFromValue(json[name]).trim();\n    const p = json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) =\u003e key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return \u0027\u0027;\n}\nconst events = $(\u0027Query Events\u0027).all();\nconst event = events.find((item) =\u003e item.json.id === input.eventId);\nif (!event) {\n  return [{ json: { ok: false, statusCode: 404, message: \u0027?曆??唳暑??隢Ⅱ隤????臬甇?Ⅱ\u0027 } }];\n}\nconst eventJson = event.json;\nconst title = prop(eventJson, [\u0027瘣餃?銝駁?\u0027, \u0027title\u0027, \u0027Name\u0027]);\nconst enabledRaw = prop(eventJson, [\u0027?勗?銵典\u0027, \u0027registrationEnabled\u0027]);\nconst enabled = [\u0027true\u0027, \u0027??勗?\u0027, \u0027?\u0027, \u0027yes\u0027, \u00271\u0027].includes(String(enabledRaw).toLowerCase()) || enabledRaw === \u0027\u0027;\nif (!enabled) {\n  return [{ json: { ok: false, statusCode: 409, message: \u0027甇斗暑????勗?\u0027 } }];\n}\nconst deadline = prop(eventJson, [\u0027?勗??芣迫??\u0027, \u0027registrationDeadline\u0027]);\nif (deadline \u0026\u0026 new Date(deadline).getTime() \u003c Date.now()) {\n  return [{ json: { ok: false, statusCode: 409, message: \u0027甇斗暑?歇?芣迫?勗?\u0027 } }];\n}\nconst limit = Number(prop(eventJson, [\u0027?勗???銝?\u0027, \u0027registrationLimit\u0027]) || 0);\nconst registrations = $(\u0027Query Existing Registrations\u0027).all();\nconst active = registrations.filter((item) =\u003e {\n  const eventId = prop(item.json, [\u0027瘣餃?ID\u0027, \u0027eventId\u0027]);\n  const status = prop(item.json, [\u0027???, \u0027status\u0027]);\n  return eventId === input.eventId \u0026\u0026 status !== \u0027cancelled\u0027;\n});\nif (input.lineUserId) {\n  const duplicate = active.find((item) =\u003e prop(item.json, [\u0027LINE User ID\u0027, \u0027LINE userId\u0027]) === input.lineUserId);\n  if (duplicate) {\n    return [{ json: { ok: false, statusCode: 409, message: \u0027?典歇?勗?甇斗暑??隢???勗?\u0027 } }];\n  }\n}\nif (limit \u003e 0 \u0026\u0026 active.length \u003e= limit) {\n  return [{ json: { ok: false, statusCode: 409, message: \u0027甇斗暑???憿歇皛? } }];\n}\nconst date = new Date();\nconst y = date.getFullYear();\nconst m = String(date.getMonth() + 1).padStart(2, \u00270\u0027);\nconst d = String(date.getDate()).padStart(2, \u00270\u0027);\nconst serial = String(active.length + 1).padStart(3, \u00270\u0027);\nreturn [{ json: { ...input, eventTitle: title, registrationId: `REG-${y}${m}${d}-${serial}`, status: \u0027registered\u0027, createdAt: new Date().toISOString() } }];"
+                                     },
+                      "id":  "event-registration-check",
+                      "name":  "Check Event And Capacity",
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       180,
+                                       -120
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "options":  {
+                                                                            "caseSensitive":  true,
+                                                                            "leftValue":  "",
+                                                                            "typeValidation":  "strict"
+                                                                        },
+                                                            "conditions":  [
+                                                                               {
+                                                                                   "leftValue":  "={{ $json.ok }}",
+                                                                                   "rightValue":  true,
+                                                                                   "operator":  {
+                                                                                                    "type":  "boolean",
+                                                                                                    "operation":  "equals"
+                                                                                                }
+                                                                               }
+                                                                           ],
+                                                            "combinator":  "and"
+                                                        },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "event-registration-if-ok",
+                      "name":  "Is Valid",
+                      "type":  "n8n-nodes-base.if",
+                      "typeVersion":  2,
+                      "position":  [
+                                       420,
+                                       -120
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "resource":  "databasePage",
+                                         "databaseId":  {
+                                                            "__rl":  true,
+                                                            "mode":  "id",
+                                                            "value":  "350b3ad1d1cd8094aaa3fb6bbf6c6d34"
+                                                        },
+                                         "title":  "={{ $json.registrationId }}",
+                                         "propertiesUi":  {
+                                                              "propertyValues":  [
+                                                                                     {
+                                                                                         "key":  "?勗?蝺刻?|title",
+                                                                                         "title":  "={{ $json.registrationId }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "瘣餃?ID|rich_text",
+                                                                                         "textContent":  "={{ $json.eventId }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "瘣餃??迂|rich_text",
+                                                                                         "textContent":  "={{ $json.eventTitle }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "憪?|rich_text",
+                                                                                         "textContent":  "={{ $json.name }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "?餉店|phone_number",
+                                                                                         "phoneValue":  "={{ $json.phone }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "??鈭箸|number",
+                                                                                         "numberValue":  "={{ $json.companions }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "?酉|rich_text",
+                                                                                         "textContent":  "={{ $json.note }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "LINE User ID|rich_text",
+                                                                                         "textContent":  "={{ $json.lineUserId }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "LINE ?迂|rich_text",
+                                                                                         "textContent":  "={{ $json.lineDisplayName }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "LIFF 隤?|rich_text",
+                                                                                         "textContent":  "={{ $json.liffLanguage }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "LIFF 蝟餌絞|rich_text",
+                                                                                         "textContent":  "={{ $json.liffOS }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "?臬 LINE ?折??checkbox",
+                                                                                         "checkboxValue":  "={{ $json.isInClient }}"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "撱箇???|date",
+                                                                                         "includeTime":  true,
+                                                                                         "date":  "={{ $json.createdAt }}",
+                                                                                         "timezone":  "Asia/Taipei"
+                                                                                     },
+                                                                                     {
+                                                                                         "key":  "??select",
+                                                                                         "selectValue":  "registered"
+                                                                                     }
+                                                                                 ]
+                                                          },
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "event-registration-create",
+                      "name":  "Create Event Registration",
+                      "type":  "n8n-nodes-base.notion",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       660,
+                                       -220
+                                   ],
+                      "credentials":  {
+                                          "notionApi":  {
+                                                            "id":  "",
+                                                            "name":  "Notion account"
+                                                        }
+                                      }
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "={{ { ok: true, message: \u0027?勗???\u0027, registrationId: $(\u0027Check Event And Capacity\u0027).item.json.registrationId } }}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "id":  "event-registration-success-response",
+                      "name":  "Respond Success",
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       900,
+                                       -220
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "={{ { ok: false, message: $json.message || \u0027?勗?憭望?\u0027 } }}",
+                                         "options":  {
+                                                         "responseCode":  "={{ $json.statusCode || 400 }}"
+                                                     }
+                                     },
+                      "id":  "event-registration-error-response",
+                      "name":  "Respond Error",
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       660,
+                                       20
+                                   ]
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "={{ { ok: false, message: \u0027Unsupported action\u0027 } }}",
+                                         "options":  {
+                                                         "responseCode":  400
+                                                     }
+                                     },
+                      "id":  "event-registration-fallback-response",
+                      "name":  "Respond Unsupported Action",
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.1,
+                      "position":  [
+                                       -540,
+                                       180
+                                   ]
+                  }
+              ],
+    "pinData":  {
+
+                },
+    "connections":  {
+                        "Event Registration Webhook":  {
+                                                           "main":  [
+                                                                        [
+                                                                            {
+                                                                                "node":  "Route Action",
+                                                                                "type":  "main",
+                                                                                "index":  0
+                                                                            }
+                                                                        ]
+                                                                    ]
+                                                       },
+                        "Route Action":  {
+                                             "main":  [
+                                                          [
+                                                              {
+                                                                  "node":  "Validate Payload",
+                                                                  "type":  "main",
+                                                                  "index":  0
+                                                              }
+                                                          ],
+                                                          [
+                                                              {
+                                                                  "node":  "Respond Unsupported Action",
+                                                                  "type":  "main",
+                                                                  "index":  0
+                                                              }
+                                                          ]
+                                                      ]
+                                         },
+                        "Validate Payload":  {
+                                                 "main":  [
+                                                              [
+                                                                  {
+                                                                      "node":  "Query Events",
+                                                                      "type":  "main",
+                                                                      "index":  0
+                                                                  }
+                                                              ]
+                                                          ]
+                                             },
+                        "Query Events":  {
+                                             "main":  [
+                                                          [
+                                                              {
+                                                                  "node":  "Query Existing Registrations",
+                                                                  "type":  "main",
+                                                                  "index":  0
+                                                              }
+                                                          ]
+                                                      ]
+                                         },
+                        "Query Existing Registrations":  {
+                                                             "main":  [
+                                                                          [
+                                                                              {
+                                                                                  "node":  "Check Event And Capacity",
+                                                                                  "type":  "main",
+                                                                                  "index":  0
+                                                                              }
+                                                                          ]
+                                                                      ]
+                                                         },
+                        "Check Event And Capacity":  {
+                                                         "main":  [
+                                                                      [
+                                                                          {
+                                                                              "node":  "Is Valid",
+                                                                              "type":  "main",
+                                                                              "index":  0
+                                                                          }
+                                                                      ]
+                                                                  ]
+                                                     },
+                        "Is Valid":  {
+                                         "main":  [
+                                                      [
+                                                          {
+                                                              "node":  "Create Event Registration",
+                                                              "type":  "main",
+                                                              "index":  0
+                                                          }
+                                                      ],
+                                                      [
+                                                          {
+                                                              "node":  "Respond Error",
+                                                              "type":  "main",
+                                                              "index":  0
+                                                          }
+                                                      ]
+                                                  ]
+                                     },
+                        "Create Event Registration":  {
+                                                          "main":  [
+                                                                       [
+                                                                           {
+                                                                               "node":  "Respond Success",
+                                                                               "type":  "main",
+                                                                               "index":  0
+                                                                           }
+                                                                       ]
+                                                                   ]
+                                                      }
+                    },
+    "active":  false,
+    "settings":  {
+                     "executionOrder":  "v1"
+                 },
+    "versionId":  "public-event-registration-v1",
+    "meta":  {
+                 "templateCredsSetupCompleted":  false
+             },
+    "id":  "public-event-registration",
+    "tags":  [
+
+             ]
+}

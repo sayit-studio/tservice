@@ -1,0 +1,279 @@
+{
+  "name": "Admin Auth Staff",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-auth-staff",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "admin-auth-staff-webhook",
+      "name": "Admin Auth Staff Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-760, 0],
+      "webhookId": "admin-auth-staff"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action || 'login' }}",
+                    "rightValue": "login",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "login"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "staff.list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "staff.list"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "debug.staff",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "debug.staff"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "admin-auth-staff-switch",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [-540, 0]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "350b3ad1d1cd801797a7dcf6f06c7f13"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "admin-auth-query-staff-login",
+      "name": "Query Staff For Login",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-300, -120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Auth Staff Webhook').first().json.body || {};\nconst account = String(body.account || '').trim();\nconst password = String(body.password || '').trim();\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join(',');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.people) return textFromValue(value.people);\n  if (value.phone_number) return String(value.phone_number);\n  if (value.email) return String(value.email);\n  if (value.formula) return textFromValue(value.formula.string ?? value.formula.number ?? value.formula.boolean);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some(name => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\nconst users = items.map(item => ({\n  id: item.json.id,\n  name: prop(item, ['人員名稱', '姓名', 'Name', 'name']),\n  account: prop(item, ['帳號', '账号', 'account', 'Account']),\n  password: prop(item, ['密碼', '密码', 'password', 'Password']),\n  role: prop(item, ['權限設定', '權限', '权限设置', 'role', 'Role']) || prop(item, ['身份', '身分', 'identity', 'Identity']),\n  identity: prop(item, ['身份', '身分', 'identity', 'Identity'])\n}));\nconst user = users.find(u => u.account === account && u.password === password);\nif (!user) {\n  return [{ json: { ok: false, statusCode: 401, message: '帳號或密碼錯誤', checkedAccounts: users.map(u => u.account).filter(Boolean) } }];\n}\nreturn [{ json: { ok: true, id: user.id, name: user.name, account: user.account, role: user.role, identity: user.identity, permissions: user.role === '管理者' ? ['all'] : ['cases', 'events', 'legal'] } }];"
+      },
+      "id": "admin-auth-validate-login",
+      "name": "Validate Login",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-60, -120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode || 200 }}"
+        }
+      },
+      "id": "admin-auth-login-response",
+      "name": "Respond Login",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [180, -120]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "350b3ad1d1cd801797a7dcf6f06c7f13"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "admin-auth-query-staff-list",
+      "name": "Query Staff List",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-300, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join(',');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.people) return textFromValue(value.people);\n  if (value.phone_number) return String(value.phone_number);\n  if (value.email) return String(value.email);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some(name => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\nreturn [{ json: { ok: true, data: items.map(item => ({ id: item.json.id, name: prop(item, ['人員名稱', '姓名', 'Name', 'name']), account: prop(item, ['帳號', '账号', 'account', 'Account']), identity: prop(item, ['身份', '身分', 'identity', 'Identity']), permissions: prop(item, ['權限設定', '權限', '权限设置', 'role', 'Role']) })) } }];"
+      },
+      "id": "admin-auth-normalize-staff-list",
+      "name": "Normalize Staff List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-60, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "admin-auth-staff-list-response",
+      "name": "Respond Staff List",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [180, 120]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "350b3ad1d1cd801797a7dcf6f06c7f13"
+        },
+        "limit": 3,
+        "options": {}
+      },
+      "id": "admin-auth-query-debug",
+      "name": "Query Staff Debug",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-300, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true, count: items.length, sample: items.slice(0, 3).map(item => ({ keys: Object.keys(item.json), json: item.json, propertyKeys: Object.keys(item.json.properties || {}) })) } }];"
+      },
+      "id": "admin-auth-build-debug",
+      "name": "Build Staff Debug",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-60, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "admin-auth-debug-response",
+      "name": "Respond Staff Debug",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [180, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: 'Unsupported action' } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "admin-auth-fallback-response",
+      "name": "Respond Unsupported Action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-300, 500]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Admin Auth Staff Webhook": {
+      "main": [[{ "node": "Route Action", "type": "main", "index": 0 }]]
+    },
+    "Route Action": {
+      "main": [
+        [{ "node": "Query Staff For Login", "type": "main", "index": 0 }],
+        [{ "node": "Query Staff List", "type": "main", "index": 0 }],
+        [{ "node": "Query Staff Debug", "type": "main", "index": 0 }],
+        [{ "node": "Respond Unsupported Action", "type": "main", "index": 0 }]
+      ]
+    },
+    "Query Staff For Login": {
+      "main": [[{ "node": "Validate Login", "type": "main", "index": 0 }]]
+    },
+    "Validate Login": {
+      "main": [[{ "node": "Respond Login", "type": "main", "index": 0 }]]
+    },
+    "Query Staff List": {
+      "main": [[{ "node": "Normalize Staff List", "type": "main", "index": 0 }]]
+    },
+    "Normalize Staff List": {
+      "main": [[{ "node": "Respond Staff List", "type": "main", "index": 0 }]]
+    },
+    "Query Staff Debug": {
+      "main": [[{ "node": "Build Staff Debug", "type": "main", "index": 0 }]]
+    },
+    "Build Staff Debug": {
+      "main": [[{ "node": "Respond Staff Debug", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "admin-auth-staff-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "admin-auth-staff",
+  "tags": []
+}

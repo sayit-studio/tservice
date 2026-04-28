@@ -1,0 +1,81 @@
+{
+  "name": "Admin Cases",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-cases",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "admin-cases-webhook",
+      "name": "Admin Cases Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-520, 0],
+      "webhookId": "admin-cases"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "29cb3ad1d1cd80da82b5fddde82ebe4d"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "admin-cases-query",
+      "name": "Query Cases",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-280, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "function prop(item, name) {\n  const p = item.json.properties?.[name];\n  if (!p) return item.json[name] ?? '';\n  if (p.type === 'title') return (p.title || []).map(v => v.plain_text || '').join('');\n  if (p.type === 'rich_text') return (p.rich_text || []).map(v => v.plain_text || '').join('');\n  if (p.type === 'select') return p.select?.name || '';\n  if (p.type === 'date') return p.date?.start || '';\n  if (p.type === 'phone_number') return p.phone_number || '';\n  if (p.type === 'relation') return (p.relation || []).map(v => v.id).join(',');\n  return item.json[name] ?? '';\n}\nreturn [{ json: { ok: true, data: items.map(item => ({ id: item.json.id, title: prop(item, '案件主題&詳情'), petitioner: prop(item, '陳情人姓名'), phone: prop(item, '陳情人連絡電話'), owner: prop(item, '負責人員'), status: prop(item, '執行狀態'), startDate: prop(item, '處理起始日期'), caseNo: prop(item, '1999案號'), category: prop(item, '建議事項類別'), summary: prop(item, '局處回覆摘要'), content: prop(item, '案件詳細說明') })) } }];"
+      },
+      "id": "admin-cases-normalize",
+      "name": "Normalize Cases",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-40, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "admin-cases-response",
+      "name": "Respond Cases",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [200, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Admin Cases Webhook": {
+      "main": [[{ "node": "Query Cases", "type": "main", "index": 0 }]]
+    },
+    "Query Cases": {
+      "main": [[{ "node": "Normalize Cases", "type": "main", "index": 0 }]]
+    },
+    "Normalize Cases": {
+      "main": [[{ "node": "Respond Cases", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "admin-cases-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "admin-cases",
+  "tags": []
+}

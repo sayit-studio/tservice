@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>活動報名</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">LINE 活動報名</p>
+          <h1>活動報名</h1>
+        </div>
+        <span class="status-pill" id="liffStatus">初始化</span>
+      </header>
+
+      <section class="notice" id="notice" hidden></section>
+
+      <form class="panel" id="registrationForm">
+        <div class="panel-head">
+          <h2 id="eventTitle">填寫報名資料</h2>
+          <p id="eventMeta">請確認資料正確，送出後服務團隊會收到報名資訊。</p>
+        </div>
+
+        <input type="hidden" name="eventId" id="eventId" />
+        <input type="hidden" name="lineUserId" id="lineUserId" />
+        <input type="hidden" name="lineDisplayName" id="lineDisplayName" />
+
+        <label class="field">
+          <span>姓名</span>
+          <input name="name" autocomplete="name" required maxlength="40" />
+        </label>
+
+        <label class="field">
+          <span>電話</span>
+          <input name="phone" inputmode="tel" autocomplete="tel" required maxlength="20" placeholder="09xxxxxxxx" />
+        </label>
+
+        <label class="field">
+          <span>同行人數</span>
+          <input name="companions" type="number" min="0" max="20" value="0" />
+        </label>
+
+        <label class="field">
+          <span>備註</span>
+          <textarea name="note" rows="4" maxlength="500" placeholder="可填寫特殊需求或補充說明"></textarea>
+        </label>
+
+        <div class="profile-box" id="profileBox" hidden>
+          <span>LINE 使用者</span>
+          <strong id="profileName"></strong>
+          <small id="profileId"></small>
+        </div>
+
+        <button class="primary-action" type="submit">送出報名</button>
+      </form>
+    </main>
+
+    <div class="complete-layer" id="completeLayer" hidden>
+      <section class="complete-box">
+        <h2>報名已送出</h2>
+        <p id="completeText">服務團隊已收到您的報名資料。</p>
+        <button class="primary-action" id="closeButton" type="button">關閉</button>
+      </section>
+    </div>
+
+    <script src="./config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

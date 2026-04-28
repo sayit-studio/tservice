@@ -1,0 +1,250 @@
+{
+  "name": "Public Legal Consultation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "legal-consultation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "public-legal-webhook",
+      "name": "Public Legal Consultation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-760, 0],
+      "webhookId": "legal-consultation"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "availability",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "availability"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "book",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "book"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "query",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "query"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "cancel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancel"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "public-legal-route",
+      "name": "Route Public Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [-540, 0]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2ccb3ad1d1cd8175aba6e21110f71145"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "public-legal-query-availability",
+      "name": "Query Legal DB For Availability",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-300, -260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Public Legal Consultation Webhook').first().json.body || {};\nconst targetDate = body.data?.appointmentDate;\nconst allSlots = ['15:00','15:15','15:30','15:45','16:00','16:15','16:30','16:45','17:00'];\nfunction prop(item, name) {\n  const p = item.json.properties?.[name];\n  if (!p) return item.json[name] ?? '';\n  if (p.type === 'date') return p.date?.start || '';\n  if (p.type === 'select') return p.select?.name || '';\n  if (p.type === 'title') return (p.title || []).map(v => v.plain_text || '').join('');\n  return item.json[name] ?? '';\n}\nconst bookedSlots = items\n  .filter(item => prop(item, '狀態') === 'confirmed')\n  .map(item => prop(item, '預約日期'))\n  .filter(value => value && value.startsWith(targetDate))\n  .map(value => value.slice(11, 16));\nreturn [{ json: { ok: true, availableSlots: allSlots.filter(slot => !bookedSlots.includes(slot)), bookedSlots } }];"
+      },
+      "id": "public-legal-build-availability",
+      "name": "Build Availability Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-60, -260]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "public-legal-respond-availability",
+      "name": "Respond Availability",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [180, -260]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: 'Booking branch needs Notion Create Page node field mapping and LINE credential setup before activation.' } }}",
+        "options": {
+          "responseCode": 501
+        }
+      },
+      "id": "public-legal-book-placeholder",
+      "name": "Book Placeholder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-300, -60]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: 'Query branch needs Notion lookup by 預約編號.' } }}",
+        "options": {
+          "responseCode": 501
+        }
+      },
+      "id": "public-legal-query-placeholder",
+      "name": "Query Placeholder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-300, 140]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: 'Cancel branch needs Notion update by 預約編號.' } }}",
+        "options": {
+          "responseCode": 501
+        }
+      },
+      "id": "public-legal-cancel-placeholder",
+      "name": "Cancel Placeholder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-300, 340]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: 'Unsupported action' } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "public-legal-fallback",
+      "name": "Respond Unsupported Public Action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-300, 540]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Public Legal Consultation Webhook": {
+      "main": [[{ "node": "Route Public Action", "type": "main", "index": 0 }]]
+    },
+    "Route Public Action": {
+      "main": [
+        [{ "node": "Query Legal DB For Availability", "type": "main", "index": 0 }],
+        [{ "node": "Book Placeholder", "type": "main", "index": 0 }],
+        [{ "node": "Query Placeholder", "type": "main", "index": 0 }],
+        [{ "node": "Cancel Placeholder", "type": "main", "index": 0 }],
+        [{ "node": "Respond Unsupported Public Action", "type": "main", "index": 0 }]
+      ]
+    },
+    "Query Legal DB For Availability": {
+      "main": [[{ "node": "Build Availability Response", "type": "main", "index": 0 }]]
+    },
+    "Build Availability Response": {
+      "main": [[{ "node": "Respond Availability", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "public-legal-consultation-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "public-legal-consultation",
+  "tags": []
+}

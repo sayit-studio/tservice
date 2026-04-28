@@ -1,0 +1,324 @@
+{
+  "name": "法律諮詢預約 - Notion 與 LINE Flex",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "legal-consultation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f4b1c31b-8f3a-4a38-9a1e-9197dba6f2c1",
+      "name": "接收 LIFF 表單",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-820, 0],
+      "webhookId": "legal-consultation"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "book",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "book"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "availability",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "availability"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "fc7fd4ab-1df0-4a07-8f48-7153f4e0b9d6",
+      "name": "依 action 分流",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [-600, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "appointment-id",
+              "name": "appointmentId",
+              "type": "string",
+              "value": "={{ 'LAW-' + $json.body.data.appointmentDate.replaceAll('-', '') + '-' + $now.toMillis().toString().slice(-3) }}"
+            },
+            {
+              "id": "name",
+              "name": "name",
+              "type": "string",
+              "value": "={{ $json.body.data.name }}"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "type": "string",
+              "value": "={{ $json.body.data.phone }}"
+            },
+            {
+              "id": "appointment-date",
+              "name": "appointmentDate",
+              "type": "string",
+              "value": "={{ $json.body.data.appointmentDate }}"
+            },
+            {
+              "id": "appointment-time",
+              "name": "appointmentTime",
+              "type": "string",
+              "value": "={{ $json.body.data.appointmentTime }}"
+            },
+            {
+              "id": "appointment-date-time",
+              "name": "appointmentDateTime",
+              "type": "string",
+              "value": "={{ $json.body.data.appointmentDate + 'T' + $json.body.data.appointmentTime + ':00+08:00' }}"
+            },
+            {
+              "id": "statement",
+              "name": "statement",
+              "type": "string",
+              "value": "={{ $json.body.data.statement }}"
+            },
+            {
+              "id": "team-target",
+              "name": "teamLineTarget",
+              "type": "string",
+              "value": "={{ $env.TEAM_LINE_TARGET || $json.body.teamLineTarget }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c0dfeb03-28df-4203-a6a3-407e4cf5c1b8",
+      "name": "整理預約資料",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-360, -120]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "350b3ad1d1cd803ba6eacedca95d3f0a",
+          "cachedResultName": "法律諮詢預約資料庫",
+          "cachedResultUrl": "https://www.notion.so/350b3ad1d1cd803ba6eacedca95d3f0a"
+        },
+        "title": "={{ $json.appointmentId }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "預約編號|title",
+              "title": "={{ $json.appointmentId }}"
+            },
+            {
+              "key": "姓名|rich_text",
+              "textContent": "={{ $json.name }}"
+            },
+            {
+              "key": "電話|phone_number",
+              "phoneValue": "={{ $json.phone }}"
+            },
+            {
+              "key": "預約日期|date",
+              "includeTime": true,
+              "date": "={{ $json.appointmentDateTime }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "狀態|select",
+              "selectValue": "confirmed"
+            },
+            {
+              "key": "事件陳述|rich_text",
+              "textContent": "={{ $json.statement }}"
+            },
+            {
+              "key": "建立時間|date",
+              "includeTime": true,
+              "date": "={{ $now.toISO() }}",
+              "timezone": "Asia/Taipei"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b3f14469-6b69-4ab2-a18a-b2e93b39c2c3",
+      "name": "新增 Notion 預約資料",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-120, -120],
+      "credentials": {
+        "notionApi": {
+          "id": "",
+          "name": "請選擇 Notion 憑證"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "line-target",
+              "name": "to",
+              "type": "string",
+              "value": "={{ $('整理預約資料').item.json.teamLineTarget }}"
+            },
+            {
+              "id": "line-flex-message",
+              "name": "messages",
+              "type": "array",
+              "value": "={{ [{ type: 'flex', altText: '新法律諮詢預約', contents: { type: 'bubble', size: 'mega', header: { type: 'box', layout: 'vertical', backgroundColor: '#1F6F5F', paddingAll: '16px', contents: [{ type: 'text', text: '新法律諮詢預約', color: '#FFFFFF', weight: 'bold', size: 'lg' }, { type: 'text', text: $('整理預約資料').item.json.appointmentId, color: '#DDF7EA', size: 'sm', margin: 'sm' }] }, body: { type: 'box', layout: 'vertical', spacing: 'md', contents: [{ type: 'text', text: $('整理預約資料').item.json.appointmentDate + ' ' + $('整理預約資料').item.json.appointmentTime, color: '#2FA084', weight: 'bold', size: 'xl', wrap: true }, { type: 'separator', margin: 'sm' }, { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [{ type: 'text', text: '姓名', color: '#5D716C', size: 'sm', flex: 3 }, { type: 'text', text: $('整理預約資料').item.json.name, color: '#17352F', size: 'sm', wrap: true, flex: 7 }] }, { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [{ type: 'text', text: '電話', color: '#5D716C', size: 'sm', flex: 3 }, { type: 'text', text: $('整理預約資料').item.json.phone, color: '#17352F', size: 'sm', wrap: true, flex: 7 }] }, { type: 'box', layout: 'horizontal', spacing: 'sm', contents: [{ type: 'text', text: '狀態', color: '#5D716C', size: 'sm', flex: 3 }, { type: 'text', text: 'confirmed', color: '#17352F', size: 'sm', wrap: true, flex: 7 }] }, { type: 'separator', margin: 'md' }, { type: 'text', text: '事件陳述', color: '#17352F', weight: 'bold', size: 'sm' }, { type: 'text', text: $('整理預約資料').item.json.statement || '未填寫', color: '#5D716C', size: 'sm', wrap: true }] } } }] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "eecfe17d-8d9b-45f5-bf32-d2347d247c34",
+      "name": "組合 LINE Flex 通知",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [120, -120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { to: $json.to, messages: $json.messages } }}",
+        "options": {}
+      },
+      "id": "2a34f7c5-80a4-48d4-8452-b2960d82d2dc",
+      "name": "LINE 推送 Flex 通知",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [360, -120],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "LINE Bearer Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, message: '預約已送出。預約編號：' + $('整理預約資料').item.json.appointmentId, appointmentId: $('整理預約資料').item.json.appointmentId } }}",
+        "options": {}
+      },
+      "id": "8f75998c-6065-40b7-9e10-585be9dadc69",
+      "name": "回傳預約成功",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [600, -120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, availableSlots: ['15:00', '15:15', '15:30', '15:45', '16:00', '16:15', '16:30', '16:45', '17:00'], bookedSlots: [] } }}",
+        "options": {}
+      },
+      "id": "ee8f7749-e123-42de-b9ac-659f3df6a00f",
+      "name": "回傳可預約時段",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-360, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: '目前此 action 尚未設定。' } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "0497f476-57fd-48e9-9c39-7eaa3097f792",
+      "name": "回傳未支援 action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-360, 340]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "接收 LIFF 表單": {
+      "main": [[{ "node": "依 action 分流", "type": "main", "index": 0 }]]
+    },
+    "依 action 分流": {
+      "main": [
+        [{ "node": "整理預約資料", "type": "main", "index": 0 }],
+        [{ "node": "回傳可預約時段", "type": "main", "index": 0 }],
+        [{ "node": "回傳未支援 action", "type": "main", "index": 0 }]
+      ]
+    },
+    "整理預約資料": {
+      "main": [[{ "node": "新增 Notion 預約資料", "type": "main", "index": 0 }]]
+    },
+    "新增 Notion 預約資料": {
+      "main": [[{ "node": "組合 LINE Flex 通知", "type": "main", "index": 0 }]]
+    },
+    "組合 LINE Flex 通知": {
+      "main": [[{ "node": "LINE 推送 Flex 通知", "type": "main", "index": 0 }]]
+    },
+    "LINE 推送 Flex 通知": {
+      "main": [[{ "node": "回傳預約成功", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e4fdfe4b-53e1-4855-858c-ec82046f8914",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "legal-consultation-notion-line-flex-no-code",
+  "tags": []
+}
