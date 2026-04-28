@@ -58,6 +58,34 @@
 
         <p class="availability-summary" id="availabilitySummary">選擇日期後會顯示可預約時段。</p>
 
+        <div class="grid-2">
+          <label class="field">
+            <span>&#x6cd5;&#x6276;&#x9805;&#x76ee;</span>
+            <select name="legalCategory" id="legalCategory" required>
+              <option value="">&#x8acb;&#x9078;&#x64c7;&#x6cd5;&#x6276;&#x9805;&#x76ee;</option>
+              <option>&#x6c11;&#x4e8b;</option>
+              <option>&#x5211;&#x4e8b;</option>
+              <option>&#x884c;&#x653f;&#x8a34;&#x8a1f;</option>
+              <option>&#x5bb6;&#x4e8b;</option>
+              <option>&#x52de;&#x8cc7;&#x7cfe;&#x7d1b;</option>
+              <option>&#x6d88;&#x8cbb;&#x7cfe;&#x7d1b;</option>
+              <option>&#x5f37;&#x5236;&#x57f7;&#x884c;</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>&#x7d30;&#x9805;</span>
+            <select name="legalItem" id="legalItem" required>
+              <option value="">&#x8acb;&#x5148;&#x9078;&#x64c7;&#x6cd5;&#x6276;&#x9805;&#x76ee;</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="field" id="legalOtherField" hidden>
+          <span>&#x5176;&#x5b83;&#x9805;&#x76ee;&#x88dc;&#x5145;</span>
+          <input name="legalOtherItem" maxlength="80" placeholder="&#x8acb;&#x88dc;&#x5145;&#x8aaa;&#x660e;&#x5176;&#x5b83;&#x9805;&#x76ee;&#x540d;&#x7a31;" />
+        </label>
+
         <label class="field">
           <span>簡單事件陳述</span>
           <textarea name="statement" rows="5" required maxlength="800" placeholder="請簡述需要諮詢的事件。"></textarea>

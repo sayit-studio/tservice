@@ -169,6 +169,13 @@ h1 {
   color: var(--muted);
 }
 
+.privacy-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
 .complete-layer {
   position: fixed;
   inset: 0;

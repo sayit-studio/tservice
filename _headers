@@ -8,4 +8,4 @@
 /zcy-staff-console-406/*
   X-Robots-Tag: noindex, nofollow, noarchive
   Cache-Control: no-store
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://drwu.zeabur.app; img-src 'self' data: https:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; connect-src https://drwu.zeabur.app; img-src 'self' data: https:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'

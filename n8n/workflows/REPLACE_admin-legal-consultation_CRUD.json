@@ -1,0 +1,607 @@
+{
+  "name": "Admin Legal Consultation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-legal-consultation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "admin-legal-consultation-webhook",
+      "name": "Admin Legal Consultation Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "legal.list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "legal.list"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "legal.create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "legal.create"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "legal.update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "legal.update"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "legal.delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "legal.delete"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "route-action",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2ccb3ad1d1cd8175aba6e21110f71145"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "query-legal-consultations",
+      "name": "Query Legal Consultations",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -420,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('?');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id, appointmentId: prop(item, '????'), name: prop(item, '??'), phone: prop(item, '??'), appointmentDate: prop(item, '????'), status: prop(item, '??'), statement: prop(item, '????'), createdAt: prop(item, '????'), cancelReason: prop(item, '????'), cancelledAt: prop(item, '????'), case1999: prop(item, '1999??'), category: prop(item, '????'), legalItem: prop(item, '????'), legalOtherItem: prop(item, '??????')\n})) } }];"
+      },
+      "id": "normalize-legal-consultations",
+      "name": "Normalize Legal Consultations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-legal-consultations",
+      "name": "Respond Legal Consultations",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Legal Consultation Webhook').first().json.body || {};\nconst data = body.data || {};\nconst owner = String(data.owner || '').trim();\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  title: String(data.title || data.name || data.appointmentId || '').trim(),\n  ownerRelations: owner ? [owner] : [],\n  now: new Date().toISOString()\n} }];"
+      },
+      "id": "prepare-create-legal-consultations",
+      "name": "Prepare Create Legal Consultations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2ccb3ad1d1cd8175aba6e21110f71145"
+        },
+        "title": "={{ $json.title || \"LAW-\" + Date.now() }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "????|title",
+              "title": "={{ $json.data.appointmentId }}"
+            },
+            {
+              "key": "??|rich_text",
+              "textContent": "={{ $json.data.name }}"
+            },
+            {
+              "key": "??|phone_number",
+              "phoneValue": "={{ $json.data.phone }}"
+            },
+            {
+              "key": "????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.appointmentDateTime || $json.data.appointmentDate }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "??|select",
+              "selectValue": "={{ $json.data.status }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.statement }}"
+            },
+            {
+              "key": "????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.createdAt }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.cancelReason || $json.data.reason }}"
+            },
+            {
+              "key": "????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.cancelledAt }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "1999??|rich_text",
+              "textContent": "={{ $json.data.case1999 }}"
+            },
+            {
+              "key": "????|select",
+              "selectValue": "={{ $json.data.legalCategory }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.legalItem }}"
+            },
+            {
+              "key": "??????|rich_text",
+              "textContent": "={{ $json.data.legalOtherItem }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-legal-consultations",
+      "name": "Create Legal Consultations",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -180,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: { id: $json.id }, page: $json } }}",
+        "options": {}
+      },
+      "id": "respond-create-legal-consultations",
+      "name": "Respond Create Legal Consultations",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Legal Consultation Webhook').first().json.body || {};\nconst data = body.data || {};\nconst owner = String(data.owner || '').trim();\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  title: String(data.title || data.name || data.appointmentId || '').trim(),\n  ownerRelations: owner ? [owner] : [],\n  now: new Date().toISOString()\n} }];"
+      },
+      "id": "prepare-update-legal-consultations",
+      "name": "Prepare Update Legal Consultations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "????|title",
+              "title": "={{ $json.data.appointmentId }}"
+            },
+            {
+              "key": "??|rich_text",
+              "textContent": "={{ $json.data.name }}"
+            },
+            {
+              "key": "??|phone_number",
+              "phoneValue": "={{ $json.data.phone }}"
+            },
+            {
+              "key": "????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.appointmentDateTime || $json.data.appointmentDate }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "??|select",
+              "selectValue": "={{ $json.data.status }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.statement }}"
+            },
+            {
+              "key": "????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.createdAt }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.cancelReason || $json.data.reason }}"
+            },
+            {
+              "key": "????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.cancelledAt }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "1999??|rich_text",
+              "textContent": "={{ $json.data.case1999 }}"
+            },
+            {
+              "key": "????|select",
+              "selectValue": "={{ $json.data.legalCategory }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.legalItem }}"
+            },
+            {
+              "key": "??????|rich_text",
+              "textContent": "={{ $json.data.legalOtherItem }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-legal-consultations",
+      "name": "Update Legal Consultations",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -180,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: { id: $json.id }, page: $json } }}",
+        "options": {}
+      },
+      "id": "respond-update-legal-consultations",
+      "name": "Respond Update Legal Consultations",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Legal Consultation Webhook').first().json.body || {};\nconst data = body.data || {};\nconst owner = String(data.owner || '').trim();\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  title: String(data.title || data.name || data.appointmentId || '').trim(),\n  ownerRelations: owner ? [owner] : [],\n  now: new Date().toISOString()\n} }];"
+      },
+      "id": "prepare-delete-legal-consultations",
+      "name": "Prepare Delete Legal Consultations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "archive",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "options": {}
+      },
+      "id": "archive-legal-consultations",
+      "name": "Archive Legal Consultations",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -180,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: { id: $json.id } } }}",
+        "options": {}
+      },
+      "id": "respond-delete-legal-consultations",
+      "name": "Respond Delete Legal Consultations",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: 'Unsupported action: ' + ($json.body?.action || '') } }}",
+        "options": {}
+      },
+      "id": "respond-unsupported-action",
+      "name": "Respond Unsupported Action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -420,
+        520
+      ]
+    }
+  ],
+  "connections": {
+    "Admin Legal Consultation Webhook": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Query Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Create Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Update Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Delete Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Unsupported Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Legal Consultations": {
+      "main": [
+        [
+          {
+            "node": "Normalize Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Legal Consultations": {
+      "main": [
+        [
+          {
+            "node": "Respond Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Create Legal Consultations": {
+      "main": [
+        [
+          {
+            "node": "Create Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Legal Consultations": {
+      "main": [
+        [
+          {
+            "node": "Respond Create Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Update Legal Consultations": {
+      "main": [
+        [
+          {
+            "node": "Update Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Legal Consultations": {
+      "main": [
+        [
+          {
+            "node": "Respond Update Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Delete Legal Consultations": {
+      "main": [
+        [
+          {
+            "node": "Archive Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive Legal Consultations": {
+      "main": [
+        [
+          {
+            "node": "Respond Delete Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "admin-legal-consultation-replace-crud-v1",
+  "id": "admin-legal-consultation",
+  "tags": []
+}

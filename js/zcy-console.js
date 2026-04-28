@@ -14,6 +14,8 @@
     legal: [],
     staff: [],
     selected: {},
+    calendarMode: "month",
+    calendarDate: "",
     modal: null,
     pageSize: 10,
     pages: {
@@ -49,6 +51,7 @@
     calendarGrid: document.getElementById("calendarGrid"),
     eventDetail: document.getElementById("eventDetail"),
     eventPager: document.getElementById("eventPager"),
+    calendarModeButtons: Array.from(document.querySelectorAll("[data-calendar-mode]")),
     legalTable: document.getElementById("legalTable"),
     legalDetail: document.getElementById("legalDetail"),
     legalPager: document.getElementById("legalPager"),
@@ -95,6 +98,32 @@
     return local.toISOString().slice(0, 16);
   }
 
+  function dateKeyFromDate(date) {
+    return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+  }
+
+  function parseDateKey(value) {
+    const parts = String(value || "").split("-").map(Number);
+    if (parts.length < 3 || parts.some(Number.isNaN)) return new Date();
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+
+  function visibleCalendarDays(year, month) {
+    if (!state.calendarDate) state.calendarDate = dateKeyFromDate(new Date(year, month - 1, 1));
+    const selected = parseDateKey(state.calendarDate);
+    if (state.calendarMode === "day") return [selected];
+    if (state.calendarMode === "week") {
+      const start = new Date(selected);
+      start.setDate(selected.getDate() - selected.getDay());
+      return Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        return date;
+      });
+    }
+    return Array.from({ length: new Date(year, month, 0).getDate() }, (_, index) => new Date(year, month - 1, index + 1));
+  }
+
   function formatDateTime(value) {
     if (!value) return "未設定";
     const date = new Date(value);
@@ -106,6 +135,13 @@
       hour: "2-digit",
       minute: "2-digit"
     }).format(date);
+  }
+
+  function formatTime(value) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat("zh-TW", { hour: "2-digit", minute: "2-digit" }).format(date);
   }
 
   function staffOptions(selected) {
@@ -124,6 +160,16 @@
       const label = typeof item === "string" ? item : item.label;
       return `<option value="${escapeHtml(value)}" ${String(selected || "") === String(value) ? "selected" : ""}>${escapeHtml(label)}</option>`;
     }).join("");
+  }
+
+  function categoryTone(value) {
+    const text = String(value || "");
+    if (text.includes("?") || text.includes("??")) return "community";
+    if (text.includes("?") || text.includes("??")) return "legal";
+    if (text.includes("??") || text.includes("??")) return "service";
+    if (text.includes("??") || text.includes("??")) return "meeting";
+    if (text.includes("??") || text.includes("??")) return "festival";
+    return "default";
   }
 
   function badge(status, type) {
@@ -243,6 +289,37 @@
     renderAll();
   }
 
+  function currentView() {
+    return document.querySelector(".nav-item.is-active")?.dataset.view || "cases";
+  }
+
+  async function refreshCurrentView() {
+    const view = currentView();
+    els.syncStatus.textContent = "\u540c\u6b65\u4e2d";
+    if (view === "cases") {
+      const cases = await AdminApi.listCases();
+      state.cases = Array.isArray(cases) ? cases : [];
+      renderCases();
+    }
+    if (view === "events") {
+      const events = await AdminApi.listEvents();
+      state.events = Array.isArray(events) ? events : [];
+      renderEvents();
+    }
+    if (view === "legal") {
+      const legal = await AdminApi.listLegalConsultations();
+      state.legal = Array.isArray(legal) ? legal : [];
+      renderLegal();
+    }
+    if (view === "staff") {
+      const staff = await AdminApi.listStaff();
+      state.staff = Array.isArray(staff) ? staff : [];
+      renderStaff();
+    }
+    els.syncStatus.textContent = "\u5df2\u540c\u6b65";
+    writeCache();
+  }
+
   function renderAll() {
     renderCases();
     renderEvents();
@@ -292,39 +369,43 @@
   function renderEvents() {
     if (!els.eventMonth.value) {
       const now = new Date();
-      els.eventMonth.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      els.eventMonth.value = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
     }
-    const [year, month] = els.eventMonth.value.split("-").map(Number);
-    const first = new Date(year, month - 1, 1);
-    const days = new Date(year, month, 0).getDate();
-    const leading = first.getDay();
-    const labels = ["日", "一", "二", "三", "四", "五", "六"];
+    const parts = els.eventMonth.value.split("-").map(Number);
+    const year = parts[0];
+    const month = parts[1];
+    const monthKey = year + "-" + String(month).padStart(2, "0");
+    if (!state.calendarDate || !state.calendarDate.startsWith(monthKey)) state.calendarDate = monthKey + "-01";
+    const labels = ["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"];
     const status = els.eventStatusFilter.value;
-    let html = labels.map((label) => `<div class="calendar-head">${label}</div>`).join("");
-    for (let i = 0; i < leading; i += 1) html += `<div class="calendar-day"></div>`;
-    for (let day = 1; day <= days; day += 1) {
-      const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const filtered = state.events.filter((item) => !status || item.status === status);
-      const { pageItems } = paginate(filtered, "events");
-      const events = pageItems.filter((item) => String(item.date || "").startsWith(dateKey));
-      html += `
-        <div class="calendar-day">
-          <span class="day-number">${day}</span>
-          ${events.map((event) => `
-            <button class="event-chip" type="button" data-event-id="${escapeHtml(event.id)}" data-status="${escapeHtml(event.status || "")}">
-              ${escapeHtml(event.title || "未命名活動")}<br />${escapeHtml(event.community || event.venue || "")}
-            </button>
-          `).join("")}
-        </div>
-      `;
+    const scopedEvents = state.events.filter((item) => {
+      const date = String(item.date || item.startDate || "");
+      if (state.calendarMode === "month") return date.startsWith(monthKey) && (!status || item.status === status);
+      return (!status || item.status === status);
+    });
+    const days = visibleCalendarDays(year, month);
+    els.calendarGrid.dataset.mode = state.calendarMode;
+    let html = labels.map((label) => '<div class="calendar-head">' + label + '</div>').join("");
+    if (state.calendarMode === "month") {
+      const leading = new Date(year, month - 1, 1).getDay();
+      for (let i = 0; i < leading; i += 1) html += '<div class="calendar-day is-empty is-padding"></div>';
     }
+    days.forEach((date) => {
+      const dateKey = dateKeyFromDate(date);
+      const events = scopedEvents.filter((item) => String(item.date || item.startDate || "").startsWith(dateKey));
+      const dayClass = events.length ? "has-events" : "is-empty";
+      const selectedClass = state.calendarDate === dateKey ? " is-selected-day" : "";
+      html += '<div class="calendar-day ' + dayClass + selectedClass + '" data-date="' + dateKey + '"><button class="day-number" type="button" data-date="' + dateKey + '">' + date.getDate() + '</button>' + events.map((event) => {
+        const category = event.category || event.type || event.status || "";
+        return '<button class="event-chip" type="button" data-event-id="' + escapeHtml(event.id) + '" data-status="' + escapeHtml(event.status || "") + '" data-category-tone="' + escapeHtml(categoryTone(category)) + '"><strong>' + escapeHtml(event.title || "\u672a\u547d\u540d\u6d3b\u52d5") + '</strong><small>' + escapeHtml([formatTime(event.date), event.community || event.venue || ""].filter(Boolean).join(" \\u00b7 ")) + '</small></button>';
+      }).join("") + '</div>';
+    });
     els.calendarGrid.innerHTML = html;
-    const filtered = state.events.filter((item) => !status || item.status === status);
-    const { pageItems, totalPages } = paginate(filtered, "events");
-    renderPager(els.eventPager, "events", filtered.length, totalPages);
-    const selected = pageItems.find((item) => item.id === state.selected.eventId) || pageItems[0];
+    const visibleEvents = scopedEvents.filter((item) => days.some((date) => String(item.date || item.startDate || "").startsWith(dateKeyFromDate(date))));
+    els.eventPager.innerHTML = '<span>' + (state.calendarMode === "month" ? "\u672c\u6708" : state.calendarMode === "week" ? "\u672c\u9031" : "\u672c\u65e5") + '\u6d3b\u52d5 ' + visibleEvents.length + ' \u7b46</span>';
+    const selected = visibleEvents.find((item) => item.id === state.selected.eventId) || visibleEvents[0];
     if (selected) showEvent(selected.id);
-    if (!selected) els.eventDetail.innerHTML = detail("尚無活動", [{ label: "提示", value: "請新增活動或切換月份。" }]);
+    if (!selected) els.eventDetail.innerHTML = detail("\u76ee\u524d\u6c92\u6709\u6d3b\u52d5", [{ label: "\u63d0\u793a", value: "\u8acb\u78ba\u8a8d\u6708\u4efd\u3001\u72c0\u614b\u7be9\u9078\uff0c\u6216\u65b0\u589e\u6d3b\u52d5\u3002" }]);
   }
 
   function showEvent(id) {
@@ -457,7 +538,7 @@
     await state.modal.onSubmit(formObject(event.currentTarget));
     clearCache();
     closeModal();
-    await loadAll({ force: true });
+    await refreshCurrentView();
   }
 
   function openCaseForm(item = {}) {
@@ -475,6 +556,21 @@
     ], (data) => AdminApi.saveCase({ ...item, ...data }), item.id ? () => deleteItem("case", item.id) : null);
   }
 
+  async function saveEventWithRegistration(item, data) {
+    const enabled = data.registrationEnabled === "true" || data.registrationEnabled === true;
+    const payload = { ...item, ...data };
+    if (!enabled) {
+      payload.registrationUrl = "";
+    }
+    const saved = await AdminApi.saveEvent(payload);
+    const savedItem = saved && typeof saved === "object" ? { ...payload, ...saved } : payload;
+    const id = savedItem.id || item.id;
+    if (enabled && id && !savedItem.registrationUrl) {
+      await AdminApi.saveEvent({ ...savedItem, id, registrationEnabled: "true", registrationUrl: buildEventRegistrationUrl(id) });
+    }
+    return saved;
+  }
+
   function openEventForm(item = {}) {
     openModal(item.id ? "編輯活動" : "新增活動", [
       { name: "title", label: "活動主題", value: item.title, wide: true },
@@ -486,13 +582,13 @@
       { name: "expectedPeople", label: "人數預計", type: "number", value: item.expectedPeople },
       { name: "contact", label: "活動聯絡人", value: item.contact },
       { name: "phone", label: "聯絡人電話", value: item.phone },
-      { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "false", label: "不開放" }, { value: "true", label: "開放報名" }], String(item.registrationEnabled === true ? "true" : item.registrationEnabled || "false")) },
+      { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "false", label: "不開放報名" }, { value: "true", label: "綁定預設活動報名表單" }], String(item.registrationEnabled === true ? "true" : item.registrationEnabled || "false")) },
       { name: "registrationDeadline", label: "報名截止時間", type: "datetime-local", value: datetimeForInput(item.registrationDeadline) },
       { name: "registrationLimit", label: "報名名額上限", type: "number", value: item.registrationLimit },
       { name: "registrationUrl", label: "報名表單網址", value: item.registrationUrl || buildEventRegistrationUrl(item.id), wide: true },
       { name: "registrationNote", label: "報名注意事項", type: "textarea", value: item.registrationNote },
       { name: "detail", label: "活動詳情", type: "textarea", value: item.detail }
-    ], (data) => AdminApi.saveEvent({ ...item, ...data }), item.id ? () => deleteItem("event", item.id) : null);
+    ], (data) => saveEventWithRegistration(item, data), item.id ? () => deleteItem("event", item.id) : null);
   }
 
   function openEventRegistrationForm(item = {}) {
@@ -508,7 +604,7 @@
       { name: "registrationLimit", label: "報名名額上限", type: "number", value: item.registrationLimit },
       { name: "registrationUrl", label: "報名表單網址", value: registrationUrl, wide: true },
       { name: "registrationNote", label: "報名注意事項", type: "textarea", value: item.registrationNote }
-    ], (data) => AdminApi.saveEvent({ ...item, ...data, registrationEnabled: data.registrationEnabled || "true" }), null);
+    ], (data) => saveEventWithRegistration(item, { ...data, registrationEnabled: data.registrationEnabled || "true" }), null);
   }
 
   function buildEventRegistrationUrl(eventId) {
@@ -551,7 +647,7 @@
     if (type === "staff") await AdminApi.deleteStaff(id);
     clearCache();
     closeModal();
-    await loadAll({ force: true });
+    await refreshCurrentView();
   }
 
   function handleDetailClick(event) {
@@ -628,6 +724,7 @@
     els.modalForm.addEventListener("submit", submitModal);
     [els.caseDetail, els.eventDetail, els.legalDetail].forEach((node) => node.addEventListener("click", handleDetailClick));
     els.navItems.forEach((item) => item.addEventListener("click", () => switchView(item.dataset.view)));
+    els.calendarModeButtons.forEach((button) => button.addEventListener("click", () => { state.calendarMode = button.dataset.calendarMode || "month"; els.calendarModeButtons.forEach((item) => item.classList.toggle("is-active", item === button)); renderEvents(); }));
     [els.caseSearch, els.caseStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("cases"); renderCases(); }));
     [els.eventMonth, els.eventStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("events"); renderEvents(); }));
     [els.legalSearch, els.legalStatusFilter, els.legalCategoryFilter].forEach((el) => el.addEventListener("input", () => { resetPage("legal"); renderLegal(); }));

@@ -18,6 +18,20 @@
   const tabs = Array.from(document.querySelectorAll(".mode-tab"));
   const forms = Array.from(document.querySelectorAll("[data-form]"));
 
+  const LEGAL_ITEM_MAP = {
+    "\u6c11\u4e8b": ["\u6c11\u4e8b\uff1a\u8eca\u798d", "\u6c11\u4e8b\uff1a\u50b5\u6b0a\u50b5\u52d9", "\u6c11\u4e8b\uff1a\u4e0d\u52d5\u7522", "\u6c11\u4e8b\uff1a\u5408\u7d04\u7cfe\u7d1b", "\u6c11\u4e8b\uff1a\u5176\u5b83"],
+    "\u5211\u4e8b": ["\u5211\u4e8b\uff1a\u8a50\u6b3a", "\u5211\u4e8b\uff1a\u80cc\u4fe1", "\u5211\u4e8b\uff1a\u507d\u9020\u6587\u66f8", "\u5211\u4e8b\uff1a\u6bd2\u54c1", "\u5211\u4e8b\uff1a\u59a8\u7919\u81ea\u7531", "\u5211\u4e8b\uff1a\u5176\u5b83"],
+    "\u884c\u653f\u8a34\u8a1f": ["\u884c\u653f\u8a34\u8a1f\uff1a\u4ea4\u901a\u88c1\u7f70", "\u884c\u653f\u8a34\u8a1f\uff1a\u7a05\u52d9", "\u884c\u653f\u8a34\u8a1f\uff1a\u570b\u8ce0", "\u884c\u653f\u8a34\u8a1f\uff1a\u516c\u52d9\u54e1\u7533\u8a34", "\u884c\u653f\u8a34\u8a1f\uff1a\u5176\u5b83"],
+    "\u5bb6\u4e8b": ["\u5bb6\u4e8b\uff1a\u96e2\u5a5a", "\u5bb6\u4e8b\uff1a\u76e3\u8b77\u6b0a", "\u5bb6\u4e8b\uff1a\u7e7c\u627f", "\u5bb6\u4e8b\uff1a\u89aa\u5b50\u7cfe\u7d1b", "\u5bb6\u4e8b\uff1a\u5176\u5b83"],
+    "\u52de\u8cc7\u7cfe\u7d1b": ["\u52de\u8cc7\u7cfe\u7d1b\uff1a\u8077\u696d\u50b7\u5bb3", "\u52de\u8cc7\u7cfe\u7d1b\uff1a\u85aa\u8cc7", "\u52de\u8cc7\u7cfe\u7d1b\uff1a\u8077\u707d", "\u52de\u8cc7\u7cfe\u7d1b\uff1a\u5176\u5b83"],
+    "\u6d88\u8cbb\u7cfe\u7d1b": ["\u6d88\u8cbb\u7cfe\u7d1b\uff1a\u7db2\u8def\u8cfc\u7269", "\u6d88\u8cbb\u7cfe\u7d1b\uff1a\u79df\u8cc3\u5408\u7d04", "\u6d88\u8cbb\u7cfe\u7d1b\uff1a\u91ab\u7642\u7cfe\u7d1b"],
+    "\u5f37\u5236\u57f7\u884c": ["\u5f37\u5236\u57f7\u884c\uff1a\u8072\u8acb\u5047\u6263\u62bc", "\u5f37\u5236\u57f7\u884c\uff1a\u5047\u8655\u5206", "\u5f37\u5236\u57f7\u884c\uff1a\u8655\u7406\u50b5\u52d9\u6e05\u511f", "\u5f37\u5236\u57f7\u884c\uff1a\u5176\u5b83"]
+  };
+
+  const legalCategory = document.getElementById("legalCategory");
+  const legalItem = document.getElementById("legalItem");
+  const legalOtherField = document.getElementById("legalOtherField");
+
   const actionLabels = {
     book: "立即預約",
     query: "預約資訊查詢",
@@ -189,6 +203,20 @@
     refreshTimeOptions();
   }
 
+  function updateLegalItems() {
+    if (!legalCategory || !legalItem) return;
+    const items = LEGAL_ITEM_MAP[legalCategory.value] || [];
+    legalItem.innerHTML = "";
+    legalItem.append(new Option(items.length ? "\u8acb\u9078\u64c7\u7d30\u9805" : "\u8acb\u5148\u9078\u64c7\u6cd5\u6276\u9805\u76ee", ""));
+    items.forEach((item) => legalItem.append(new Option(item, item)));
+    if (legalOtherField) legalOtherField.hidden = true;
+  }
+
+  function toggleLegalOther() {
+    if (!legalOtherField || !legalItem) return;
+    legalOtherField.hidden = !legalItem.value.includes("??");
+  }
+
   function formToObject(form) {
     const data = new FormData(form);
     return Object.fromEntries(Array.from(data.entries()).map(([key, value]) => [key, String(value).trim()]));
@@ -197,6 +225,9 @@
   function validatePayload(payload, mode) {
     if (mode === "book" && !isWeekday(payload.appointmentDate)) {
       return "預約日期僅開放週一至週五。";
+    }
+    if (mode === "book" && (!payload.legalCategory || !payload.legalItem)) {
+      return "???????????";
     }
     if (mode === "book") {
       const availability = state.availabilityByDate[payload.appointmentDate];
@@ -327,8 +358,11 @@
   });
 
   appointmentDate.addEventListener("change", refreshTimeOptions);
+  if (legalCategory) legalCategory.addEventListener("change", updateLegalItems);
+  if (legalItem) legalItem.addEventListener("change", toggleLegalOther);
   closeButton.addEventListener("click", closeLiffWindow);
 
+  updateLegalItems();
   setupBookingCalendar();
   setMode(state.mode);
   initLiff();

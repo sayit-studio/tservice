@@ -1,0 +1,619 @@
+{
+  "name": "Admin Events",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-events",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "admin-events-webhook",
+      "name": "Admin Events Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "events.list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "events.list"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "events.create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "events.create"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "events.update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "events.update"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "events.delete",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "events.delete"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "route-action",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2cab3ad1d1cd804aa922caf1a7621f78"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "query-events",
+      "name": "Query Events",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -420,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('?');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  title: prop(item, '????'), date: prop(item, '????'), status: prop(item, '????'), owner: prop(item, '????'), ownerName: prop(item, '????'), community: prop(item, '????'), venue: prop(item, '????'), expectedPeople: prop(item, '????'), contact: prop(item, '?????'), phone: prop(item, '???????'), registrationEnabled: prop(item, '????'), registrationDeadline: prop(item, '??????'), registrationLimit: prop(item, '??????'), registrationUrl: prop(item, '??????'), registrationNote: prop(item, '??????'), detail: prop(item, '????')\n})) } }];"
+      },
+      "id": "normalize-events",
+      "name": "Normalize Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-events",
+      "name": "Respond Events",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Events Webhook').first().json.body || {};\nconst data = body.data || {};\nconst owner = String(data.owner || '').trim();\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  title: String(data.title || data.name || data.appointmentId || '').trim(),\n  ownerRelations: owner ? [owner] : [],\n  now: new Date().toISOString()\n} }];"
+      },
+      "id": "prepare-create-events",
+      "name": "Prepare Create Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2cab3ad1d1cd804aa922caf1a7621f78"
+        },
+        "title": "={{ $json.title || \"?????\" }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "????|title",
+              "title": "={{ $json.data.title }}"
+            },
+            {
+              "key": "????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.date }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "????|select",
+              "selectValue": "={{ $json.data.status }}"
+            },
+            {
+              "key": "????|relation",
+              "relationValue": "={{ $json.ownerRelations }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.community }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.venue }}"
+            },
+            {
+              "key": "????|number",
+              "numberValue": "={{ $json.data.expectedPeople }}"
+            },
+            {
+              "key": "?????|rich_text",
+              "textContent": "={{ $json.data.contact }}"
+            },
+            {
+              "key": "???????|rich_text",
+              "textContent": "={{ $json.data.phone }}"
+            },
+            {
+              "key": "????|select",
+              "selectValue": "={{ $json.data.registrationEnabled }}"
+            },
+            {
+              "key": "??????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.registrationDeadline }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "??????|number",
+              "numberValue": "={{ $json.data.registrationLimit }}"
+            },
+            {
+              "key": "??????|rich_text",
+              "textContent": "={{ $json.data.registrationUrl }}"
+            },
+            {
+              "key": "??????|rich_text",
+              "textContent": "={{ $json.data.registrationNote }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.detail }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-events",
+      "name": "Create Events",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -180,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: { id: $json.id }, page: $json } }}",
+        "options": {}
+      },
+      "id": "respond-create-events",
+      "name": "Respond Create Events",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Events Webhook').first().json.body || {};\nconst data = body.data || {};\nconst owner = String(data.owner || '').trim();\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  title: String(data.title || data.name || data.appointmentId || '').trim(),\n  ownerRelations: owner ? [owner] : [],\n  now: new Date().toISOString()\n} }];"
+      },
+      "id": "prepare-update-events",
+      "name": "Prepare Update Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "????|title",
+              "title": "={{ $json.data.title }}"
+            },
+            {
+              "key": "????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.date }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "????|select",
+              "selectValue": "={{ $json.data.status }}"
+            },
+            {
+              "key": "????|relation",
+              "relationValue": "={{ $json.ownerRelations }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.community }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.venue }}"
+            },
+            {
+              "key": "????|number",
+              "numberValue": "={{ $json.data.expectedPeople }}"
+            },
+            {
+              "key": "?????|rich_text",
+              "textContent": "={{ $json.data.contact }}"
+            },
+            {
+              "key": "???????|rich_text",
+              "textContent": "={{ $json.data.phone }}"
+            },
+            {
+              "key": "????|select",
+              "selectValue": "={{ $json.data.registrationEnabled }}"
+            },
+            {
+              "key": "??????|date",
+              "includeTime": true,
+              "date": "={{ $json.data.registrationDeadline }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "??????|number",
+              "numberValue": "={{ $json.data.registrationLimit }}"
+            },
+            {
+              "key": "??????|rich_text",
+              "textContent": "={{ $json.data.registrationUrl }}"
+            },
+            {
+              "key": "??????|rich_text",
+              "textContent": "={{ $json.data.registrationNote }}"
+            },
+            {
+              "key": "????|rich_text",
+              "textContent": "={{ $json.data.detail }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-events",
+      "name": "Update Events",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -180,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: { id: $json.id }, page: $json } }}",
+        "options": {}
+      },
+      "id": "respond-update-events",
+      "name": "Respond Update Events",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Events Webhook').first().json.body || {};\nconst data = body.data || {};\nconst owner = String(data.owner || '').trim();\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  title: String(data.title || data.name || data.appointmentId || '').trim(),\n  ownerRelations: owner ? [owner] : [],\n  now: new Date().toISOString()\n} }];"
+      },
+      "id": "prepare-delete-events",
+      "name": "Prepare Delete Events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "archive",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "options": {}
+      },
+      "id": "archive-events",
+      "name": "Archive Events",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -180,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: { id: $json.id } } }}",
+        "options": {}
+      },
+      "id": "respond-delete-events",
+      "name": "Respond Delete Events",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: 'Unsupported action: ' + ($json.body?.action || '') } }}",
+        "options": {}
+      },
+      "id": "respond-unsupported-action",
+      "name": "Respond Unsupported Action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -420,
+        520
+      ]
+    }
+  ],
+  "connections": {
+    "Admin Events Webhook": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Query Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Create Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Update Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Delete Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Unsupported Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Events": {
+      "main": [
+        [
+          {
+            "node": "Normalize Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Events": {
+      "main": [
+        [
+          {
+            "node": "Respond Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Create Events": {
+      "main": [
+        [
+          {
+            "node": "Create Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Events": {
+      "main": [
+        [
+          {
+            "node": "Respond Create Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Update Events": {
+      "main": [
+        [
+          {
+            "node": "Update Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Events": {
+      "main": [
+        [
+          {
+            "node": "Respond Update Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Delete Events": {
+      "main": [
+        [
+          {
+            "node": "Archive Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive Events": {
+      "main": [
+        [
+          {
+            "node": "Respond Delete Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "admin-events-replace-crud-v1",
+  "id": "admin-events",
+  "tags": []
+}
