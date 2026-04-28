@@ -15,7 +15,8 @@
       "position": [
         -980,
         0
-      ]
+      ],
+      "webhookId": "admin-auth-staff"
     },
     {
       "parameters": {
@@ -187,11 +188,17 @@
       "position": [
         -520,
         -300
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('?');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nconst body = $('Admin Auth Staff Webhook').first().json.body || {};\nconst account = String(body.account || '').trim();\nconst password = String(body.password || '').trim();\nconst users = items.map(item => ({\n  id: item.json.id,\n  name: prop(item, ['????', '??', 'Name', 'name']),\n  account: prop(item, ['??', '??', 'account', 'Account']),\n  password: prop(item, ['??', '??', 'password', 'Password']),\n  role: prop(item, ['????', '??', '????', 'role', 'Role']) || prop(item, ['??', '??', 'identity', 'Identity']),\n  identity: prop(item, ['??', '??', 'identity', 'Identity']),\n  permissions: prop(item, ['????', '??', 'permissions'])\n}));\nconst user = users.find(u => u.account === account && u.password === password);\nif (!user) return [{ json: { ok: false, statusCode: 401, message: '???????', checkedAccounts: users.map(u => u.account).filter(Boolean) } }];\nconst role = user.role || user.identity || '';\nconst all = role === '???' || role === '???' || user.permissions === '???';\nreturn [{ json: { ok: true, id: user.id, name: user.name, account: user.account, role, identity: user.identity, permissions: all ? ['all'] : ['cases', 'events', 'legal'] } }];"
+        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nconst body = $('Admin Auth Staff Webhook').first().json.body || {};\nconst account = String(body.account || '').trim();\nconst password = String(body.password || '').trim();\nconst users = items.map(item => ({\n  id: item.json.id,\n  name: prop(item, ['人員名稱', '姓名', 'Name', 'name']),\n  account: prop(item, ['帳號', 'account', 'Account']),\n  password: prop(item, ['密碼', 'password', 'Password']),\n  role: prop(item, ['權限設定', '身分', '權限', 'role', 'Role']) || prop(item, ['身分', '角色', 'identity', 'Identity']),\n  identity: prop(item, ['身分', '角色', 'identity', 'Identity']),\n  permissions: prop(item, ['權限設定', '權限', 'permissions'])\n}));\nconst user = users.find(u => u.account === account && u.password === password);\nif (!user) return [{ json: { ok: false, statusCode: 401, message: '帳號或密碼錯誤', checkedAccounts: users.map(u => u.account).filter(Boolean) } }];\nconst role = user.role || user.identity || '';\nconst all = role === '管理者' || role === '管理員' || user.permissions === '全部';\nreturn [{ json: { ok: true, id: user.id, name: user.name, account: user.account, role, identity: user.identity, permissions: all ? ['all'] : ['cases', 'events', 'legal'] } }];"
       },
       "id": "validate-login",
       "name": "Validate Login",
@@ -236,11 +243,17 @@
       "position": [
         -520,
         -120
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('?');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  name: prop(item, ['????', '??', 'Name', 'name']),\n  account: prop(item, ['??', '??', 'account', 'Account']),\n  password: prop(item, ['??', '??', 'password', 'Password']),\n  identity: prop(item, ['??', '??', 'identity', 'Identity']),\n  permissions: prop(item, ['????', '??', 'permissions'])\n})) } }];"
+        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  name: prop(item, ['人員名稱', '姓名', 'Name', 'name']),\n  account: prop(item, ['帳號', 'account', 'Account']),\n  password: prop(item, ['密碼', 'password', 'Password']),\n  identity: prop(item, ['身分', '角色', 'identity', 'Identity']),\n  permissions: prop(item, ['權限設定', '權限', 'permissions'])\n})) } }];"
       },
       "id": "normalize-staff-list",
       "name": "Normalize Staff List",
@@ -287,27 +300,27 @@
           "mode": "id",
           "value": "350b3ad1d1cd801797a7dcf6f06c7f13"
         },
-        "title": "={{ $json.data.name || $json.data.account || \"?????\" }}",
+        "title": "={{ $json.data.name || $json.data.account || \"未命名\" }}",
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "????|title",
+              "key": "人員名稱|title",
               "title": "={{ $json.data.name }}"
             },
             {
-              "key": "??|rich_text",
+              "key": "帳號|rich_text",
               "textContent": "={{ $json.data.account }}"
             },
             {
-              "key": "??|rich_text",
+              "key": "密碼|rich_text",
               "textContent": "={{ $json.data.password }}"
             },
             {
-              "key": "????|select",
+              "key": "權限設定|select",
               "selectValue": "={{ $json.data.permissions }}"
             },
             {
-              "key": "??|select",
+              "key": "身分|select",
               "selectValue": "={{ $json.data.identity }}"
             }
           ]
@@ -321,7 +334,13 @@
       "position": [
         -220,
         120
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
@@ -363,23 +382,23 @@
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "????|title",
+              "key": "人員名稱|title",
               "title": "={{ $json.data.name }}"
             },
             {
-              "key": "??|rich_text",
+              "key": "帳號|rich_text",
               "textContent": "={{ $json.data.account }}"
             },
             {
-              "key": "??|rich_text",
+              "key": "密碼|rich_text",
               "textContent": "={{ $json.data.password }}"
             },
             {
-              "key": "????|select",
+              "key": "權限設定|select",
               "selectValue": "={{ $json.data.permissions }}"
             },
             {
-              "key": "??|select",
+              "key": "身分|select",
               "selectValue": "={{ $json.data.identity }}"
             }
           ]
@@ -393,7 +412,13 @@
       "position": [
         -220,
         280
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
@@ -441,7 +466,13 @@
       "position": [
         -220,
         440
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
@@ -477,11 +508,17 @@
       "position": [
         -520,
         600
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('?');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  name: prop(item, ['????', '??', 'Name', 'name']),\n  account: prop(item, ['??', '??', 'account', 'Account']),\n  password: prop(item, ['??', '??', 'password', 'Password']),\n  identity: prop(item, ['??', '??', 'identity', 'Identity']),\n  permissions: prop(item, ['????', '??', 'permissions'])\n})) } }];"
+        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  name: prop(item, ['人員名稱', '姓名', 'Name', 'name']),\n  account: prop(item, ['帳號', 'account', 'Account']),\n  password: prop(item, ['密碼', 'password', 'Password']),\n  identity: prop(item, ['身分', '角色', 'identity', 'Identity']),\n  permissions: prop(item, ['權限設定', '權限', 'permissions'])\n})) } }];"
       },
       "id": "build-staff-debug",
       "name": "Build Staff Debug",

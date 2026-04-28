@@ -1,6 +1,12 @@
 (function () {
   const config = window.ADMIN_CONFIG || {};
 
+  function readableErrorMessage(message, fallback) {
+    const text = String(message || "").trim();
+    if (!text || /^\?+$/.test(text)) return fallback;
+    return text;
+  }
+
   async function post(endpoint, payload) {
     if (!config.webhookBaseUrl) {
       throw new Error("尚未設定 n8n webhookBaseUrl");
@@ -11,8 +17,8 @@
       body: JSON.stringify(payload || {})
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || "n8n 請求失敗");
-    if (body && body.ok === false) throw new Error(body.message || "n8n 回傳失敗");
+    if (!response.ok) throw new Error(readableErrorMessage(body.message, "帳號或密碼錯誤"));
+    if (body && body.ok === false) throw new Error(readableErrorMessage(body.message, "n8n 回傳失敗"));
     return body.data || body;
   }
 
