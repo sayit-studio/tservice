@@ -15,7 +15,8 @@
       "position": [
         -900,
         0
-      ]
+      ],
+      "webhookId": "admin-events"
     },
     {
       "parameters": {
@@ -143,11 +144,17 @@
       "position": [
         -420,
         -260
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('?');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  title: prop(item, '????'), date: prop(item, '????'), status: prop(item, '????'), owner: prop(item, '????'), ownerName: prop(item, '????'), community: prop(item, '????'), venue: prop(item, '????'), expectedPeople: prop(item, '????'), contact: prop(item, '?????'), phone: prop(item, '???????'), registrationEnabled: prop(item, '????'), registrationDeadline: prop(item, '??????'), registrationLimit: prop(item, '??????'), registrationUrl: prop(item, '??????'), registrationNote: prop(item, '??????'), detail: prop(item, '????')\n})) } }];"
+        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  title: prop(item, ['活動主題', 'title', 'Name']),\n  date: prop(item, ['活動日期時間', '活動日期']),\n  status: prop(item, ['活動狀態', '狀態']),\n  owner: prop(item, ['負責人員']),\n  ownerName: prop(item, ['負責人員']),\n  community: prop(item, ['社區名稱']),\n  venue: prop(item, ['活動場地']),\n  expectedPeople: prop(item, ['人數預計']),\n  contact: prop(item, ['活動聯絡人']),\n  phone: prop(item, ['聯絡人電話']),\n  registrationEnabled: prop(item, ['報名表單']),\n  registrationDeadline: prop(item, ['報名截止時間']),\n  registrationLimit: prop(item, ['報名名額上限']),\n  registrationUrl: prop(item, ['報名表單網址']),\n  registrationNote: prop(item, ['報名注意事項']),\n  detail: prop(item, ['活動詳情'])\n})) } }];"
       },
       "id": "normalize-events",
       "name": "Normalize Events",
@@ -194,71 +201,71 @@
           "mode": "id",
           "value": "2cab3ad1d1cd804aa922caf1a7621f78"
         },
-        "title": "={{ $json.title || \"?????\" }}",
+        "title": "={{ $json.title || \"未命名活動\" }}",
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "????|title",
+              "key": "活動主題|title",
               "title": "={{ $json.data.title }}"
             },
             {
-              "key": "????|date",
+              "key": "活動日期時間|date",
               "includeTime": true,
               "date": "={{ $json.data.date }}",
               "timezone": "Asia/Taipei"
             },
             {
-              "key": "????|select",
+              "key": "活動狀態|select",
               "selectValue": "={{ $json.data.status }}"
             },
             {
-              "key": "????|relation",
+              "key": "負責人員|relation",
               "relationValue": "={{ $json.ownerRelations }}"
             },
             {
-              "key": "????|rich_text",
+              "key": "社區名稱|rich_text",
               "textContent": "={{ $json.data.community }}"
             },
             {
-              "key": "????|rich_text",
+              "key": "活動場地|rich_text",
               "textContent": "={{ $json.data.venue }}"
             },
             {
-              "key": "????|number",
+              "key": "人數預計|number",
               "numberValue": "={{ $json.data.expectedPeople }}"
             },
             {
-              "key": "?????|rich_text",
+              "key": "活動聯絡人|rich_text",
               "textContent": "={{ $json.data.contact }}"
             },
             {
-              "key": "???????|rich_text",
+              "key": "聯絡人電話|rich_text",
               "textContent": "={{ $json.data.phone }}"
             },
             {
-              "key": "????|select",
+              "key": "報名表單|select",
               "selectValue": "={{ $json.data.registrationEnabled }}"
             },
             {
-              "key": "??????|date",
+              "key": "報名截止時間|date",
               "includeTime": true,
               "date": "={{ $json.data.registrationDeadline }}",
               "timezone": "Asia/Taipei"
             },
             {
-              "key": "??????|number",
+              "key": "報名名額上限|number",
               "numberValue": "={{ $json.data.registrationLimit }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "報名表單網址|rich_text",
               "textContent": "={{ $json.data.registrationUrl }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "報名注意事項|rich_text",
               "textContent": "={{ $json.data.registrationNote }}"
             },
             {
-              "key": "????|rich_text",
+              "key": "活動詳情|rich_text",
               "textContent": "={{ $json.data.detail }}"
             }
           ]
@@ -272,7 +279,13 @@
       "position": [
         -180,
         -60
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
@@ -314,67 +327,67 @@
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "????|title",
+              "key": "活動主題|title",
               "title": "={{ $json.data.title }}"
             },
             {
-              "key": "????|date",
+              "key": "活動日期時間|date",
               "includeTime": true,
               "date": "={{ $json.data.date }}",
               "timezone": "Asia/Taipei"
             },
             {
-              "key": "????|select",
+              "key": "活動狀態|select",
               "selectValue": "={{ $json.data.status }}"
             },
             {
-              "key": "????|relation",
+              "key": "負責人員|relation",
               "relationValue": "={{ $json.ownerRelations }}"
             },
             {
-              "key": "????|rich_text",
+              "key": "社區名稱|rich_text",
               "textContent": "={{ $json.data.community }}"
             },
             {
-              "key": "????|rich_text",
+              "key": "活動場地|rich_text",
               "textContent": "={{ $json.data.venue }}"
             },
             {
-              "key": "????|number",
+              "key": "人數預計|number",
               "numberValue": "={{ $json.data.expectedPeople }}"
             },
             {
-              "key": "?????|rich_text",
+              "key": "活動聯絡人|rich_text",
               "textContent": "={{ $json.data.contact }}"
             },
             {
-              "key": "???????|rich_text",
+              "key": "聯絡人電話|rich_text",
               "textContent": "={{ $json.data.phone }}"
             },
             {
-              "key": "????|select",
+              "key": "報名表單|select",
               "selectValue": "={{ $json.data.registrationEnabled }}"
             },
             {
-              "key": "??????|date",
+              "key": "報名截止時間|date",
               "includeTime": true,
               "date": "={{ $json.data.registrationDeadline }}",
               "timezone": "Asia/Taipei"
             },
             {
-              "key": "??????|number",
+              "key": "報名名額上限|number",
               "numberValue": "={{ $json.data.registrationLimit }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "報名表單網址|rich_text",
               "textContent": "={{ $json.data.registrationUrl }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "報名注意事項|rich_text",
               "textContent": "={{ $json.data.registrationNote }}"
             },
             {
-              "key": "????|rich_text",
+              "key": "活動詳情|rich_text",
               "textContent": "={{ $json.data.detail }}"
             }
           ]
@@ -388,7 +401,13 @@
       "position": [
         -180,
         140
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
@@ -436,7 +455,13 @@
       "position": [
         -180,
         340
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {

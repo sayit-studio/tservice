@@ -15,7 +15,8 @@
       "position": [
         -900,
         0
-      ]
+      ],
+      "webhookId": "admin-cases"
     },
     {
       "parameters": {
@@ -143,11 +144,17 @@
       "position": [
         -420,
         -260
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('?');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  title: prop(item, '????&??'), petitioner: prop(item, '?????'), phone: prop(item, '???????'), owner: prop(item, '????'), ownerName: prop(item, '????'), status: prop(item, '????'), startDate: prop(item, '??????'), caseNo: prop(item, '1999??'), category: prop(item, '??????'), summary: prop(item, '??????'), content: prop(item, '??????')\n})) } }];"
+        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  title: prop(item, ['案件主題', '案件主題&內容', 'title', 'Name']),\n  petitioner: prop(item, ['陳情人', '姓名']),\n  phone: prop(item, ['陳情人電話', '電話']),\n  owner: prop(item, ['負責人員']),\n  ownerName: prop(item, ['負責人員']),\n  status: prop(item, ['執行狀態', '狀態']),\n  startDate: prop(item, ['處理起始日期', '起始日期']),\n  caseNo: prop(item, ['1999案號']),\n  category: prop(item, ['建議事項類別', '類別']),\n  summary: prop(item, ['執行狀況敘述', '處理摘要']),\n  content: prop(item, ['案件詳細說明', '陳情內容', '內容'])\n})) } }];"
       },
       "id": "normalize-cases",
       "name": "Normalize Cases",
@@ -194,49 +201,49 @@
           "mode": "id",
           "value": "29cb3ad1d1cd80da82b5fddde82ebe4d"
         },
-        "title": "={{ $json.title || $json.data.content || \"?????\" }}",
+        "title": "={{ $json.title || $json.data.content || \"未命名案件\" }}",
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "????&??|title",
+              "key": "案件主題|title",
               "title": "={{ $json.data.title }}"
             },
             {
-              "key": "?????|rich_text",
+              "key": "陳情人|rich_text",
               "textContent": "={{ $json.data.petitioner }}"
             },
             {
-              "key": "???????|phone_number",
+              "key": "陳情人電話|phone_number",
               "phoneValue": "={{ $json.data.phone }}"
             },
             {
-              "key": "????|relation",
+              "key": "負責人員|relation",
               "relationValue": "={{ $json.ownerRelations }}"
             },
             {
-              "key": "????|select",
+              "key": "執行狀態|select",
               "selectValue": "={{ $json.data.status }}"
             },
             {
-              "key": "??????|date",
+              "key": "處理起始日期|date",
               "includeTime": false,
               "date": "={{ $json.data.startDate }}",
               "timezone": "Asia/Taipei"
             },
             {
-              "key": "1999??|rich_text",
+              "key": "1999案號|rich_text",
               "textContent": "={{ $json.data.caseNo }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "建議事項類別|rich_text",
               "textContent": "={{ $json.data.category }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "執行狀況敘述|rich_text",
               "textContent": "={{ $json.data.summary }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "案件詳細說明|rich_text",
               "textContent": "={{ $json.data.content }}"
             }
           ]
@@ -250,7 +257,13 @@
       "position": [
         -180,
         -60
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
@@ -292,45 +305,45 @@
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "????&??|title",
+              "key": "案件主題|title",
               "title": "={{ $json.data.title }}"
             },
             {
-              "key": "?????|rich_text",
+              "key": "陳情人|rich_text",
               "textContent": "={{ $json.data.petitioner }}"
             },
             {
-              "key": "???????|phone_number",
+              "key": "陳情人電話|phone_number",
               "phoneValue": "={{ $json.data.phone }}"
             },
             {
-              "key": "????|relation",
+              "key": "負責人員|relation",
               "relationValue": "={{ $json.ownerRelations }}"
             },
             {
-              "key": "????|select",
+              "key": "執行狀態|select",
               "selectValue": "={{ $json.data.status }}"
             },
             {
-              "key": "??????|date",
+              "key": "處理起始日期|date",
               "includeTime": false,
               "date": "={{ $json.data.startDate }}",
               "timezone": "Asia/Taipei"
             },
             {
-              "key": "1999??|rich_text",
+              "key": "1999案號|rich_text",
               "textContent": "={{ $json.data.caseNo }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "建議事項類別|rich_text",
               "textContent": "={{ $json.data.category }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "執行狀況敘述|rich_text",
               "textContent": "={{ $json.data.summary }}"
             },
             {
-              "key": "??????|rich_text",
+              "key": "案件詳細說明|rich_text",
               "textContent": "={{ $json.data.content }}"
             }
           ]
@@ -344,7 +357,13 @@
       "position": [
         -180,
         140
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
@@ -392,7 +411,13 @@
       "position": [
         -180,
         340
-      ]
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
