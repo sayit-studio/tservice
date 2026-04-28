@@ -1,0 +1,190 @@
+{
+  "name": "查詢陳情案件petition/list",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "petition/list",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "f92f0af1-564d-44d4-bd6b-e45918b8b047",
+      "name": "接收列表查詢",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        288,
+        48
+      ],
+      "webhookId": "b8c0b215-439f-410e-b0c9-5865ee95f18e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 解析查詢參數\nconst query = $input.first().json.query || {};\n\nconst category = query.category || '';   // 案件類型篩選（空=全部）\nconst status   = query.status   || '';   // 案件狀態篩選（空=全部）\nconst page     = parseInt(query.page) || 1;\nconst pageSize = 15;\n\nreturn [{\n  json: { category, status, page, pageSize, offset: (page - 1) * pageSize }\n}];"
+      },
+      "id": "f665d7b1-de1b-4001-941c-abd26ecff14d",
+      "name": "解析查詢參數",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "330b3ad1d1cd8047aabfc9e95de6658d",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "simple": false,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "是否公開|checkbox",
+              "condition": "equals",
+              "checkboxValue": true
+            }
+          ]
+        },
+        "options": {
+          "downloadFiles": false
+        }
+      },
+      "id": "b62e3698-aad5-4a56-883c-11d6157ba431",
+      "name": "查詢 Notion DB1 公開案件",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        720,
+        48
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('解析查詢參數').first().json;\nconst { category, status, page, pageSize, offset } = params;\n\nconst allItems = $input.all();\n\nconst getString = (prop) => {\n  if (!prop) return '';\n  if (prop.type === 'title')      return (prop.title     || []).map(t => t.plain_text).join('');\n  if (prop.type === 'rich_text')  return (prop.rich_text || []).map(t => t.plain_text).join('');\n  if (prop.type === 'select')     return prop.select?.name || '';\n  if (prop.type === 'checkbox')   return prop.checkbox || false;\n  if (prop.type === 'created_time')    return prop.created_time || '';\n  if (prop.type === 'last_edited_time') return prop.last_edited_time || '';\n  if (prop.type === 'phone_number') return prop.phone_number || '';\n  return '';\n};\n\nconst getImages = (prop) => {\n  if (!prop || prop.type !== 'files') return [];\n  return (prop.files || []).map(f => f.file?.url || f.external?.url || '').filter(Boolean);\n};\n\nlet items = allItems.map(item => {\n  const props = item.json.properties;\n  return {\n    caseId:       getString(props['案件編號']),\n    caseType:     getString(props['案件類型']),\n    caseArea:     getString(props['案件區域']),\n    title:        getString(props['案件標題']),\n    status:       getString(props['案件狀態']),\n    summary:      getString(props['公開摘要']),\n    reply:        getString(props['回覆內容']),\n    beforeImages: getImages(props['改善前圖片']),\n    afterImages:  getImages(props['改善後圖片']),\n    date:         getString(props['建立時間']).slice(0, 10),\n    lastUpdate:   getString(props['上次編輯時間']).slice(0, 10)\n  };\n});\n\n// 篩選\nif (category) items = items.filter(i => i.caseType === category);\nif (status)   items = items.filter(i => i.status   === status);\n\n// 排序：新到舊\nitems.sort((a, b) => b.date.localeCompare(a.date));\n\n// 各分類計數\nconst categories = {};\nconst typeList = ['交通運輸','公共設施','衛福勞動','文教科技','環境建管','警消政風','市政議題','其他服務'];\ntypeList.forEach(t => { categories[t] = 0; });\nallItems.forEach(item => {\n  const t = item.json.properties['案件類型']?.select?.name || '';\n  if (categories[t] !== undefined) categories[t]++;\n});\n\n// 分頁\nconst total = items.length;\nconst paged = items.slice(offset, offset + pageSize);\n\nreturn [{\n  json: {\n    success: true,\n    total,\n    page,\n    pageSize,\n    totalPages: Math.ceil(total / pageSize),\n    categories,\n    items: paged\n  }\n}];"
+      },
+      "id": "8512dae0-1268-4b0c-ae34-138985fc6935",
+      "name": "整理列表資料",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "7691ce1a-2702-432d-8cf5-387b63074977",
+      "name": "回傳列表結果",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        48
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "接收列表查詢": {
+      "main": [
+        [
+          {
+            "node": "解析查詢參數",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析查詢參數": {
+      "main": [
+        [
+          {
+            "node": "查詢 Notion DB1 公開案件",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢 Notion DB1 公開案件": {
+      "main": [
+        [
+          {
+            "node": "整理列表資料",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "整理列表資料": {
+      "main": [
+        [
+          {
+            "node": "回傳列表結果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "435a9a9e-3949-490a-9944-a28fe5be7959",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ea9f6ac1ff7da32529ced04796f9f569ceb9443e61704045e82d3e53adc457c5"
+  },
+  "id": "wAlEIx6tn49DeFIN",
+  "tags": [
+    {
+      "updatedAt": "2026-03-27T08:13:40.532Z",
+      "createdAt": "2026-03-27T08:13:40.532Z",
+      "id": "fgx9alXdiukb4KLr",
+      "name": "陳情系統"
+    },
+    {
+      "updatedAt": "2026-04-08T13:35:36.875Z",
+      "createdAt": "2026-04-08T13:35:36.875Z",
+      "id": "9xkkdNmh7BjwXoVm",
+      "name": "曾咨耀"
+    }
+  ]
+}

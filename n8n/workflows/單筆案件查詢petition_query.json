@@ -1,0 +1,165 @@
+{
+  "name": "單筆案件查詢petition/query",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "petition/query",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "8e08c836-bd7d-4014-b146-c2c681fb2c37",
+      "name": "接收案件查詢",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -128
+      ],
+      "webhookId": "petition-query-001"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "330b3ad1d1cd8047aabfc9e95de6658d",
+          "mode": "id"
+        },
+        "limit": 1,
+        "simple": false,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "案件編號|rich_text",
+              "condition": "equals",
+              "richTextValue": "={{ $json.query.caseId }}"
+            }
+          ]
+        },
+        "options": {
+          "downloadFiles": true
+        }
+      },
+      "id": "bd4136c5-41c1-48ed-bdb1-c2332180cd58",
+      "name": "查詢 Notion DB1",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        848,
+        -128
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (!items || items.length === 0) {\n  return [{ json: { found: false } }];\n}\n\nconst d = items[0].json;\n\n// Simplify 模式關閉後用 properties，開啟後直接讀 key\n// 先偵測是哪種結構\nlet props = d.properties;\nlet useProps = !!props;\n\nconst getString = (prop) => {\n  if (!prop) return '';\n  if (prop.type === 'title')      return (prop.title     || []).map(t => t.plain_text).join('');\n  if (prop.type === 'rich_text')  return (prop.rich_text || []).map(t => t.plain_text).join('');\n  if (prop.type === 'select')     return prop.select?.name || '';\n  if (prop.type === 'checkbox')   return prop.checkbox || false;\n  if (prop.type === 'created_time')     return prop.created_time || '';\n  if (prop.type === 'last_edited_time') return prop.last_edited_time || '';\n  return '';\n};\n\nconst getImages = (prop) => {\n  if (!prop || prop.type !== 'files') return [];\n  return (prop.files || []).map(f => f.file?.url || f.external?.url || '').filter(Boolean);\n};\n\nlet result;\n\nif (useProps) {\n  // Simplify OFF：完整 properties 結構\n  const isPublic = getString(props['是否公開']);\n  if (isPublic === false) return [{ json: { found: false } }];\n  result = {\n    found:        true,\n    caseId:       getString(props['案件編號']),\n    title:        getString(props['案件標題']),\n    caseType:     getString(props['案件類型']),\n    caseArea:     getString(props['案件區域']),\n    status:       getString(props['案件狀態']),\n    summary:      getString(props['公開摘要']),\n    reply:        getString(props['回覆內容']),\n    beforeImages: getImages(props['改善前圖片']),\n    afterImages:  getImages(props['改善後圖片']),\n    date:         getString(props['建立時間']).slice(0, 10),\n    lastUpdate:   getString(props['上次編輯時間']).slice(0, 10)\n  };\n} else {\n  // Simplify ON：直接讀 key\n  if (!d['是否公開']) return [{ json: { found: false } }];\n  const getImgSimple = (val) => {\n    if (!val) return [];\n    if (Array.isArray(val)) return val.map(f => f.url || f.file?.url || '').filter(Boolean);\n    return [];\n  };\n  result = {\n    found:        true,\n    caseId:       d['案件編號']  || '',\n    title:        d['案件標題']  || d.name || '',\n    caseType:     d['案件類型']  || '',\n    caseArea:     d['案件區域']  || '',\n    status:       d['案件狀態']  || '',\n    summary:      d['公開摘要']  || '',\n    reply:        d['回覆內容']  || '',\n    beforeImages: getImgSimple(d['改善前圖片']),\n    afterImages:  getImgSimple(d['改善後圖片']),\n    date:         (d['建立時間']     || '').slice(0, 10),\n    lastUpdate:   (d['上次編輯時間'] || '').slice(0, 10)\n  };\n}\n\nreturn [{ json: result }];"
+      },
+      "id": "4a79f4a5-5ac3-4cc3-91ac-b79a0f87f7f3",
+      "name": "整理查詢結果",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c6391e05-04d2-473b-a8e3-dcb93a7c04ad",
+      "name": "回傳查詢結果",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        -128
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "接收案件查詢": {
+      "main": [
+        [
+          {
+            "node": "查詢 Notion DB1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢 Notion DB1": {
+      "main": [
+        [
+          {
+            "node": "整理查詢結果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "整理查詢結果": {
+      "main": [
+        [
+          {
+            "node": "回傳查詢結果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "80753850-3f6a-4525-971f-e7bc3dbfef48",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ea9f6ac1ff7da32529ced04796f9f569ceb9443e61704045e82d3e53adc457c5"
+  },
+  "id": "WJQPBWW8C3BeoWA5",
+  "tags": [
+    {
+      "updatedAt": "2026-03-27T08:13:40.532Z",
+      "createdAt": "2026-03-27T08:13:40.532Z",
+      "id": "fgx9alXdiukb4KLr",
+      "name": "陳情系統"
+    },
+    {
+      "updatedAt": "2026-04-08T13:35:36.875Z",
+      "createdAt": "2026-04-08T13:35:36.875Z",
+      "id": "9xkkdNmh7BjwXoVm",
+      "name": "曾咨耀"
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "name": "儀表板趨勢查詢 petition/dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// ── 取得 period 參數，預設 7d ──\nconst period = $input.first().json.query?.period || '7d';\n\n// ── 計算起始日期 ──\nconst now = new Date();\nlet days;\nif (period === '90d') days = 90;\nelse if (period === '30d') days = 30;\nelse days = 7;\n\nconst startDate = new Date(now);\nstartDate.setDate(startDate.getDate() - (days - 1));\nstartDate.setHours(0, 0, 0, 0);\n\n// 【優化】使用在地化日期格式，避免 UTC 時區導致日期少一天\nconst startDateStr = startDate.toLocaleDateString('en-CA'); \n\n// 傳給下一個節點\nreturn [{\n  json: {\n    period,\n    days,\n    startDateISO: startDate.toISOString(),\n    startDateStr: startDateStr // 確保這裡輸出的格式是 YYYY-MM-DD\n  }\n}];"
+      },
+      "id": "54034b63-70ad-4cbb-9fcd-e8ffd96b5fea",
+      "name": "解析參數",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "path": "transparentcafe/dashboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ce3ae354-0a19-42e0-a39c-29fd03c8a06e",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        -256
+      ],
+      "webhookId": "petition-dashboard"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "33cb3ad1d1cd819d9c73c8580b0e4e95",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "simple": false,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "建立時間|created_time",
+              "condition": "on_or_after",
+              "createdTimeValue": "={{ $('解析參數').first().json.startDateISO }}",
+              "dateValue": "={{ $json.startDateISO }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2f8ede8a-c8f1-4084-aa45-1ace028fd0ed",
+      "name": "查詢 Notion 案件",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        -256
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c19791be-66e6-4102-a48f-64478882182f",
+      "name": "回傳結果",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        3024,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $('解析參數').first().json;\nconst items  = $input.all();\nconst { days, period } = params;\nconst now = new Date();\n\n// ── 輔助\nfunction getStatus(item) {\n  return item.json.properties?.['案件狀態']?.select?.name || '';\n}\nfunction getType(item) {\n  return item.json.properties?.['案件類型']?.select?.name || '未分類';\n}\nfunction getCloseDate(item) {\n  return item.json.properties?.['結案日期']?.date?.start || null;\n}\n\n// ── 建立日期陣列（起始日到今天）\nconst dateMap = {};\nfor (let i = days - 1; i >= 0; i--) {\n  const d = new Date(now);\n  d.setDate(d.getDate() - i);\n  const key = d.toISOString().split('T')[0];\n  let label = '';\n  if (days <= 7)       label = `${d.getMonth()+1}/${d.getDate()}`;\n  else if (days <= 30) label = (i % 7 === 0 || i === 0) ? `${d.getMonth()+1}/${d.getDate()}` : '';\n  else                 label = (i % 10 === 0 || i === 0) ? `${d.getMonth()+1}/${d.getDate()}` : '';\n  dateMap[key] = { label, newCount: 0, closedCount: 0 };\n}\n\n// ── 每日新增件數（Simplify OFF 後路徑正確）\nfor (const item of items) {\n  const created = item.json.created_time || item.json.properties?.['建立時間']?.date?.start || '';\n  const key = created.split('T')[0];\n  if (dateMap[key]) dateMap[key].newCount += 1;\n}\n\n// ── 每日結案件數（結案日期）\nfor (const item of items) {\n  if (getStatus(item) !== '已結案') continue;\n  const closeDate = getCloseDate(item);\n  if (!closeDate) continue;\n  const key = closeDate.split('T')[0];\n  if (dateMap[key]) dateMap[key].closedCount += 1;\n}\n\nconst chart = Object.values(dateMap);\n\n// ── 當月統計\nconst monthStart = new Date(now.getFullYear(), now.getMonth(), 1);\nlet msNew = 0, msClosed = 0, msProgress = 0;\nfor (const item of items) {\n  const created = item.json.created_time;\n  if (created && new Date(created) >= monthStart) msNew++;\n  const status = getStatus(item);\n  if (status === '已結案') {\n    const cd = getCloseDate(item);\n    if (cd && new Date(cd) >= monthStart) msClosed++;\n  } else if (status === '處理中') {\n    msProgress++;\n  }\n}\n\n// ── 類別比例（依所選期間）\nconst typeCounts = {};\nfor (const item of items) {\n  const type = getType(item);\n  typeCounts[type] = (typeCounts[type] || 0) + 1;\n}\n\nreturn [{\n  json: {\n    success: true,\n    period,\n    chart,\n    monthStats: {\n      newCount:      msNew,\n      closedCount:   msClosed,\n      progressCount: msProgress\n    },\n    typeCounts\n  }\n}];"
+      },
+      "id": "0978b83d-a6f3-4e25-b4a8-01e415434c42",
+      "name": "計算趨勢圖資料",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2816,
+        -256
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "解析參數": {
+      "main": [
+        [
+          {
+            "node": "查詢 Notion 案件",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "解析參數",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢 Notion 案件": {
+      "main": [
+        [
+          {
+            "node": "計算趨勢圖資料",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "計算趨勢圖資料": {
+      "main": [
+        [
+          {
+            "node": "回傳結果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "961c8231-8f0c-4aa0-8c2f-c20fb75a5472",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ea9f6ac1ff7da32529ced04796f9f569ceb9443e61704045e82d3e53adc457c5"
+  },
+  "id": "Qj9AasuCUTJmabfA",
+  "tags": [
+    {
+      "updatedAt": "2026-03-27T08:13:40.532Z",
+      "createdAt": "2026-03-27T08:13:40.532Z",
+      "id": "fgx9alXdiukb4KLr",
+      "name": "陳情系統"
+    },
+    {
+      "updatedAt": "2026-04-08T13:42:35.075Z",
+      "createdAt": "2026-04-08T13:42:35.075Z",
+      "id": "2V6gBvvNKs0MNdQW",
+      "name": "純透明"
+    }
+  ]
+}

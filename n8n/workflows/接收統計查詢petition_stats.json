@@ -1,0 +1,196 @@
+{
+  "name": "接收統計查詢petition/stats",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "petition/stats",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "c2eb1cae-be57-4507-9467-8bb5d404b236",
+      "name": "接收統計查詢",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -80
+      ],
+      "webhookId": "38bfb668-dce7-451d-a6f2-68ac675140e8"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "330b3ad1d1cd8047aabfc9e95de6658d",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "options": {
+          "downloadFiles": false
+        }
+      },
+      "id": "fe099e55-0c51-4947-bac9-4dad8ae4d0be",
+      "name": "計算陳情總案件數",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -80
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "330b3ad1d1cd806b955bf854d5d316cd",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "simple": false,
+        "options": {
+          "downloadFiles": false
+        }
+      },
+      "id": "9728d117-0e0e-4988-bce5-17f3c45c6fad",
+      "name": "取得手動統計設定 DB5",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -80
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const petitionCount = $('計算陳情總案件數').all().length;\n\nconst statsItems = $('取得手動統計設定 DB5').all();\nlet inspections = 0;\nlet interpellations = 0;\nlet proposals = 0;\n\nif (statsItems.length > 0) {\n  const props = statsItems[0].json.properties || {};\n  const getNum = (prop) => {\n    if (!prop || prop.type !== 'number') return 0;\n    return prop.number || 0;\n  };\n  inspections     = getNum(props['地方會勘數量']);\n  interpellations = getNum(props['國會質詢數量']);\n  proposals       = getNum(props['國會提案數量']);\n}\n\nreturn [{\n  json: {\n    success: true,\n    petitions:      petitionCount,\n    inspections,\n    interpellations,\n    proposals\n  }\n}];"
+      },
+      "id": "c8566f36-0a81-48fc-aa26-f936c2886739",
+      "name": "合併統計數字",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "889fffdc-54f8-4aef-b05e-664208e52965",
+      "name": "回傳統計結果",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        -80
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "接收統計查詢": {
+      "main": [
+        [
+          {
+            "node": "計算陳情總案件數",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "計算陳情總案件數": {
+      "main": [
+        [
+          {
+            "node": "取得手動統計設定 DB5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "合併統計數字": {
+      "main": [
+        [
+          {
+            "node": "回傳統計結果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "取得手動統計設定 DB5": {
+      "main": [
+        [
+          {
+            "node": "合併統計數字",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d286b2bb-710f-4efd-8c84-e2ed53c26d1e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ea9f6ac1ff7da32529ced04796f9f569ceb9443e61704045e82d3e53adc457c5"
+  },
+  "id": "nHAotsAGVrZV2nSr",
+  "tags": [
+    {
+      "updatedAt": "2026-03-27T08:13:40.532Z",
+      "createdAt": "2026-03-27T08:13:40.532Z",
+      "id": "fgx9alXdiukb4KLr",
+      "name": "陳情系統"
+    },
+    {
+      "updatedAt": "2026-04-08T13:35:36.875Z",
+      "createdAt": "2026-04-08T13:35:36.875Z",
+      "id": "9xkkdNmh7BjwXoVm",
+      "name": "曾咨耀"
+    }
+  ]
+}

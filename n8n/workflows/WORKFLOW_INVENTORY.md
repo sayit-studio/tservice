@@ -18,17 +18,17 @@
 | `public-event-registration.json` | Public Event Registration | `/event-registration` | 活動報名 LIFF，寫入活動報名資料庫、比對 LINE User ID 重複報名 |
 | `public-legal-consultation.json` | Public Legal Consultation | `/legal-consultation` | 法律諮詢預約 LIFF，預約、查詢、取消 |
 
-## 已在 n8n 建置，但本專案目前沒有 JSON 備份
+## 陳情 petition workflow（已補上 JSON 備份）
 
-以下 workflow 依你提供的 n8n 截圖，已存在於 n8n，但本專案目前沒有對應 JSON 檔。若要納入版本控管，請從 n8n export 後放入本資料夾。
+以下 workflow 依你提供的 n8n 截圖，已存在於 n8n，並已將 JSON export 備份放入本資料夾。
 
-| n8n workflow | Webhook path | 用途 |
-| --- | --- | --- |
-| 接收陳情表單 | `/petition/submit` | 品牌前台陳情表單資料來源 |
-| 單筆案件查詢 | `/petition/query` | 品牌前台用案件編號查詢 |
-| 接收統計查詢 | `/petition/stats` | 品牌前台統計數字 |
-| 查詢陳情案件 | `/petition/list` | 品牌前台案件列表 |
-| 儀表板趨勢查詢 | `/petition/dashboard` | 儀表板/趨勢查詢 |
+| 檔案 | n8n workflow | Webhook path | 用途 |
+| --- | --- | --- | --- |
+| `接收陳情表單petition_submit.json` | 接收陳情表單 | `/petition/submit` | 品牌前台陳情表單資料來源 |
+| `單筆案件查詢petition_query.json` | 單筆案件查詢 | `/petition/query` | 品牌前台用案件編號查詢 |
+| `接收統計查詢petition_stats.json` | 接收統計查詢 | `/petition/stats` | 品牌前台統計數字 |
+| `查詢陳情案件petition_list.json` | 查詢陳情案件 | `/petition/list` | 品牌前台案件列表 |
+| `儀表板趨勢查詢 petition_dashboard.json` | 儀表板趨勢查詢 | `/petition/dashboard` | 儀表板/趨勢查詢 |
 
 ## 注意
 

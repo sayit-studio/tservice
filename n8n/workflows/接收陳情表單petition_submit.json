@@ -1,0 +1,234 @@
+{
+  "name": "接收陳情表單petition/submit",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "petition/submit",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "5d1b5335-0ef7-4444-a2ae-bab12ae4f6a7",
+      "name": "接收陳情表單",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -240
+      ],
+      "webhookId": "petition-submit-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 產生案件編號 SVC-YYYYMMDD-XXXX\nconst now = new Date();\nconst yyyy = now.getFullYear();\nconst mm = String(now.getMonth() + 1).padStart(2, '0');\nconst dd = String(now.getDate()).padStart(2, '0');\nconst rand = Math.floor(Math.random() * 9000) + 1000;\nconst caseId = `SVC-${yyyy}${mm}${dd}-${rand}`;\n\n// 取得表單資料\nconst body = $input.first().json.body || $input.first().json;\n\nreturn [{\n  json: {\n    caseId,\n    caseTitle:   body.caseTitle   || '',\n    caseType:    body.caseType    || '',\n    caseArea:    body.caseArea    || '',\n    caseContent: body.caseContent || '',\n    name:        body.name        || '',\n    phone:       body.phone       || '',\n    email:       body.email       || '',\n    address:     body.address     || '',\n    createdAt:   now.toISOString()\n  }\n}];"
+      },
+      "id": "ca577a46-5914-4fb4-b2f3-3d6c81d85ee2",
+      "name": "產生案件編號",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "value": "330b3ad1-d1cd-8047-aabf-c9e95de6658d",
+          "mode": "list",
+          "cachedResultName": "陳情案件主要資料庫",
+          "cachedResultUrl": "https://www.notion.so/330b3ad1d1cd8047aabfc9e95de6658d"
+        },
+        "title": "={{ $json.caseTitle }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "案件編號|rich_text",
+              "textContent": "={{ $json.caseId }}"
+            },
+            {
+              "key": "案件狀態|select",
+              "selectValue": "處理中"
+            },
+            {
+              "key": "案件區域|select",
+              "selectValue": "={{ $json.caseArea }}"
+            },
+            {
+              "key": "聯絡手機|phone_number",
+              "phoneValue": "={{ $json.phone }}"
+            },
+            {
+              "key": "陳情人姓名|rich_text",
+              "textContent": "={{ $json.name }}"
+            },
+            {
+              "key": "聯絡地址|rich_text",
+              "textContent": "={{ $json.address }}"
+            },
+            {
+              "key": "聯絡Email|rich_text",
+              "textContent": "={{ $json.email }}"
+            },
+            {
+              "key": "案件原始內容|rich_text",
+              "textContent": "={{ $json.caseContent }}"
+            },
+            {
+              "key": "案件類型|select",
+              "selectValue": "={{ $json.caseType }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "604d0161-2c1c-4a74-b231-d5e05d8b583e",
+      "name": "新增到 Notion DB1",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        768,
+        -240
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "to": "U5a15eca7d7d02e6a2170853b455f1067",
+        "messages": {
+          "values": [
+            {
+              "altText": "新陳情案件，請盡速查看",
+              "flexJson": "={\n  \"type\": \"bubble\",\n  \"size\": \"mega\",\n  \"header\": {\n    \"type\": \"box\",\n    \"layout\": \"vertical\",\n    \"contents\": [\n      {\n        \"type\": \"text\",\n        \"text\": \"📌 新進案件通知\",\n        \"weight\": \"bold\",\n        \"color\": \"#FFFFFF\",\n        \"size\": \"xl\"\n      },\n      {\n        \"type\": \"text\",\n        \"text\": \"請相關人員儘速追蹤執行\",\n        \"color\": \"#CCCCCC\",\n        \"size\": \"sm\",\n        \"margin\": \"sm\"\n      }\n    ],\n    \"backgroundColor\": \"#548C00\"\n  },\n  \"body\": {\n    \"type\": \"box\",\n    \"layout\": \"vertical\",\n    \"contents\": [\n      {\n        \"type\": \"text\",\n        \"text\": \"{{ $('產生案件編號').item.json.caseTitle }}\",\n        \"weight\": \"bold\",\n        \"size\": \"xl\",\n        \"margin\": \"md\",\n        \"wrap\": true,\n        \"color\": \"#111111\"\n      },\n      {\n        \"type\": \"box\",\n        \"layout\": \"vertical\",\n        \"margin\": \"lg\",\n        \"spacing\": \"sm\",\n        \"contents\": [\n          {\n            \"type\": \"box\",\n            \"layout\": \"baseline\",\n            \"spacing\": \"sm\",\n            \"contents\": [\n              {\n                \"type\": \"text\",\n                \"text\": \"案件編號\",\n                \"color\": \"#000000\",\n                \"size\": \"sm\",\n                \"flex\": 2\n              },\n              {\n                \"type\": \"text\",\n                \"text\": \"{{ $('產生案件編號').item.json.caseId }}\",\n                \"wrap\": true,\n                \"color\": \"#666666\",\n                \"size\": \"sm\",\n                \"flex\": 5\n              }\n            ]\n          },\n          {\n            \"type\": \"box\",\n            \"layout\": \"baseline\",\n            \"spacing\": \"sm\",\n            \"contents\": [\n              {\n                \"type\": \"text\",\n                \"text\": \"案件類型\",\n                \"color\": \"#000000\",\n                \"size\": \"sm\",\n                \"flex\": 2\n              },\n              {\n                \"type\": \"text\",\n                \"text\": \"{{ $('產生案件編號').item.json.caseType }}\",\n                \"wrap\": true,\n                \"color\": \"#666666\",\n                \"size\": \"sm\",\n                \"flex\": 5\n              }\n            ]\n          },\n          {\n            \"type\": \"box\",\n            \"layout\": \"baseline\",\n            \"spacing\": \"sm\",\n            \"contents\": [\n              {\n                \"type\": \"text\",\n                \"text\": \"案發區域\",\n                \"color\": \"#000000\",\n                \"size\": \"sm\",\n                \"flex\": 2\n              },\n              {\n                \"type\": \"text\",\n                \"text\": \"{{ $('產生案件編號').item.json.caseArea }}\",\n                \"wrap\": true,\n                \"color\": \"#666666\",\n                \"size\": \"sm\",\n                \"flex\": 5\n              }\n            ]\n          },\n          {\n            \"type\": \"box\",\n            \"layout\": \"baseline\",\n            \"spacing\": \"sm\",\n            \"contents\": [\n              {\n                \"type\": \"text\",\n                \"text\": \"陳情人\",\n                \"color\": \"#000000\",\n                \"size\": \"sm\",\n                \"flex\": 2\n              },\n              {\n                \"type\": \"text\",\n                \"text\": \"{{ $('產生案件編號').item.json.name }}\",\n                \"wrap\": true,\n                \"color\": \"#666666\",\n                \"size\": \"sm\",\n                \"flex\": 5\n              }\n            ]\n          },\n          {\n            \"type\": \"box\",\n            \"layout\": \"baseline\",\n            \"spacing\": \"sm\",\n            \"contents\": [\n              {\n                \"type\": \"text\",\n                \"text\": \"聯絡電話\",\n                \"color\": \"#000000\",\n                \"size\": \"sm\",\n                \"flex\": 2\n              },\n              {\n                \"type\": \"text\",\n                \"text\": \"{{ $('產生案件編號').item.json.phone }}\",\n                \"wrap\": true,\n                \"color\": \"#666666\",\n                \"size\": \"sm\",\n                \"flex\": 5\n              }\n            ]\n          },\n          {\n            \"type\": \"separator\",\n            \"margin\": \"md\"\n          },\n          {\n            \"type\": \"box\",\n            \"layout\": \"vertical\",\n            \"margin\": \"md\",\n            \"contents\": [\n              {\n                \"type\": \"text\",\n                \"text\": \"陳情內容：\",\n                \"size\": \"sm\",\n                \"color\": \"#000000\",\n                \"margin\": \"sm\"\n              },\n              {\n                \"type\": \"text\",\n                \"text\": \"{{ $('產生案件編號').item.json.caseContent }}\",\n                \"size\": \"md\",\n                \"color\": \"#333333\",\n                \"wrap\": true,\n                \"margin\": \"xs\"\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  },\n  \"footer\": {\n    \"type\": \"box\",\n    \"layout\": \"vertical\",\n    \"spacing\": \"sm\",\n    \"contents\": [\n      {\n        \"type\": \"button\",\n        \"style\": \"primary\",\n        \"height\": \"sm\",\n        \"action\": {\n          \"type\": \"uri\",\n          \"label\": \"立即處理追蹤\",\n          \"uri\": \"https://line.me\"\n        },\n        \"color\": \"#005757\"\n      },\n      {\n        \"type\": \"text\",\n        \"text\": \"建立時間：{{ $('產生案件編號').item.json.createdAt }}\",\n        \"size\": \"xxs\",\n        \"color\": \"#7B7B7B\",\n        \"margin\": \"sm\",\n        \"align\": \"center\"\n      }\n    ]\n  }\n} ",
+              "type": "flex"
+            }
+          ]
+        }
+      },
+      "type": "@aotoki/n8n-nodes-line-messaging.lineMessaging",
+      "typeVersion": 1,
+      "position": [
+        992,
+        -240
+      ],
+      "id": "d4e83b88-d9dd-4c20-9417-b6e3640f0a2a",
+      "name": "傳送訊息到指定LINE帳號",
+      "credentials": {
+        "lineMessagingApi": {
+          "id": "IOq0ijSDVV1cS6PL",
+          "name": "wu_plant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"caseId\": \"{{ $('產生案件編號').first().json.caseId }}\",\n  \"message\": \"陳情已成功送出，請記錄您的案件編號\"\n}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "1ba35145-22fd-4923-b7c8-1b5f809f2f70",
+      "name": "回傳案件編號",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -240
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "接收陳情表單": {
+      "main": [
+        [
+          {
+            "node": "產生案件編號",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "產生案件編號": {
+      "main": [
+        [
+          {
+            "node": "新增到 Notion DB1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新增到 Notion DB1": {
+      "main": [
+        [
+          {
+            "node": "傳送訊息到指定LINE帳號",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "傳送訊息到指定LINE帳號": {
+      "main": [
+        [
+          {
+            "node": "回傳案件編號",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "db91ad95-daae-460b-8f36-2a3b0260f1dd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ea9f6ac1ff7da32529ced04796f9f569ceb9443e61704045e82d3e53adc457c5"
+  },
+  "id": "bMm1vEKNRUDfhY82",
+  "tags": [
+    {
+      "updatedAt": "2026-03-27T08:13:40.532Z",
+      "createdAt": "2026-03-27T08:13:40.532Z",
+      "id": "fgx9alXdiukb4KLr",
+      "name": "陳情系統"
+    },
+    {
+      "updatedAt": "2026-04-08T13:35:36.875Z",
+      "createdAt": "2026-04-08T13:35:36.875Z",
+      "id": "9xkkdNmh7BjwXoVm",
+      "name": "曾咨耀"
+    }
+  ]
+}
