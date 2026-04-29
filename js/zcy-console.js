@@ -20,6 +20,8 @@
     { value: "cancelled", label: "已取消" }
   ];
   const LEGAL_CATEGORIES = ["民事", "刑事", "行政訴訟", "家事", "勞資糾紛", "消費糾紛", "強制執行"];
+  const STAFF_IDENTITIES = ["管理員", "志工", "助理", "主任", "議員", "一般人員"];
+  const STAFF_PERMISSIONS = ["小編", "助理", "管理員", "一般人員"];
 
   const state = {
     user: null,
@@ -683,8 +685,8 @@
       { name: "name", label: "人員名稱", value: item.name },
       { name: "account", label: "帳號", value: item.account },
       { name: "password", label: "密碼", value: item.password },
-      { name: "identity", label: "身分", type: "select", options: selectOptions(["管理員", "一般人員", "只讀人員"], item.identity || item.permissions) },
-      { name: "permissions", label: "權限設定", type: "select", options: selectOptions(["管理員", "一般人員", "只讀人員"], asText(item.permissions)) }
+      { name: "identity", label: "身分", type: "select", options: selectOptions(STAFF_IDENTITIES, asText(item.identity)) },
+      { name: "permissions", label: "權限設定", type: "select", options: selectOptions(STAFF_PERMISSIONS, asText(item.permissions)) }
     ], (data) => AdminApi.saveStaff({ ...item, ...data }), item.id ? () => deleteItem("staff", item.id) : null);
   }
 
