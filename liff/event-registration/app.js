@@ -43,10 +43,13 @@
   const state = {
     liffReady: false,
     eventId: readEventId(),
-    eventName: readParamFromUrlOrLiffState(["eventName", "eventTitle", "title"])
+    eventName: readParamFromUrlOrLiffState(["eventName", "eventTitle", "title"]),
+    eventDate: readParamFromUrlOrLiffState(["eventDate", "eventTime", "date", "time"])
   };
 
   const eventNamePill = document.getElementById("eventNamePill");
+  const eventNameText = document.getElementById("eventNameText");
+  const eventDateText = document.getElementById("eventDateText");
   const noticeEl = document.getElementById("notice");
   const form = document.getElementById("registrationForm");
   const completeLayer = document.getElementById("completeLayer");
@@ -74,8 +77,10 @@
 
   async function initLiff() {
     setValue("eventId", state.eventId);
-    if (state.eventName) {
-      eventNamePill.textContent = state.eventName;
+    if (state.eventName || state.eventDate) {
+      eventNameText.textContent = state.eventName || "活動場次";
+      eventDateText.textContent = state.eventDate || "";
+      eventDateText.hidden = !state.eventDate;
       eventNamePill.hidden = false;
     }
 

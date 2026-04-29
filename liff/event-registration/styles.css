@@ -56,6 +56,8 @@ h1 {
 }
 
 .event-name-pill {
+  display: grid;
+  gap: 3px;
   align-self: start;
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 8px;
@@ -68,6 +70,12 @@ h1 {
   max-width: 52%;
   overflow-wrap: anywhere;
   text-align: right;
+}
+
+.event-name-pill small {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .panel,

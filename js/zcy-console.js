@@ -889,7 +889,7 @@
     const savedItem = saved && typeof saved === "object" ? { ...payload, ...saved } : payload;
     const id = savedItem.id || item.id;
     if (enabled && id && !savedItem.registrationUrl) {
-      await AdminApi.saveEvent({ ...savedItem, id, registrationEnabled: "true", registrationUrl: buildEventRegistrationUrl(id, savedItem.title) });
+      await AdminApi.saveEvent({ ...savedItem, id, registrationEnabled: "true", registrationUrl: buildEventRegistrationUrl(id, savedItem.title, savedItem.date) });
     }
     return saved;
   }
@@ -930,22 +930,24 @@
     ], (data) => saveEventWithRegistration(item, { ...data, registrationEnabled: data.registrationEnabled || "true" }), null);
   }
 
-  function buildEventRegistrationUrl(eventId, eventName) {
+  function buildEventRegistrationUrl(eventId, eventName, eventDate) {
     if (!eventId) return "";
     const base = "https://tseng-service.pages.dev/liff/event-registration/";
     const url = new URL(base);
     url.searchParams.set("eventId", eventId);
     if (eventName) url.searchParams.set("eventName", eventName);
+    if (eventDate) url.searchParams.set("eventDate", formatDateTime(eventDate));
     return url.toString();
   }
 
   function eventRegistrationUrl(item = {}) {
-    if (!item.registrationUrl) return buildEventRegistrationUrl(item.id, item.title);
-    if (!item.title) return item.registrationUrl;
+    if (!item.registrationUrl) return buildEventRegistrationUrl(item.id, item.title, item.date);
+    if (!item.title && !item.date) return item.registrationUrl;
 
     try {
       const url = new URL(item.registrationUrl);
-      if (!url.searchParams.get("eventName")) url.searchParams.set("eventName", item.title);
+      if (item.title) url.searchParams.set("eventName", item.title);
+      if (item.date) url.searchParams.set("eventDate", formatDateTime(item.date));
       return url.toString();
     } catch (_) {
       return item.registrationUrl;
