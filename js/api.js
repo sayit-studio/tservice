@@ -101,6 +101,10 @@
       }
       return post(config.endpoints.eventRegistrationsList, { action: "eventRegistrations.list", eventId });
     },
+    async updateEventRegistration(payload) {
+      if (config.useMockData) return mutateMock("eventRegistrations", "update", payload);
+      return post(config.endpoints.eventRegistrationsList, { action: "eventRegistrations.update", data: payload });
+    },
     async listLegalConsultations() {
       return config.useMockData ? mock.legal : post(config.endpoints.legalList, { action: "legal.list" });
     },

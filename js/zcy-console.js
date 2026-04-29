@@ -660,7 +660,7 @@
     if (!els.registrationsTable) return;
     const eventId = state.selected.registrationEventId || "";
     if (!eventId) {
-      els.registrationsTable.innerHTML = `<tr><td colspan="7" class="registration-empty">請先從上方下拉選擇活動，系統才會顯示報名名單。</td></tr>`;
+      els.registrationsTable.innerHTML = `<tr><td colspan="8" class="registration-empty">請先從上方下拉選擇活動，系統才會顯示報名名單。</td></tr>`;
       renderPager(els.registrationsPager, "registrations", 0, 1);
       return;
     }
@@ -669,21 +669,40 @@
     const { pageItems, totalPages } = paginate(items, "registrations");
     renderPager(els.registrationsPager, "registrations", items.length, totalPages);
     if (!pageItems.length) {
-      els.registrationsTable.innerHTML = `<tr><td colspan="7" class="registration-empty">這個活動目前沒有報名資料。</td></tr>`;
+      els.registrationsTable.innerHTML = `<tr><td colspan="8" class="registration-empty">這個活動目前沒有報名資料。</td></tr>`;
       return;
     }
 
-    els.registrationsTable.innerHTML = pageItems.map((item) => `
-      <tr>
-        <td><span class="title-cell"><strong>${escapeHtml(item.registrationId || item.id || "")}</strong><small>${escapeHtml(item.note || "")}</small></span></td>
-        <td>${escapeHtml(item.name || "")}</td>
-        <td>${escapeHtml(item.phone || "")}</td>
-        <td>${escapeHtml(item.companions || 0)}</td>
-        <td><span class="title-cell"><strong>${escapeHtml(item.lineDisplayName || "")}</strong><small>${escapeHtml(item.lineUserId || "")}</small></span></td>
-        <td>${badge(item.status || "registered")}</td>
-        <td>${formatDateTime(item.createdAt || item.createdTime)}</td>
-      </tr>
-    `).join("");
+    els.registrationsTable.innerHTML = pageItems.map((item) => {
+      const isCancelled = item.status === "cancelled";
+      const actionBtn = isCancelled
+        ? `<button class="secondary-button compact" type="button" data-restore-reg="${escapeHtml(item.id)}">恢復報名</button>`
+        : `<button class="danger-button compact" type="button" data-cancel-reg="${escapeHtml(item.id)}">取消報名</button>`;
+      return `
+        <tr${isCancelled ? ' class="row-cancelled"' : ""}>
+          <td><span class="title-cell"><strong>${escapeHtml(item.registrationId || item.id || "")}</strong><small>${escapeHtml(item.note || "")}</small></span></td>
+          <td>${escapeHtml(item.name || "")}</td>
+          <td>${escapeHtml(item.phone || "")}</td>
+          <td>${escapeHtml(item.companions || 0)}</td>
+          <td><span class="title-cell"><strong>${escapeHtml(item.lineDisplayName || "")}</strong><small>${escapeHtml(item.lineUserId || "")}</small></span></td>
+          <td>${badge(item.status || "registered")}</td>
+          <td>${formatDateTime(item.createdAt || item.createdTime)}</td>
+          <td>${actionBtn}</td>
+        </tr>`;
+    }).join("");
+  }
+
+  async function updateRegistrationStatus(id, status) {
+    const label = status === "cancelled" ? "取消" : "恢復";
+    if (!confirm(`確定要${label}這筆報名嗎？`)) return;
+    try {
+      await AdminApi.updateEventRegistration({ id, status });
+      const item = state.eventRegistrations.find((r) => r.id === id);
+      if (item) item.status = status;
+      renderRegistrations();
+    } catch (error) {
+      alert(error.message || `${label}報名失敗`);
+    }
   }
 
   function renderLegal() {
@@ -1054,6 +1073,12 @@
     els.eventStatusFilter.addEventListener("input", () => { resetPage("events"); renderEvents(); });
     els.registrationEventSelect.addEventListener("change", (event) => loadEventRegistrations(event.target.value));
     els.refreshRegistrationsButton.addEventListener("click", () => loadEventRegistrations(els.registrationEventSelect.value));
+    els.registrationsTable.addEventListener("click", (event) => {
+      const cancelBtn = event.target.closest("[data-cancel-reg]");
+      const restoreBtn = event.target.closest("[data-restore-reg]");
+      if (cancelBtn) updateRegistrationStatus(cancelBtn.dataset.cancelReg, "cancelled");
+      if (restoreBtn) updateRegistrationStatus(restoreBtn.dataset.restoreReg, "registered");
+    });
     [els.legalSearch, els.legalStatusFilter, els.legalCategoryFilter].forEach((el) => el.addEventListener("input", () => { resetPage("legal"); renderLegal(); }));
     els.staffSearch.addEventListener("input", () => { resetPage("staff"); renderStaff(); });
     els.addCaseButton.addEventListener("click", () => openCaseForm());

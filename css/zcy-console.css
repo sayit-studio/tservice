@@ -456,6 +456,10 @@ h3 {
   font-weight: 800;
 }
 
+tr.row-cancelled td {
+  opacity: 0.45;
+}
+
 .copy-field-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
