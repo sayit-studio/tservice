@@ -889,7 +889,7 @@
     const savedItem = saved && typeof saved === "object" ? { ...payload, ...saved } : payload;
     const id = savedItem.id || item.id;
     if (enabled && id && !savedItem.registrationUrl) {
-      await AdminApi.saveEvent({ ...savedItem, id, registrationEnabled: "true", registrationUrl: buildEventRegistrationUrl(id) });
+      await AdminApi.saveEvent({ ...savedItem, id, registrationEnabled: "true", registrationUrl: buildEventRegistrationUrl(id, savedItem.title) });
     }
     return saved;
   }
@@ -908,7 +908,7 @@
       { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "false", label: "不開放報名" }, { value: "true", label: "綁定預設活動報名表單" }], String(item.registrationEnabled === true ? "true" : item.registrationEnabled || "false")) },
       { name: "registrationDeadline", label: "報名截止時間", type: "datetime-local", value: datetimeForInput(item.registrationDeadline) },
       { name: "registrationLimit", label: "報名名額上限", type: "number", value: item.registrationLimit },
-      { name: "registrationUrl", label: "報名表單網址", type: "copy-url", value: item.registrationUrl || buildEventRegistrationUrl(item.id), wide: true },
+      { name: "registrationUrl", label: "報名表單網址", type: "copy-url", value: eventRegistrationUrl(item), wide: true },
       { name: "registrationNote", label: "報名注意事項", type: "textarea", value: item.registrationNote },
       { name: "detail", label: "活動詳情", type: "textarea", value: item.detail }
     ], (data) => saveEventWithRegistration(item, data), item.id ? () => deleteItem("event", item.id) : null);
@@ -919,7 +919,7 @@
       alert("請先選擇一個活動，或先新增活動後再設定報名表單。");
       return;
     }
-    const registrationUrl = item.registrationUrl || buildEventRegistrationUrl(item.id);
+    const registrationUrl = eventRegistrationUrl(item);
     openModal("新增/設定報名表單", [
       { name: "title", label: "活動主題", value: item.title, wide: true },
       { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "true", label: "開放報名" }, { value: "false", label: "不開放" }], String(item.registrationEnabled === false || item.registrationEnabled === "false" ? "false" : "true")) },
@@ -930,10 +930,26 @@
     ], (data) => saveEventWithRegistration(item, { ...data, registrationEnabled: data.registrationEnabled || "true" }), null);
   }
 
-  function buildEventRegistrationUrl(eventId) {
+  function buildEventRegistrationUrl(eventId, eventName) {
     if (!eventId) return "";
     const base = "https://tseng-service.pages.dev/liff/event-registration/";
-    return `${base}?eventId=${encodeURIComponent(eventId)}`;
+    const url = new URL(base);
+    url.searchParams.set("eventId", eventId);
+    if (eventName) url.searchParams.set("eventName", eventName);
+    return url.toString();
+  }
+
+  function eventRegistrationUrl(item = {}) {
+    if (!item.registrationUrl) return buildEventRegistrationUrl(item.id, item.title);
+    if (!item.title) return item.registrationUrl;
+
+    try {
+      const url = new URL(item.registrationUrl);
+      if (!url.searchParams.get("eventName")) url.searchParams.set("eventName", item.title);
+      return url.toString();
+    } catch (_) {
+      return item.registrationUrl;
+    }
   }
 
   function openLegalForm(item = {}) {

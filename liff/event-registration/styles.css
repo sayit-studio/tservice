@@ -42,13 +42,6 @@ textarea {
   padding: 18px 0 20px;
 }
 
-.eyebrow {
-  margin: 0 0 6px;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.86rem;
-  font-weight: 800;
-}
-
 h1,
 h2,
 p {
@@ -62,7 +55,7 @@ h1 {
   line-height: 1.16;
 }
 
-.status-pill {
+.event-name-pill {
   align-self: start;
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 8px;
@@ -71,6 +64,10 @@ h1 {
   padding: 7px 11px;
   font-size: 0.86rem;
   font-weight: 800;
+  line-height: 1.35;
+  max-width: 52%;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .panel,
@@ -153,20 +150,6 @@ h1 {
 .notice[data-tone="error"] {
   color: var(--danger);
   background: #fff1f1;
-}
-
-.profile-box {
-  display: grid;
-  gap: 4px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #f7faf8;
-  padding: 12px;
-}
-
-.profile-box span,
-.profile-box small {
-  color: var(--muted);
 }
 
 .privacy-note {

@@ -17,28 +17,44 @@
     }
   }
 
+  function readParamFromUrlOrLiffState(names) {
+    for (const name of names) {
+      const direct = params.get(name);
+      if (direct) return direct;
+    }
+
+    const liffState = params.get("liff.state");
+    if (!liffState) return "";
+
+    try {
+      const normalized = liffState.startsWith("?") ? liffState.slice(1) : liffState;
+      const stateParams = new URLSearchParams(normalized);
+      for (const name of names) {
+        const value = stateParams.get(name);
+        if (value) return value;
+      }
+    } catch (_) {
+      return "";
+    }
+
+    return "";
+  }
+
   const state = {
     liffReady: false,
-    eventId: readEventId()
+    eventId: readEventId(),
+    eventName: readParamFromUrlOrLiffState(["eventName", "eventTitle", "title"])
   };
 
-  const statusEl = document.getElementById("liffStatus");
+  const eventNamePill = document.getElementById("eventNamePill");
   const noticeEl = document.getElementById("notice");
   const form = document.getElementById("registrationForm");
   const completeLayer = document.getElementById("completeLayer");
   const completeText = document.getElementById("completeText");
   const closeButton = document.getElementById("closeButton");
-  const profileBox = document.getElementById("profileBox");
-  const profileName = document.getElementById("profileName");
-  const profileId = document.getElementById("profileId");
-
-  function setStatus(text, tone) {
-    statusEl.textContent = text;
-    statusEl.dataset.tone = tone || "";
-  }
 
   function showNotice(message, tone) {
-    noticeEl.textContent = message;
+    noticeEl.textContent = displayMessage(message);
     noticeEl.dataset.tone = tone || "info";
     noticeEl.hidden = false;
   }
@@ -52,16 +68,24 @@
     document.getElementById(id).value = value || "";
   }
 
+  function displayMessage(message) {
+    return String(message || "").replace(/報名/g, "簽到");
+  }
+
   async function initLiff() {
     setValue("eventId", state.eventId);
+    if (state.eventName) {
+      eventNamePill.textContent = state.eventName;
+      eventNamePill.hidden = false;
+    }
+
     if (!state.eventId) {
-      showNotice("缺少活動編號，請重新開啟報名連結。", "error");
+      showNotice("缺少活動編號，請重新開啟簽到連結。", "error");
       form.querySelector("button[type='submit']").disabled = true;
       return;
     }
 
     if (!window.liff || !config.liffId || config.liffId.includes("請填入")) {
-      setStatus("未設定 LIFF", "warn");
       showNotice("尚未設定 LIFF ID，目前只能測試表單送出，無法取得 LINE 使用者資料。", "info");
       return;
     }
@@ -76,12 +100,7 @@
       const profile = await liff.getProfile();
       setValue("lineUserId", profile.userId);
       setValue("lineDisplayName", profile.displayName);
-      profileName.textContent = profile.displayName || "未命名";
-      profileId.textContent = profile.userId || "";
-      profileBox.hidden = false;
-      setStatus("LINE 已連線", "success");
     } catch (error) {
-      setStatus("LINE 連線失敗", "error");
       showNotice("LIFF 初始化失敗，請確認 LIFF ID 與 Endpoint URL。", "error");
     }
   }
@@ -115,15 +134,15 @@
         body: JSON.stringify(payload)
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok || body.ok === false) throw new Error(body.message || "報名送出失敗");
-      completeText.textContent = body.message || "服務團隊已收到您的報名資料。";
+      if (!response.ok || body.ok === false) throw new Error(body.message || "簽到送出失敗");
+      completeText.textContent = displayMessage(body.message) || "服務團隊已收到您的簽到資料。";
       completeLayer.hidden = false;
       window.setTimeout(closeWindow, Number(config.closeDelayMs) || 1400);
     } catch (error) {
-      showNotice(error.message || "報名送出失敗，請稍後再試。", "error");
+      showNotice(error.message || "簽到送出失敗，請稍後再試。", "error");
     } finally {
       button.disabled = false;
-      button.textContent = "送出報名";
+      button.textContent = "送出簽到";
     }
   }
 
