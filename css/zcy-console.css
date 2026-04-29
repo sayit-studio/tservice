@@ -454,6 +454,9 @@ tr.is-selected {
 .detail-row p {
   margin: 0;
   line-height: 1.6;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .calendar-grid {
@@ -520,26 +523,54 @@ tr.is-selected {
 
 .event-chip {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 0;
-  border-left: 4px solid var(--blue);
-  border-radius: 6px;
+  border-left: 3px solid var(--blue);
+  border-radius: 5px;
   background: #edf3f8;
   color: var(--ink);
-  padding: 6px 7px;
+  padding: 4px 6px;
   text-align: left;
-  font-size: 0.76rem;
-  line-height: 1.35;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  overflow: hidden;
+}
+
+.event-chip-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .event-chip strong,
+.event-chip time,
 .event-chip small {
   display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-chip strong {
+  font-size: 0.69rem;
+  font-weight: 800;
+}
+
+.event-chip time {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 700;
 }
 
 .event-chip small {
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.63rem;
 }
 
 .event-chip[data-status="進行中"] {

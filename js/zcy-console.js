@@ -397,7 +397,7 @@
       const selectedClass = state.calendarDate === dateKey ? " is-selected-day" : "";
       html += '<div class="calendar-day ' + dayClass + selectedClass + '" data-date="' + dateKey + '"><button class="day-number" type="button" data-date="' + dateKey + '">' + date.getDate() + '</button>' + events.map((event) => {
         const category = event.category || event.type || event.status || "";
-        return '<button class="event-chip" type="button" data-event-id="' + escapeHtml(event.id) + '" data-status="' + escapeHtml(event.status || "") + '" data-category-tone="' + escapeHtml(categoryTone(category)) + '"><strong>' + escapeHtml(event.title || "\u672a\u547d\u540d\u6d3b\u52d5") + '</strong><small>' + escapeHtml([formatTime(event.date), event.community || event.venue || ""].filter(Boolean).join(" \\u00b7 ")) + '</small></button>';
+        return '<button class="event-chip" type="button" data-event-id="' + escapeHtml(event.id) + '" data-status="' + escapeHtml(event.status || "") + '" data-category-tone="' + escapeHtml(categoryTone(category)) + '"><span class="event-chip-main"><strong>' + escapeHtml(event.title || "\u672a\u547d\u540d\u6d3b\u52d5") + '</strong><time>' + escapeHtml(formatTime(event.date)) + '</time></span><small>' + escapeHtml(event.community || event.venue || "") + '</small></button>';
       }).join("") + '</div>';
     });
     els.calendarGrid.innerHTML = html;
