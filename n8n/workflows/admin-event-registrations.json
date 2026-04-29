@@ -31,7 +31,13 @@
       "name": "Query Event Registrations",
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2.2,
-      "position": [-280, 0]
+      "position": [-280, 0],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
     },
     {
       "parameters": {
