@@ -99,6 +99,14 @@
     return String(value || "");
   }
 
+  function asTextList(value) {
+    if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
+    return String(value || "")
+      .split(/[、,，\s]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
   function isNotionId(value) {
     const text = String(value || "").trim();
     return /^[0-9a-f]{32}$/i.test(text) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(text);
@@ -730,13 +738,21 @@
   }
 
   function isAdminUser() {
-    const role = state.user?.role || "";
-    const permissions = state.user?.permissions || [];
-    return role === "管理者" || role === "管理員" || permissions.includes("all");
+    const user = state.user || {};
+    const accessValues = [
+      ...asTextList(user.role),
+      ...asTextList(user.identity),
+      ...asTextList(user.permissions),
+      ...asTextList(user.permission)
+    ];
+    return accessValues.some((value) => ["all", "admin", "管理者", "管理員", "主任", "議員"].includes(value));
   }
 
   function applyRole() {
-    els.roleLabel.textContent = `${state.user.name || state.user.account}｜${state.user.role || ""}`;
+    const user = state.user || {};
+    const displayName = user.name || user.account || user.email || "未命名使用者";
+    const displayRole = asText(user.role || user.identity || user.permissions || "").trim();
+    els.roleLabel.textContent = displayRole ? `${displayName}｜${displayRole}` : displayName;
     document.querySelectorAll(".admin-only").forEach((node) => {
       node.hidden = !isAdminUser();
     });
