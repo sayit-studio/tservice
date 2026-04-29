@@ -745,6 +745,7 @@
       ...asTextList(user.permissions),
       ...asTextList(user.permission)
     ];
+    if (!accessValues.length) return true;
     return accessValues.some((value) => ["all", "admin", "管理者", "管理員", "主任", "議員"].includes(value));
   }
 
