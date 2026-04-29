@@ -1,5 +1,19 @@
 (function () {
   const CASE_STATUSES = ["新案件", "進行中", "追蹤中", "未完成案件", "已完成案件"];
+  const CASE_CATEGORIES = [
+    "陳情建議",
+    "市府單位",
+    "一般請託",
+    "人事案",
+    "託辦類別",
+    "學籍安排",
+    "府外單位",
+    "民間救助",
+    "醫療院所",
+    "兵役",
+    "總質詢",
+    "車禍"
+  ];
   const EVENT_STATUSES = ["籌備中", "進行中", "已完成"];
   const LEGAL_STATUSES = [
     { value: "confirmed", label: "已預約" },
@@ -172,6 +186,25 @@
     return "default";
   }
 
+  function caseStatusRank(status) {
+    const rank = CASE_STATUSES.indexOf(status);
+    return rank === -1 ? CASE_STATUSES.length : rank;
+  }
+
+  function caseTimestamp(item) {
+    const value = item.startDate || item.createdAt || item.created_at || item.createdTime || item.created_time || item.id || 0;
+    const parsed = new Date(value).getTime();
+    if (!Number.isNaN(parsed)) return parsed;
+    const idTimestamp = String(item.id || "").match(/\d{10,}/);
+    return idTimestamp ? Number(idTimestamp[0]) : 0;
+  }
+
+  function compareCases(a, b) {
+    const rankDiff = caseStatusRank(a.status) - caseStatusRank(b.status);
+    if (rankDiff !== 0) return rankDiff;
+    return caseTimestamp(b) - caseTimestamp(a);
+  }
+
   function badge(status, type) {
     const label = type === "legal" ? (LEGAL_STATUSES.find((item) => item.value === status)?.label || status || "未設定") : (status || "未設定");
     const done = status === "已完成" || status === "confirmed";
@@ -333,7 +366,7 @@
     const items = state.cases.filter((item) => {
       const text = `${item.title} ${item.petitioner} ${item.caseNo} ${item.owner}`;
       return (!keyword || text.includes(keyword)) && (!status || item.status === status);
-    });
+    }).sort(compareCases);
     const { pageItems, totalPages } = paginate(items, "cases");
     renderPager(els.casePager, "cases", items.length, totalPages);
     els.casesTable.innerHTML = pageItems.map((item) => `
@@ -550,7 +583,7 @@
       { name: "startDate", label: "處理起始日期", type: "date", value: dateForInput(item.startDate) },
       { name: "status", label: "執行狀態", type: "select", options: '<option value="">未設定</option>' + selectOptions(CASE_STATUSES, item.status) },
       { name: "owner", label: "負責人員", type: "select", options: staffOptions(item.owner) },
-      { name: "category", label: "建議事項類別", value: item.category },
+      { name: "category", label: "建議事項類別", type: "select", options: selectOptions(CASE_CATEGORIES, item.category) },
       { name: "summary", label: "執行狀況敘述", type: "textarea", value: item.summary },
       { name: "content", label: "案件詳細說明", type: "textarea", value: item.content }
     ], (data) => AdminApi.saveCase({ ...item, ...data }), item.id ? () => deleteItem("case", item.id) : null);
