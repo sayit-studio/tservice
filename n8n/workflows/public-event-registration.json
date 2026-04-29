@@ -191,7 +191,7 @@
             },
             {
               "key": "曾辦_活動紀錄資料庫|relation",
-              "relationValue": "={{ [$json.eventId] }}"
+              "relationValue": "={{ $json.eventId }}"
             },
             {
               "key": "活動ID|rich_text",
