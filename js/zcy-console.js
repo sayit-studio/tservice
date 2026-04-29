@@ -33,6 +33,7 @@
     selected: {},
     calendarMode: "month",
     calendarDate: "",
+    eventDetailOpen: false,
     modal: null,
     pageSize: 10,
     registrationPageSize: 25,
@@ -171,7 +172,6 @@
   function visibleCalendarDays(year, month) {
     if (!state.calendarDate) state.calendarDate = dateKeyFromDate(new Date(year, month - 1, 1));
     const selected = parseDateKey(state.calendarDate);
-    if (state.calendarMode === "day") return [selected];
     if (state.calendarMode === "week") {
       const start = new Date(selected);
       start.setDate(selected.getDate() - selected.getDay());
@@ -202,6 +202,22 @@
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
     return new Intl.DateTimeFormat("zh-TW", { hour: "2-digit", minute: "2-digit" }).format(date);
+  }
+
+  function formatMonthDay(value) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  }
+
+  function eventDateValue(item) {
+    return item.date || item.startDate || "";
+  }
+
+  function eventHour(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 9;
+    return Math.min(21, Math.max(8, date.getHours()));
   }
 
   function staffOptions(selected) {
@@ -323,24 +339,28 @@
     const extra = type === "event"
       ? `<button class="secondary-button compact" type="button" data-registration="${escapeHtml(id)}">報名設定</button>`
       : "";
+    const close = type === "event"
+      ? `<button class="icon-button" type="button" data-close-detail aria-label="關閉">×</button>`
+      : "";
     return `
       <div class="detail-actions">
         <button class="secondary-button compact" type="button" data-edit="${type}" data-id="${escapeHtml(id)}">編輯</button>
         ${extra}
         <button class="danger-button compact" type="button" data-delete="${type}" data-id="${escapeHtml(id)}">刪除</button>
+        ${close}
       </div>
     `;
   }
 
-  function detail(title, rows, actions = "") {
+  function detail(title, rows, actions = "", options = {}) {
     return `
       <div class="detail-title">
         <h3>${escapeHtml(title || "未命名")}</h3>
         ${actions}
       </div>
-      <div class="detail-grid">
+      <div class="detail-grid ${options.compact ? "is-compact" : ""}">
         ${rows.map((row) => `
-          <div class="detail-row">
+          <div class="detail-row ${row.wide ? "is-wide" : ""}">
             <span>${escapeHtml(row.label)}</span>
             ${row.html ? row.value : row.multiline ? `<p>${escapeHtml(row.value || "未填寫")}</p>` : `<strong>${escapeHtml(row.value || "未填寫")}</strong>`}
           </div>
@@ -477,33 +497,66 @@
     const labels = ["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"];
     const status = els.eventStatusFilter.value;
     const scopedEvents = state.events.filter((item) => {
-      const date = String(item.date || item.startDate || "");
+      const date = String(eventDateValue(item));
       if (state.calendarMode === "month") return date.startsWith(monthKey) && (!status || item.status === status);
       return (!status || item.status === status);
     });
     const days = visibleCalendarDays(year, month);
     els.calendarGrid.dataset.mode = state.calendarMode;
-    let html = labels.map((label) => '<div class="calendar-head">' + label + '</div>').join("");
-    if (state.calendarMode === "month") {
+    if (state.calendarMode === "week") {
+      els.calendarGrid.innerHTML = renderWeekCalendar(days, scopedEvents);
+    } else {
+      let html = labels.map((label) => '<div class="calendar-head">' + label + '</div>').join("");
       const leading = new Date(year, month - 1, 1).getDay();
       for (let i = 0; i < leading; i += 1) html += '<div class="calendar-day is-empty is-padding"></div>';
+      days.forEach((date) => {
+        const dateKey = dateKeyFromDate(date);
+        const events = scopedEvents.filter((item) => String(eventDateValue(item)).startsWith(dateKey))
+          .sort((a, b) => new Date(eventDateValue(a)).getTime() - new Date(eventDateValue(b)).getTime());
+        const dayClass = events.length ? "has-events" : "is-empty";
+        const selectedClass = state.calendarDate === dateKey ? " is-selected-day" : "";
+        html += '<div class="calendar-day ' + dayClass + selectedClass + '" data-date="' + dateKey + '"><button class="day-number" type="button" data-date="' + dateKey + '">' + date.getDate() + '</button>' + events.map(renderEventChip).join("") + '</div>';
+      });
+      els.calendarGrid.innerHTML = html;
     }
+    const visibleEvents = scopedEvents.filter((item) => days.some((date) => String(eventDateValue(item)).startsWith(dateKeyFromDate(date))));
+    els.eventPager.innerHTML = '<span>' + (state.calendarMode === "month" ? "\u672c\u6708" : "\u672c\u9031") + '\u6d3b\u52d5 ' + visibleEvents.length + ' \u7b46</span>';
+    if (!visibleEvents.some((item) => item.id === state.selected.eventId)) closeEventDetail();
+  }
+
+  function renderEventChip(event) {
+    const category = event.category || event.type || event.status || "";
+    const selectedClass = state.selected.eventId === event.id && state.eventDetailOpen ? " is-selected" : "";
+    return '<button class="event-chip' + selectedClass + '" type="button" data-event-id="' + escapeHtml(event.id) + '" data-status="' + escapeHtml(event.status || "") + '" data-category-tone="' + escapeHtml(categoryTone(category)) + '"><span class="event-chip-main"><strong>' + escapeHtml(event.title || "\u672a\u547d\u540d\u6d3b\u52d5") + '</strong><time>' + escapeHtml(formatTime(eventDateValue(event))) + '</time></span><small>' + escapeHtml(event.community || event.venue || "") + '</small></button>';
+  }
+
+  function renderWeekCalendar(days, scopedEvents) {
+    const weekLabels = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+    const todayKey = dateKeyFromDate(new Date());
+    const hours = Array.from({ length: 14 }, (_, index) => index + 8);
+    let html = '<div class="week-calendar"><div class="week-time-corner"></div>';
     days.forEach((date) => {
       const dateKey = dateKeyFromDate(date);
-      const events = scopedEvents.filter((item) => String(item.date || item.startDate || "").startsWith(dateKey));
-      const dayClass = events.length ? "has-events" : "is-empty";
-      const selectedClass = state.calendarDate === dateKey ? " is-selected-day" : "";
-      html += '<div class="calendar-day ' + dayClass + selectedClass + '" data-date="' + dateKey + '"><button class="day-number" type="button" data-date="' + dateKey + '">' + date.getDate() + '</button>' + events.map((event) => {
-        const category = event.category || event.type || event.status || "";
-        return '<button class="event-chip" type="button" data-event-id="' + escapeHtml(event.id) + '" data-status="' + escapeHtml(event.status || "") + '" data-category-tone="' + escapeHtml(categoryTone(category)) + '"><span class="event-chip-main"><strong>' + escapeHtml(event.title || "\u672a\u547d\u540d\u6d3b\u52d5") + '</strong><time>' + escapeHtml(formatTime(event.date)) + '</time></span><small>' + escapeHtml(event.community || event.venue || "") + '</small></button>';
-      }).join("") + '</div>';
+      html += '<div class="week-day-head' + (dateKey === todayKey ? " is-today" : "") + '"><small>' + weekLabels[date.getDay()] + '</small><strong>' + date.getDate() + '</strong><small>' + formatMonthDay(date) + '</small></div>';
     });
-    els.calendarGrid.innerHTML = html;
-    const visibleEvents = scopedEvents.filter((item) => days.some((date) => String(item.date || item.startDate || "").startsWith(dateKeyFromDate(date))));
-    els.eventPager.innerHTML = '<span>' + (state.calendarMode === "month" ? "\u672c\u6708" : state.calendarMode === "week" ? "\u672c\u9031" : "\u672c\u65e5") + '\u6d3b\u52d5 ' + visibleEvents.length + ' \u7b46</span>';
-    const selected = visibleEvents.find((item) => item.id === state.selected.eventId) || visibleEvents[0];
-    if (selected) showEvent(selected.id);
-    if (!selected) els.eventDetail.innerHTML = detail("\u76ee\u524d\u6c92\u6709\u6d3b\u52d5", [{ label: "\u63d0\u793a", value: "\u8acb\u78ba\u8a8d\u6708\u4efd\u3001\u72c0\u614b\u7be9\u9078\uff0c\u6216\u65b0\u589e\u6d3b\u52d5\u3002" }]);
+    hours.forEach((hour) => {
+      html += '<div class="week-time-label">' + (hour < 12 ? "上午" : "下午") + (hour > 12 ? hour - 12 : hour) + '</div>';
+      days.forEach((date) => {
+        const dateKey = dateKeyFromDate(date);
+        const events = scopedEvents.filter((item) => String(eventDateValue(item)).startsWith(dateKey) && eventHour(eventDateValue(item)) === hour)
+          .sort((a, b) => new Date(eventDateValue(a)).getTime() - new Date(eventDateValue(b)).getTime());
+        html += '<div class="week-slot' + (events.length ? " has-events" : "") + '" data-date="' + dateKey + '" data-hour="' + hour + '">' + events.map((event) => {
+          const selectedClass = state.selected.eventId === event.id && state.eventDetailOpen ? " is-selected" : "";
+          return '<button class="week-event' + selectedClass + '" type="button" data-event-id="' + escapeHtml(event.id) + '" data-status="' + escapeHtml(event.status || "") + '"><time>' + escapeHtml(formatTime(eventDateValue(event))) + '</time><strong>' + escapeHtml(event.title || "未命名活動") + '</strong><small>' + escapeHtml(event.community || event.venue || "") + '</small></button>';
+        }).join("") + '</div>';
+      });
+    });
+    return html + '</div>';
+  }
+
+  function renderCopyUrlButton(url) {
+    if (!url) return "<strong>未設定</strong>";
+    return `<button class="secondary-button compact copy-url-button" type="button" data-copy-url="${escapeHtml(url)}">點我複製</button>`;
   }
 
   function updateCalendarNavLabel(ref) {
@@ -512,7 +565,7 @@
     const m = ref.getMonth() + 1;
     if (state.calendarMode === "month") {
       els.calendarNavLabel.textContent = y + "\u5e74" + m + "\u6708";
-    } else if (state.calendarMode === "week") {
+    } else {
       const sun = new Date(ref);
       sun.setDate(ref.getDate() - ref.getDay());
       const sat = new Date(sun);
@@ -522,8 +575,6 @@
       els.calendarNavLabel.textContent = sm === em
         ? sm + "\u6708" + sun.getDate() + "\u2013" + sat.getDate() + "\u65e5"
         : sm + "\u6708" + sun.getDate() + "\u65e5 \u2013 " + em + "\u6708" + sat.getDate() + "\u65e5";
-    } else {
-      els.calendarNavLabel.textContent = y + "\u5e74" + m + "\u6708" + ref.getDate() + "\u65e5";
     }
   }
 
@@ -532,10 +583,8 @@
     if (state.calendarMode === "month") {
       date.setDate(1);
       date.setMonth(date.getMonth() + dir);
-    } else if (state.calendarMode === "week") {
-      date.setDate(date.getDate() + dir * 7);
     } else {
-      date.setDate(date.getDate() + dir);
+      date.setDate(date.getDate() + dir * 7);
     }
     state.calendarDate = dateKeyFromDate(date);
     renderEvents();
@@ -606,6 +655,7 @@
 
   function showEvent(id) {
     state.selected.eventId = id;
+    state.eventDetailOpen = true;
     const item = state.events.find((entry) => entry.id === id);
     if (!item) return;
     els.eventDetail.innerHTML = detail(item.title || "未命名活動", [
@@ -616,11 +666,28 @@
       { label: "負責人員", value: item.ownerName || item.owner || "未指派" },
       { label: "聯絡資訊", value: `${item.contact || ""} ${item.phone || ""}`.trim() },
       { label: "報名表單", value: item.registrationEnabled === "true" || item.registrationEnabled === true ? "開放報名" : "未開放" },
-      { label: "報名網址", value: eventRegistrationUrl(item) || "未設定" },
+      { label: "報名網址", value: renderCopyUrlButton(eventRegistrationUrl(item)), html: true },
       { label: "報名截止", value: formatDateTime(item.registrationDeadline) },
       { label: "名額上限", value: item.registrationLimit },
-      { label: "活動詳情", value: item.detail, multiline: true }
-    ], renderActions("event", item.id));
+      { label: "活動詳情", value: item.detail, multiline: true, wide: true }
+    ], renderActions("event", item.id), { compact: true });
+    els.eventDetail.classList.add("is-open");
+    openDrawerBackdrop();
+    renderEvents();
+  }
+
+  function openDrawerBackdrop() {
+    if (document.querySelector(".drawer-backdrop")) return;
+    const backdrop = document.createElement("div");
+    backdrop.className = "drawer-backdrop";
+    backdrop.dataset.closeDetail = "true";
+    document.body.append(backdrop);
+  }
+
+  function closeEventDetail() {
+    state.eventDetailOpen = false;
+    els.eventDetail.classList.remove("is-open");
+    document.querySelector(".drawer-backdrop")?.remove();
   }
 
   function eventOptionLabel(item) {
@@ -800,8 +867,9 @@
         <label class="field wide copy-field">
           <span>${escapeHtml(field.label)}</span>
           <div class="copy-field-row">
-            <input name="${field.name}" type="url" value="${escapeHtml(value)}" readonly />
-            <button class="secondary-button compact" type="button" data-copy-target="${escapeHtml(field.name)}">複製</button>
+            <input name="${field.name}" type="hidden" value="${escapeHtml(value)}" readonly />
+            <strong class="copy-field-summary">已產生簽到連結</strong>
+            <button class="secondary-button compact" type="button" data-copy-target="${escapeHtml(field.name)}">點我複製</button>
           </div>
         </label>
       `;
@@ -819,17 +887,7 @@
     const name = event.currentTarget.dataset.copyTarget;
     const input = els.modalForm.querySelector(`[name="${CSS.escape(name)}"]`);
     if (!input || !input.value) return;
-
-    try {
-      await navigator.clipboard.writeText(input.value);
-      event.currentTarget.textContent = "已複製";
-      window.setTimeout(() => {
-        event.currentTarget.textContent = "複製";
-      }, 1200);
-    } catch (_) {
-      input.select();
-      document.execCommand("copy");
-    }
+    await copyText(input.value, event.currentTarget);
   }
 
   function closeModal() {
@@ -892,6 +950,30 @@
       await AdminApi.saveEvent({ ...savedItem, id, registrationEnabled: "true", registrationUrl: buildEventRegistrationUrl(id, savedItem.title, savedItem.date) });
     }
     return saved;
+  }
+
+  async function copyText(value, button) {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      if (button) {
+        const original = button.textContent;
+        button.textContent = "已複製";
+        window.setTimeout(() => {
+          button.textContent = original;
+        }, 1200);
+      }
+    } catch (_) {
+      const temp = document.createElement("textarea");
+      temp.value = value;
+      temp.setAttribute("readonly", "");
+      temp.style.position = "fixed";
+      temp.style.opacity = "0";
+      document.body.append(temp);
+      temp.select();
+      document.execCommand("copy");
+      temp.remove();
+    }
   }
 
   function openEventForm(item = {}) {
@@ -992,6 +1074,17 @@
   }
 
   function handleDetailClick(event) {
+    const closeDetail = event.target.closest("[data-close-detail]");
+    if (closeDetail) {
+      closeEventDetail();
+      renderEvents();
+      return;
+    }
+    const copyUrl = event.target.closest("[data-copy-url]");
+    if (copyUrl) {
+      copyText(copyUrl.dataset.copyUrl, copyUrl);
+      return;
+    }
     const edit = event.target.closest("[data-edit]");
     const del = event.target.closest("[data-delete]");
     const registration = event.target.closest("[data-registration]");
@@ -1075,6 +1168,10 @@
     els.modalCloseButton.addEventListener("click", closeModal);
     document.addEventListener("click", (event) => {
       if (event.target.closest(".image-preview-close") || event.target.classList.contains("image-preview-layer")) closeImagePreview();
+      if (event.target.closest(".drawer-backdrop")) {
+        closeEventDetail();
+        renderEvents();
+      }
     });
     els.modalForm.addEventListener("submit", submitModal);
     [els.caseDetail, els.eventDetail, els.legalDetail].forEach((node) => node.addEventListener("click", handleDetailClick));
@@ -1118,7 +1215,15 @@
     });
     els.calendarGrid.addEventListener("click", (event) => {
       const button = event.target.closest("[data-event-id]");
-      if (button) showEvent(button.dataset.eventId);
+      if (button) {
+        showEvent(button.dataset.eventId);
+        return;
+      }
+      const day = event.target.closest("[data-date]");
+      if (day?.dataset.date) {
+        state.calendarDate = day.dataset.date;
+        renderEvents();
+      }
     });
     document.addEventListener("click", (event) => {
       const button = event.target.closest("[data-page]");
