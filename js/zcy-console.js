@@ -678,6 +678,7 @@
       const actionBtn = isCancelled
         ? `<button class="secondary-button compact" type="button" data-restore-reg="${escapeHtml(item.id)}">恢復報名</button>`
         : `<button class="danger-button compact" type="button" data-cancel-reg="${escapeHtml(item.id)}">取消報名</button>`;
+      const dupBadge = item.isDuplicate ? `<span class="dup-badge" title="${escapeHtml(item.note || "重複報名")}">重複報名</span>` : "";
       return `
         <tr${isCancelled ? ' class="row-cancelled"' : ""}>
           <td><span class="title-cell"><strong>${escapeHtml(item.registrationId || item.id || "")}</strong><small>${escapeHtml(item.note || "")}</small></span></td>
@@ -685,7 +686,7 @@
           <td>${escapeHtml(item.phone || "")}</td>
           <td>${escapeHtml(item.companions || 0)}</td>
           <td><span class="title-cell"><strong>${escapeHtml(item.lineDisplayName || "")}</strong><small>${escapeHtml(item.lineUserId || "")}</small></span></td>
-          <td>${badge(item.status || "registered")}</td>
+          <td><span class="status-group">${badge(item.status || "registered")}${dupBadge}</span></td>
           <td>${formatDateTime(item.createdAt || item.createdTime)}</td>
           <td>${actionBtn}</td>
         </tr>`;

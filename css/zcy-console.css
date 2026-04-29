@@ -460,6 +460,26 @@ tr.row-cancelled td {
   opacity: 0.45;
 }
 
+.status-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dup-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #fff3cd;
+  color: #7a5200;
+  border: 1px solid #f0c050;
+  white-space: nowrap;
+  cursor: default;
+}
+
 .copy-field-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
