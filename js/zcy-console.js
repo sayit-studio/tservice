@@ -94,6 +94,18 @@
     })[char]);
   }
 
+  function isImageUrl(value) {
+    const url = String(value || "").split("?")[0].toLowerCase();
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url);
+  }
+
+  function renderAttachment(value) {
+    const url = String(value || "").trim();
+    if (!url) return "無";
+    if (!isImageUrl(url)) return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`;
+    return `<button class="attachment-preview" type="button" data-preview-image="${escapeHtml(url)}"><img src="${escapeHtml(url)}" alt="案件附件" loading="lazy" /></button>`;
+  }
+
   function asText(value) {
     if (Array.isArray(value)) return value.join("、");
     return String(value || "");
@@ -319,7 +331,7 @@
         ${rows.map((row) => `
           <div class="detail-row">
             <span>${escapeHtml(row.label)}</span>
-            ${row.multiline ? `<p>${escapeHtml(row.value || "未填寫")}</p>` : `<strong>${escapeHtml(row.value || "未填寫")}</strong>`}
+            ${row.html ? row.value : row.multiline ? `<p>${escapeHtml(row.value || "未填寫")}</p>` : `<strong>${escapeHtml(row.value || "未填寫")}</strong>`}
           </div>
         `).join("")}
       </div>
@@ -522,7 +534,7 @@
       { label: "細項分類", value: asText(item.subcategories) },
       { label: "其它項目名稱", value: item.otherName || "無" },
       { label: "1999案號", value: item.case1999 || "無" },
-      { label: "附件連結", value: item.attachmentUrl || "無" },
+      { label: "附件連結", value: renderAttachment(item.attachmentUrl), html: true },
       { label: "事件陳述", value: item.statement, multiline: true }
     ], renderActions("legal", item.id));
     markSelected(els.legalTable, id);
@@ -585,6 +597,19 @@
     els.modalLayer.hidden = true;
     els.modalForm.innerHTML = "";
     state.modal = null;
+  }
+
+  function closeImagePreview() {
+    const layer = document.querySelector(".image-preview-layer");
+    if (layer) layer.remove();
+  }
+
+  function openImagePreview(url) {
+    closeImagePreview();
+    const layer = document.createElement("div");
+    layer.className = "image-preview-layer";
+    layer.innerHTML = `<button class="image-preview-close" type="button" aria-label="關閉">×</button><img src="${escapeHtml(url)}" alt="附件圖片" />`;
+    document.body.append(layer);
   }
 
   function formObject(form) {
@@ -725,6 +750,8 @@
       if (type === "legal") openLegalForm(state.legal.find((item) => item.id === id));
     }
     if (del) deleteItem(del.dataset.delete, del.dataset.id);
+    const preview = event.target.closest("[data-preview-image]");
+    if (preview) openImagePreview(preview.dataset.previewImage);
   }
 
   function switchView(view) {
@@ -789,6 +816,9 @@
       loadAll({ force: true });
     });
     els.modalCloseButton.addEventListener("click", closeModal);
+    document.addEventListener("click", (event) => {
+      if (event.target.closest(".image-preview-close") || event.target.classList.contains("image-preview-layer")) closeImagePreview();
+    });
     els.modalForm.addEventListener("submit", submitModal);
     [els.caseDetail, els.eventDetail, els.legalDetail].forEach((node) => node.addEventListener("click", handleDetailClick));
     els.navItems.forEach((item) => item.addEventListener("click", () => switchView(item.dataset.view)));
