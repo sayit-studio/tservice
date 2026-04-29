@@ -97,6 +97,21 @@
     return String(value || "");
   }
 
+  function isNotionId(value) {
+    const text = String(value || "").trim();
+    return /^[0-9a-f]{32}$/i.test(text) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(text);
+  }
+
+  function casePetitionerName(value) {
+    const text = String(value || "").trim();
+    return text && !isNotionId(text) ? text : "未填寫";
+  }
+
+  function casePetitionerDetail(item) {
+    const name = casePetitionerName(item.petitioner);
+    return name === "未填寫" ? name : `${name} ${item.phone || ""}`.trim();
+  }
+
   function dateForInput(value) {
     if (!value) return "";
     const date = new Date(value);
@@ -364,7 +379,8 @@
     const keyword = els.caseSearch.value.trim();
     const status = els.caseStatusFilter.value;
     const items = state.cases.filter((item) => {
-      const text = `${item.title} ${item.petitioner} ${item.caseNo} ${item.owner}`;
+      const petitioner = casePetitionerName(item.petitioner);
+      const text = `${item.title} ${petitioner === "未填寫" ? "" : petitioner} ${item.caseNo} ${item.owner}`;
       return (!keyword || text.includes(keyword)) && (!status || item.status === status);
     }).sort(compareCases);
     const { pageItems, totalPages } = paginate(items, "cases");
@@ -374,7 +390,7 @@
         <td><span class="title-cell"><strong>${escapeHtml(item.title || item.content || "未命名案件")}</strong><small>${escapeHtml(item.category || "")} ${escapeHtml(item.caseNo || "")}</small></span></td>
         <td>${escapeHtml(item.ownerName || item.owner || "未指派")}</td>
         <td>${badge(item.status)}</td>
-        <td>${escapeHtml(item.petitioner || "")}</td>
+        <td>${escapeHtml(casePetitionerName(item.petitioner))}</td>
         <td>${escapeHtml(item.startDate || "")}</td>
       </tr>
     `).join("");
@@ -390,7 +406,7 @@
     els.caseDetail.innerHTML = detail(item.title || "未命名案件", [
       { label: "負責人員", value: item.ownerName || item.owner || "未指派" },
       { label: "執行狀態", value: item.status },
-      { label: "陳情人", value: `${item.petitioner || ""} ${item.phone || ""}`.trim() },
+      { label: "陳情人", value: casePetitionerDetail(item) },
       { label: "處理起始日期", value: item.startDate },
       { label: "1999案號", value: item.caseNo || "無" },
       { label: "執行狀況敘述", value: item.summary, multiline: true },
