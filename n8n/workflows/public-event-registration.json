@@ -182,31 +182,35 @@
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "?勗?蝺刻?|title",
+              "key": "報名編號|title",
               "title": "={{ $json.registrationId }}"
             },
             {
-              "key": "瘣餃?ID|rich_text",
+              "key": "狀態|select",
+              "selectValue": "registered"
+            },
+            {
+              "key": "曾辦_活動紀錄資料庫|relation",
+              "relationValue": "={{ [$json.eventId] }}"
+            },
+            {
+              "key": "活動ID|rich_text",
               "textContent": "={{ $json.eventId }}"
             },
             {
-              "key": "瘣餃??迂|rich_text",
-              "textContent": "={{ $json.eventTitle }}"
-            },
-            {
-              "key": "憪?|rich_text",
+              "key": "姓名|rich_text",
               "textContent": "={{ $json.name }}"
             },
             {
-              "key": "?餉店|phone_number",
+              "key": "電話|phone_number",
               "phoneValue": "={{ $json.phone }}"
             },
             {
-              "key": "??鈭箸|number",
+              "key": "同行人數|number",
               "numberValue": "={{ $json.companions }}"
             },
             {
-              "key": "?酉|rich_text",
+              "key": "備註|rich_text",
               "textContent": "={{ $json.note }}"
             },
             {
@@ -214,30 +218,14 @@
               "textContent": "={{ $json.lineUserId }}"
             },
             {
-              "key": "LINE ?迂|rich_text",
+              "key": "LINE名稱|rich_text",
               "textContent": "={{ $json.lineDisplayName }}"
             },
             {
-              "key": "LIFF 隤?|rich_text",
-              "textContent": "={{ $json.liffLanguage }}"
-            },
-            {
-              "key": "LIFF 蝟餌絞|rich_text",
-              "textContent": "={{ $json.liffOS }}"
-            },
-            {
-              "key": "?臬 LINE ?折??checkbox",
-              "checkboxValue": "={{ $json.isInClient }}"
-            },
-            {
-              "key": "撱箇???|date",
+              "key": "建立時間|date",
               "includeTime": true,
               "date": "={{ $json.createdAt }}",
               "timezone": "Asia/Taipei"
-            },
-            {
-              "key": "??select",
-              "selectValue": "registered"
             }
           ]
         },

@@ -41,6 +41,7 @@
         <nav class="side-nav" aria-label="後台導覽">
           <button class="nav-item is-active" type="button" data-view="cases">陳情案件</button>
           <button class="nav-item" type="button" data-view="events">活動管理</button>
+          <button class="nav-item" type="button" data-view="registrations">活動報名名單</button>
           <button class="nav-item" type="button" data-view="legal">法扶諮詢</button>
           <button class="nav-item admin-only" type="button" data-view="staff">人員管理</button>
         </nav>
@@ -125,6 +126,35 @@
             <article class="detail-pane" id="eventDetail"></article>
           </div>
           <div class="pager" id="eventPager"></div>
+        </section>
+
+        <section class="view-panel" id="registrationsView" data-title="活動報名名單">
+          <div class="toolbar registration-toolbar">
+            <label class="select-field">
+              <span>選擇活動</span>
+              <select id="registrationEventSelect">
+                <option value="">請先選擇活動</option>
+              </select>
+            </label>
+            <button class="secondary-button compact" id="refreshRegistrationsButton" type="button">重新載入</button>
+          </div>
+          <div class="table-wrap full">
+            <table>
+              <thead>
+                <tr>
+                  <th>報名編號</th>
+                  <th>姓名</th>
+                  <th>電話</th>
+                  <th>同行人數</th>
+                  <th>LINE</th>
+                  <th>狀態</th>
+                  <th>建立時間</th>
+                </tr>
+              </thead>
+              <tbody id="registrationsTable"></tbody>
+            </table>
+          </div>
+          <div class="pager" id="registrationsPager"></div>
         </section>
 
         <section class="view-panel" id="legalView" data-title="法扶諮詢">

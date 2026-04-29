@@ -1,9 +1,25 @@
 (function () {
   const config = window.EVENT_REGISTRATION_CONFIG || {};
   const params = new URLSearchParams(window.location.search);
+
+  function readEventId() {
+    const direct = params.get("eventId");
+    if (direct) return direct;
+
+    const liffState = params.get("liff.state");
+    if (!liffState) return "";
+
+    try {
+      const normalized = liffState.startsWith("?") ? liffState.slice(1) : liffState;
+      return new URLSearchParams(normalized).get("eventId") || "";
+    } catch (_) {
+      return "";
+    }
+  }
+
   const state = {
     liffReady: false,
-    eventId: params.get("eventId") || ""
+    eventId: readEventId()
   };
 
   const statusEl = document.getElementById("liffStatus");

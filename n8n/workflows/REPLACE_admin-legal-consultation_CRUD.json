@@ -154,7 +154,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  appointmentId: prop(item, ['預約編號']),\n  name: prop(item, ['姓名']),\n  phone: prop(item, ['電話']),\n  appointmentDate: prop(item, ['預約日期', '預約日期時間']),\n  status: prop(item, ['狀態']),\n  statement: prop(item, ['事件陳述']),\n  createdAt: prop(item, ['建立時間', '建立日期']),\n  cancelReason: prop(item, ['取消原因']),\n  cancelledAt: prop(item, ['取消時間']),\n  case1999: prop(item, ['1999案號']),\n  category: prop(item, ['法扶項目']),\n  legalItem: prop(item, ['法扶細項']),\n  legalOtherItem: prop(item, ['其它項目名稱', '其他項目名稱'])\n})) } }];"
+        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  appointmentId: prop(item, ['預約編號']),\n  name: prop(item, ['姓名']),\n  phone: prop(item, ['電話']),\n  appointmentDate: prop(item, ['預約日期', '預約日期時間']),\n  status: prop(item, ['狀態']),\n  statement: prop(item, ['事件陳述']),\n  createdAt: prop(item, ['建立時間', '建立日期']),\n  cancelReason: prop(item, ['取消原因']),\n  cancelledAt: prop(item, ['取消時間']),\n  case1999: prop(item, ['1999案號']),\n  category: prop(item, ['法扶項目']),\n  legalItem: prop(item, ['??', '??', '????', '??', '????', '????', '????']),\n  legalOtherItem: prop(item, ['??????', '??????'])\n})) } }];"
       },
       "id": "normalize-legal-consultations",
       "name": "Normalize Legal Consultations",
@@ -251,12 +251,36 @@
               "textContent": "={{ $json.data.case1999 }}"
             },
             {
-              "key": "法扶項目|select",
-              "selectValue": "={{ $json.data.category || $json.data.legalCategory }}"
+              "key": "法扶項目|multi_select",
+              "multiSelectValue": "={{ [$json.data.category || $json.data.legalCategory].filter(Boolean) }}"
             },
             {
-              "key": "法扶細項|rich_text",
-              "textContent": "={{ $json.data.legalItem }}"
+              "key": "民事|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '民事' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "刑事|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '刑事' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "行政訴訟|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '行政訴訟' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "家事|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '家事' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "勞資糾紛|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '勞資糾紛' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "消費糾紛|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '消費糾紛' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "強制執行|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '強制執行' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
             },
             {
               "key": "其它項目名稱|rich_text",
@@ -367,12 +391,36 @@
               "textContent": "={{ $json.data.case1999 }}"
             },
             {
-              "key": "法扶項目|select",
-              "selectValue": "={{ $json.data.category || $json.data.legalCategory }}"
+              "key": "法扶項目|multi_select",
+              "multiSelectValue": "={{ [$json.data.category || $json.data.legalCategory].filter(Boolean) }}"
             },
             {
-              "key": "法扶細項|rich_text",
-              "textContent": "={{ $json.data.legalItem }}"
+              "key": "民事|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '民事' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "刑事|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '刑事' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "行政訴訟|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '行政訴訟' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "家事|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '家事' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "勞資糾紛|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '勞資糾紛' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "消費糾紛|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '消費糾紛' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
+            },
+            {
+              "key": "強制執行|multi_select",
+              "multiSelectValue": "={{ (($json.data.category || $json.data.legalCategory) === '強制執行' && $json.data.legalItem) ? [$json.data.legalItem] : [] }}"
             },
             {
               "key": "其它項目名稱|rich_text",

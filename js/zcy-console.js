@@ -27,6 +27,7 @@
     user: null,
     cases: [],
     events: [],
+    eventRegistrations: [],
     legal: [],
     staff: [],
     selected: {},
@@ -34,9 +35,11 @@
     calendarDate: "",
     modal: null,
     pageSize: 10,
+    registrationPageSize: 25,
     pages: {
       cases: 1,
       events: 1,
+      registrations: 1,
       legal: 1,
       staff: 1
     }
@@ -68,6 +71,10 @@
     eventDetail: document.getElementById("eventDetail"),
     eventPager: document.getElementById("eventPager"),
     calendarModeButtons: Array.from(document.querySelectorAll("[data-calendar-mode]")),
+    registrationEventSelect: document.getElementById("registrationEventSelect"),
+    refreshRegistrationsButton: document.getElementById("refreshRegistrationsButton"),
+    registrationsTable: document.getElementById("registrationsTable"),
+    registrationsPager: document.getElementById("registrationsPager"),
     legalTable: document.getElementById("legalTable"),
     legalDetail: document.getElementById("legalDetail"),
     legalPager: document.getElementById("legalPager"),
@@ -259,6 +266,7 @@
       if (!cached.savedAt) return false;
       state.cases = Array.isArray(cached.cases) ? cached.cases : [];
       state.events = Array.isArray(cached.events) ? cached.events : [];
+      state.eventRegistrations = [];
       state.legal = Array.isArray(cached.legal) ? cached.legal : [];
       state.staff = Array.isArray(cached.staff) ? cached.staff : [];
       els.syncStatus.textContent = `快取 ${new Date(cached.savedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}`;
@@ -283,12 +291,13 @@
   }
 
   function paginate(items, key) {
-    const totalPages = Math.max(1, Math.ceil(items.length / state.pageSize));
+    const pageSize = key === "registrations" ? state.registrationPageSize : state.pageSize;
+    const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
     state.pages[key] = Math.min(Math.max(1, state.pages[key] || 1), totalPages);
-    const start = (state.pages[key] - 1) * state.pageSize;
+    const start = (state.pages[key] - 1) * pageSize;
     return {
       totalPages,
-      pageItems: items.slice(start, start + state.pageSize),
+      pageItems: items.slice(start, start + pageSize),
       start
     };
   }
@@ -352,6 +361,7 @@
     ]);
     state.cases = Array.isArray(cases) ? cases : [];
     state.events = Array.isArray(events) ? events : [];
+    state.eventRegistrations = [];
     state.legal = Array.isArray(legal) ? legal : [];
     state.staff = Array.isArray(staff) ? staff : [];
     els.syncStatus.textContent = "已同步";
@@ -375,6 +385,10 @@
       const events = await AdminApi.listEvents();
       state.events = Array.isArray(events) ? events : [];
       renderEvents();
+      renderRegistrationEventOptions();
+    }
+    if (view === "registrations") {
+      await loadEventRegistrations(els.registrationEventSelect.value);
     }
     if (view === "legal") {
       const legal = await AdminApi.listLegalConsultations();
@@ -393,6 +407,8 @@
   function renderAll() {
     renderCases();
     renderEvents();
+    renderRegistrationEventOptions();
+    renderRegistrations();
     renderLegal();
     renderStaff();
   }
@@ -498,6 +514,69 @@
     ], renderActions("event", item.id));
   }
 
+  function eventOptionLabel(item) {
+    const meta = [item.community, formatDateTime(item.date)].filter(Boolean).join("｜");
+    return `${item.title || "未命名活動"}${meta ? `（${meta}）` : ""}`;
+  }
+
+  function renderRegistrationEventOptions() {
+    if (!els.registrationEventSelect) return;
+    const selected = state.selected.registrationEventId || els.registrationEventSelect.value;
+    els.registrationEventSelect.innerHTML = [
+      '<option value="">請先選擇活動</option>',
+      ...state.events.map((item) => `<option value="${escapeHtml(item.id)}" ${String(selected) === String(item.id) ? "selected" : ""}>${escapeHtml(eventOptionLabel(item))}</option>`)
+    ].join("");
+  }
+
+  async function loadEventRegistrations(eventId) {
+    state.selected.registrationEventId = eventId || "";
+    state.eventRegistrations = [];
+    resetPage("registrations");
+    renderRegistrations();
+    if (!eventId) return;
+
+    els.registrationsTable.innerHTML = `<tr><td colspan="7" class="registration-empty">載入報名名單中...</td></tr>`;
+    try {
+      const registrations = await AdminApi.listEventRegistrations(eventId);
+      state.eventRegistrations = Array.isArray(registrations) ? registrations : [];
+    } catch (error) {
+      state.eventRegistrations = [];
+      els.registrationsTable.innerHTML = `<tr><td colspan="7" class="registration-empty">${escapeHtml(error.message || "名單載入失敗")}</td></tr>`;
+      return;
+    }
+    renderRegistrations();
+  }
+
+  function renderRegistrations() {
+    if (!els.registrationsTable) return;
+    const eventId = state.selected.registrationEventId || "";
+    if (!eventId) {
+      els.registrationsTable.innerHTML = `<tr><td colspan="7" class="registration-empty">請先從上方下拉選擇活動，系統才會顯示報名名單。</td></tr>`;
+      renderPager(els.registrationsPager, "registrations", 0, 1);
+      return;
+    }
+
+    const items = state.eventRegistrations.filter((item) => !item.eventId || item.eventId === eventId);
+    const { pageItems, totalPages } = paginate(items, "registrations");
+    renderPager(els.registrationsPager, "registrations", items.length, totalPages);
+    if (!pageItems.length) {
+      els.registrationsTable.innerHTML = `<tr><td colspan="7" class="registration-empty">這個活動目前沒有報名資料。</td></tr>`;
+      return;
+    }
+
+    els.registrationsTable.innerHTML = pageItems.map((item) => `
+      <tr>
+        <td><span class="title-cell"><strong>${escapeHtml(item.registrationId || item.id || "")}</strong><small>${escapeHtml(item.note || "")}</small></span></td>
+        <td>${escapeHtml(item.name || "")}</td>
+        <td>${escapeHtml(item.phone || "")}</td>
+        <td>${escapeHtml(item.companions || 0)}</td>
+        <td><span class="title-cell"><strong>${escapeHtml(item.lineDisplayName || "")}</strong><small>${escapeHtml(item.lineUserId || "")}</small></span></td>
+        <td>${badge(item.status || "registered")}</td>
+        <td>${formatDateTime(item.createdAt || item.createdTime)}</td>
+      </tr>
+    `).join("");
+  }
+
   function renderLegal() {
     const keyword = els.legalSearch.value.trim();
     const status = els.legalStatusFilter.value;
@@ -580,10 +659,24 @@
     document.getElementById("modalCancelButton").addEventListener("click", closeModal);
     const deleteButton = document.getElementById("modalDeleteButton");
     if (deleteButton) deleteButton.addEventListener("click", onDelete);
+    els.modalForm.querySelectorAll("[data-copy-target]").forEach((button) => {
+      button.addEventListener("click", copyFieldValue);
+    });
   }
 
   function renderField(field) {
     const value = field.value == null ? "" : field.value;
+    if (field.type === "copy-url") {
+      return `
+        <label class="field wide copy-field">
+          <span>${escapeHtml(field.label)}</span>
+          <div class="copy-field-row">
+            <input name="${field.name}" type="url" value="${escapeHtml(value)}" readonly />
+            <button class="secondary-button compact" type="button" data-copy-target="${escapeHtml(field.name)}">複製</button>
+          </div>
+        </label>
+      `;
+    }
     if (field.type === "textarea") {
       return `<label class="field wide"><span>${escapeHtml(field.label)}</span><textarea name="${field.name}" rows="4">${escapeHtml(value)}</textarea></label>`;
     }
@@ -591,6 +684,23 @@
       return `<label class="field"><span>${escapeHtml(field.label)}</span><select name="${field.name}">${field.options}</select></label>`;
     }
     return `<label class="field ${field.wide ? "wide" : ""}"><span>${escapeHtml(field.label)}</span><input name="${field.name}" type="${field.type || "text"}" value="${escapeHtml(value)}" /></label>`;
+  }
+
+  async function copyFieldValue(event) {
+    const name = event.currentTarget.dataset.copyTarget;
+    const input = els.modalForm.querySelector(`[name="${CSS.escape(name)}"]`);
+    if (!input || !input.value) return;
+
+    try {
+      await navigator.clipboard.writeText(input.value);
+      event.currentTarget.textContent = "已複製";
+      window.setTimeout(() => {
+        event.currentTarget.textContent = "複製";
+      }, 1200);
+    } catch (_) {
+      input.select();
+      document.execCommand("copy");
+    }
   }
 
   function closeModal() {
@@ -669,7 +779,7 @@
       { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "false", label: "不開放報名" }, { value: "true", label: "綁定預設活動報名表單" }], String(item.registrationEnabled === true ? "true" : item.registrationEnabled || "false")) },
       { name: "registrationDeadline", label: "報名截止時間", type: "datetime-local", value: datetimeForInput(item.registrationDeadline) },
       { name: "registrationLimit", label: "報名名額上限", type: "number", value: item.registrationLimit },
-      { name: "registrationUrl", label: "報名表單網址", value: item.registrationUrl || buildEventRegistrationUrl(item.id), wide: true },
+      { name: "registrationUrl", label: "報名表單網址", type: "copy-url", value: item.registrationUrl || buildEventRegistrationUrl(item.id), wide: true },
       { name: "registrationNote", label: "報名注意事項", type: "textarea", value: item.registrationNote },
       { name: "detail", label: "活動詳情", type: "textarea", value: item.detail }
     ], (data) => saveEventWithRegistration(item, data), item.id ? () => deleteItem("event", item.id) : null);
@@ -686,7 +796,7 @@
       { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "true", label: "開放報名" }, { value: "false", label: "不開放" }], String(item.registrationEnabled === false || item.registrationEnabled === "false" ? "false" : "true")) },
       { name: "registrationDeadline", label: "報名截止時間", type: "datetime-local", value: datetimeForInput(item.registrationDeadline) },
       { name: "registrationLimit", label: "報名名額上限", type: "number", value: item.registrationLimit },
-      { name: "registrationUrl", label: "報名表單網址", value: registrationUrl, wide: true },
+      { name: "registrationUrl", label: "報名表單網址", type: "copy-url", value: registrationUrl, wide: true },
       { name: "registrationNote", label: "報名注意事項", type: "textarea", value: item.registrationNote }
     ], (data) => saveEventWithRegistration(item, { ...data, registrationEnabled: data.registrationEnabled || "true" }), null);
   }
@@ -825,6 +935,8 @@
     els.calendarModeButtons.forEach((button) => button.addEventListener("click", () => { state.calendarMode = button.dataset.calendarMode || "month"; els.calendarModeButtons.forEach((item) => item.classList.toggle("is-active", item === button)); renderEvents(); }));
     [els.caseSearch, els.caseStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("cases"); renderCases(); }));
     [els.eventMonth, els.eventStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("events"); renderEvents(); }));
+    els.registrationEventSelect.addEventListener("change", (event) => loadEventRegistrations(event.target.value));
+    els.refreshRegistrationsButton.addEventListener("click", () => loadEventRegistrations(els.registrationEventSelect.value));
     [els.legalSearch, els.legalStatusFilter, els.legalCategoryFilter].forEach((el) => el.addEventListener("input", () => { resetPage("legal"); renderLegal(); }));
     els.staffSearch.addEventListener("input", () => { resetPage("staff"); renderStaff(); });
     els.addCaseButton.addEventListener("click", () => openCaseForm());
@@ -854,6 +966,7 @@
       state.pages[key] += Number(button.dataset.dir);
       if (key === "cases") renderCases();
       if (key === "events") renderEvents();
+      if (key === "registrations") renderRegistrations();
       if (key === "legal") renderLegal();
       if (key === "staff") renderStaff();
     });

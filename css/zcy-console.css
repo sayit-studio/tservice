@@ -334,6 +334,28 @@ h3 {
   align-items: end;
 }
 
+.registration-toolbar {
+  grid-template-columns: minmax(320px, 1fr) auto;
+}
+
+.registration-empty {
+  padding: 34px 18px;
+  color: var(--muted);
+  text-align: center;
+  font-weight: 800;
+}
+
+.copy-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.copy-field-row input {
+  width: 100%;
+}
+
 .data-layout,
 .calendar-layout {
   min-height: 0;

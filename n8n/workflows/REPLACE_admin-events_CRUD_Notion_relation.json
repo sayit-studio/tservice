@@ -209,7 +209,7 @@
               "title": "={{ $json.data.title }}"
             },
             {
-              "key": "活動日期時間|date",
+              "key": "活動日期|date",
               "includeTime": true,
               "date": "={{ $json.data.date }}",
               "timezone": "Asia/Taipei"
@@ -239,30 +239,12 @@
               "textContent": "={{ $json.data.contact }}"
             },
             {
-              "key": "聯絡人電話|rich_text",
+              "key": "活動聯絡人電話|rich_text",
               "textContent": "={{ $json.data.phone }}"
             },
             {
-              "key": "報名表單|select",
-              "selectValue": "={{ $json.data.registrationEnabled }}"
-            },
-            {
-              "key": "報名截止時間|date",
-              "includeTime": true,
-              "date": "={{ $json.data.registrationDeadline }}",
-              "timezone": "Asia/Taipei"
-            },
-            {
-              "key": "報名名額上限|number",
-              "numberValue": "={{ $json.data.registrationLimit }}"
-            },
-            {
-              "key": "報名表單網址|rich_text",
-              "textContent": "={{ $json.data.registrationUrl }}"
-            },
-            {
-              "key": "報名注意事項|rich_text",
-              "textContent": "={{ $json.data.registrationNote }}"
+              "key": "備註|rich_text",
+              "textContent": "={{ $json.data.registrationNote || $json.data.note }}"
             },
             {
               "key": "活動詳情|rich_text",
@@ -331,7 +313,7 @@
               "title": "={{ $json.data.title }}"
             },
             {
-              "key": "活動日期時間|date",
+              "key": "活動日期|date",
               "includeTime": true,
               "date": "={{ $json.data.date }}",
               "timezone": "Asia/Taipei"
@@ -361,30 +343,12 @@
               "textContent": "={{ $json.data.contact }}"
             },
             {
-              "key": "聯絡人電話|rich_text",
+              "key": "活動聯絡人電話|rich_text",
               "textContent": "={{ $json.data.phone }}"
             },
             {
-              "key": "報名表單|select",
-              "selectValue": "={{ $json.data.registrationEnabled }}"
-            },
-            {
-              "key": "報名截止時間|date",
-              "includeTime": true,
-              "date": "={{ $json.data.registrationDeadline }}",
-              "timezone": "Asia/Taipei"
-            },
-            {
-              "key": "報名名額上限|number",
-              "numberValue": "={{ $json.data.registrationLimit }}"
-            },
-            {
-              "key": "報名表單網址|rich_text",
-              "textContent": "={{ $json.data.registrationUrl }}"
-            },
-            {
-              "key": "報名注意事項|rich_text",
-              "textContent": "={{ $json.data.registrationNote }}"
+              "key": "備註|rich_text",
+              "textContent": "={{ $json.data.registrationNote || $json.data.note }}"
             },
             {
               "key": "活動詳情|rich_text",

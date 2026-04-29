@@ -205,15 +205,15 @@
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "案件主題|title",
+              "key": "案件主題&詳情|title",
               "title": "={{ $json.data.title }}"
             },
             {
-              "key": "陳情人|rich_text",
+              "key": "陳情人姓名|rich_text",
               "textContent": "={{ $json.data.petitioner }}"
             },
             {
-              "key": "陳情人電話|phone_number",
+              "key": "陳情人連絡電話|phone_number",
               "phoneValue": "={{ $json.data.phone }}"
             },
             {
@@ -239,7 +239,7 @@
               "textContent": "={{ $json.data.category }}"
             },
             {
-              "key": "執行狀況敘述|rich_text",
+              "key": "局處回覆摘要|rich_text",
               "textContent": "={{ $json.data.summary }}"
             },
             {
@@ -305,15 +305,15 @@
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "案件主題|title",
+              "key": "案件主題&詳情|title",
               "title": "={{ $json.data.title }}"
             },
             {
-              "key": "陳情人|rich_text",
+              "key": "陳情人姓名|rich_text",
               "textContent": "={{ $json.data.petitioner }}"
             },
             {
-              "key": "陳情人電話|phone_number",
+              "key": "陳情人連絡電話|phone_number",
               "phoneValue": "={{ $json.data.phone }}"
             },
             {
@@ -339,7 +339,7 @@
               "textContent": "={{ $json.data.category }}"
             },
             {
-              "key": "執行狀況敘述|rich_text",
+              "key": "局處回覆摘要|rich_text",
               "textContent": "={{ $json.data.summary }}"
             },
             {

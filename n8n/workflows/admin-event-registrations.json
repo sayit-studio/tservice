@@ -1,0 +1,81 @@
+{
+  "name": "Admin Event Registrations",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-event-registrations",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "admin-event-registrations-webhook",
+      "name": "Admin Event Registrations Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-520, 0],
+      "webhookId": "admin-event-registrations"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "350b3ad1d1cd8094aaa3fb6bbf6c6d34"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "admin-event-registrations-query",
+      "name": "Query Event Registrations",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-280, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Event Registrations Webhook').first().json.body || {};\nconst eventId = String(body.eventId || body.data?.eventId || '').trim();\n\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join(',');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.date) return value.date.start || '';\n  if (value.number != null) return String(value.number);\n  if (value.phone_number) return String(value.phone_number);\n  if (value.url) return String(value.url);\n  if (value.relation) return value.relation.map((entry) => entry.id).join(',');\n  return '';\n}\n\nfunction prop(json, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (json[name] != null) return textFromValue(json[name]).trim();\n    const p = json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nconst data = items.map((item) => {\n  const json = item.json;\n  const relationIds = prop(json, ['曾辦_活動紀錄資料庫']);\n  return {\n    id: json.id,\n    registrationId: prop(json, ['報名編號']),\n    eventId: prop(json, ['活動ID']),\n    eventRelationIds: relationIds,\n    eventTitle: prop(json, ['活動名稱']),\n    community: prop(json, ['社區名稱']),\n    eventDate: prop(json, ['活動日期']),\n    name: prop(json, ['姓名']),\n    phone: prop(json, ['電話']),\n    companions: Number(prop(json, ['同行人數']) || 0),\n    note: prop(json, ['備註']),\n    lineUserId: prop(json, ['LINE User ID']),\n    lineDisplayName: prop(json, ['LINE名稱', 'LINE 名稱']),\n    status: prop(json, ['狀態']) || 'registered',\n    createdAt: prop(json, ['建立時間']) || json.created_time || json.createdTime || ''\n  };\n}).filter((item) => !eventId || item.eventId === eventId || item.eventRelationIds.includes(eventId));\n\nreturn [{ json: { ok: true, data } }];"
+      },
+      "id": "admin-event-registrations-normalize",
+      "name": "Normalize Event Registrations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-40, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "admin-event-registrations-response",
+      "name": "Respond Event Registrations",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [200, 0]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Admin Event Registrations Webhook": {
+      "main": [[{ "node": "Query Event Registrations", "type": "main", "index": 0 }]]
+    },
+    "Query Event Registrations": {
+      "main": [[{ "node": "Normalize Event Registrations", "type": "main", "index": 0 }]]
+    },
+    "Normalize Event Registrations": {
+      "main": [[{ "node": "Respond Event Registrations", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "admin-event-registrations-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "admin-event-registrations",
+  "tags": []
+}

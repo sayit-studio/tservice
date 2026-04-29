@@ -29,7 +29,10 @@ const HELPER = `function textFromValue(value) {
 function prop(item, names) {
   const wanted = Array.isArray(names) ? names : [names];
   for (const name of wanted) {
-    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();
+    const directKeys = [name, 'property_' + name];
+    for (const key of directKeys) {
+      if (item.json?.[key] != null) return textFromValue(item.json[key]).trim();
+    }
     const p = item.json?.properties?.[name];
     if (p != null) return textFromValue(p).trim();
   }

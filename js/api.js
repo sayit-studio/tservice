@@ -26,6 +26,7 @@
     users: [],
     cases: [],
     events: [],
+    eventRegistrations: [],
     legal: [],
     staff: []
   };
@@ -80,6 +81,12 @@
     async deleteEvent(id) {
       if (config.useMockData) return mutateMock("events", "delete", { id });
       return post(config.endpoints.eventsList, { action: "events.delete", id });
+    },
+    async listEventRegistrations(eventId) {
+      if (config.useMockData) {
+        return mock.eventRegistrations.filter((item) => !eventId || item.eventId === eventId);
+      }
+      return post(config.endpoints.eventRegistrationsList, { action: "eventRegistrations.list", eventId });
     },
     async listLegalConsultations() {
       return config.useMockData ? mock.legal : post(config.endpoints.legalList, { action: "legal.list" });
