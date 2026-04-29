@@ -919,7 +919,7 @@
       alert("請先選擇一個活動，或先新增活動後再設定報名表單。");
       return;
     }
-    const registrationUrl = eventRegistrationUrl(item);
+    const registrationUrl = buildEventRegistrationUrl(item.id, item.title, item.date);
     openModal("新增/設定報名表單", [
       { name: "title", label: "活動主題", value: item.title, wide: true },
       { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "true", label: "開放報名" }, { value: "false", label: "不開放" }], String(item.registrationEnabled === false || item.registrationEnabled === "false" ? "false" : "true")) },
