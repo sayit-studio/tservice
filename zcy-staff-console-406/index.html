@@ -100,10 +100,11 @@
 
         <section class="view-panel" id="eventsView" data-title="活動管理">
           <div class="toolbar">
-            <label class="select-field">
-              <span>月份</span>
-              <input id="eventMonth" type="month" />
-            </label>
+            <div class="calendar-nav">
+              <button class="cal-nav-arrow" id="calendarPrev" type="button">&#8249;</button>
+              <button class="cal-nav-label" id="calendarNavLabel" type="button">載入中</button>
+              <button class="cal-nav-arrow" id="calendarNext" type="button">&#8250;</button>
+            </div>
             <label class="select-field">
               <span>狀態</span>
               <select id="eventStatusFilter">

@@ -63,7 +63,9 @@
     caseSearch: document.getElementById("caseSearch"),
     caseStatusFilter: document.getElementById("caseStatusFilter"),
     addCaseButton: document.getElementById("addCaseButton"),
-    eventMonth: document.getElementById("eventMonth"),
+    calendarPrev: document.getElementById("calendarPrev"),
+    calendarNext: document.getElementById("calendarNext"),
+    calendarNavLabel: document.getElementById("calendarNavLabel"),
     eventStatusFilter: document.getElementById("eventStatusFilter"),
     addEventButton: document.getElementById("addEventButton"),
     eventRegistrationButton: document.getElementById("eventRegistrationButton"),
@@ -366,7 +368,19 @@
     state.staff = Array.isArray(staff) ? staff : [];
     els.syncStatus.textContent = "已同步";
     writeCache();
+    enrichUserFromStaff();
     renderAll();
+  }
+
+  function enrichUserFromStaff() {
+    if (!state.user || !state.staff.length) return;
+    const match = state.staff.find((s) => s.id === state.user.id || (s.account && s.account === state.user.account));
+    if (!match) return;
+    const enriched = { ...match, ...state.user, name: state.user.name || match.name, account: state.user.account || match.account, identity: state.user.identity || match.identity };
+    if (enriched.name === state.user.name && enriched.account === state.user.account) return;
+    state.user = enriched;
+    sessionStorage.setItem("staffConsoleUser", JSON.stringify(state.user));
+    applyRole();
   }
 
   function currentView() {
@@ -454,15 +468,12 @@
   }
 
   function renderEvents() {
-    if (!els.eventMonth.value) {
-      const now = new Date();
-      els.eventMonth.value = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
-    }
-    const parts = els.eventMonth.value.split("-").map(Number);
-    const year = parts[0];
-    const month = parts[1];
+    if (!state.calendarDate) state.calendarDate = dateKeyFromDate(new Date());
+    const ref = parseDateKey(state.calendarDate);
+    const year = ref.getFullYear();
+    const month = ref.getMonth() + 1;
     const monthKey = year + "-" + String(month).padStart(2, "0");
-    if (!state.calendarDate || !state.calendarDate.startsWith(monthKey)) state.calendarDate = monthKey + "-01";
+    updateCalendarNavLabel(ref);
     const labels = ["\u65e5", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d"];
     const status = els.eventStatusFilter.value;
     const scopedEvents = state.events.filter((item) => {
@@ -493,6 +504,104 @@
     const selected = visibleEvents.find((item) => item.id === state.selected.eventId) || visibleEvents[0];
     if (selected) showEvent(selected.id);
     if (!selected) els.eventDetail.innerHTML = detail("\u76ee\u524d\u6c92\u6709\u6d3b\u52d5", [{ label: "\u63d0\u793a", value: "\u8acb\u78ba\u8a8d\u6708\u4efd\u3001\u72c0\u614b\u7be9\u9078\uff0c\u6216\u65b0\u589e\u6d3b\u52d5\u3002" }]);
+  }
+
+  function updateCalendarNavLabel(ref) {
+    if (!els.calendarNavLabel) return;
+    const y = ref.getFullYear();
+    const m = ref.getMonth() + 1;
+    if (state.calendarMode === "month") {
+      els.calendarNavLabel.textContent = y + "\u5e74" + m + "\u6708";
+    } else if (state.calendarMode === "week") {
+      const sun = new Date(ref);
+      sun.setDate(ref.getDate() - ref.getDay());
+      const sat = new Date(sun);
+      sat.setDate(sun.getDate() + 6);
+      const sm = sun.getMonth() + 1;
+      const em = sat.getMonth() + 1;
+      els.calendarNavLabel.textContent = sm === em
+        ? sm + "\u6708" + sun.getDate() + "\u2013" + sat.getDate() + "\u65e5"
+        : sm + "\u6708" + sun.getDate() + "\u65e5 \u2013 " + em + "\u6708" + sat.getDate() + "\u65e5";
+    } else {
+      els.calendarNavLabel.textContent = y + "\u5e74" + m + "\u6708" + ref.getDate() + "\u65e5";
+    }
+  }
+
+  function navigateCalendar(dir) {
+    const date = parseDateKey(state.calendarDate);
+    if (state.calendarMode === "month") {
+      date.setDate(1);
+      date.setMonth(date.getMonth() + dir);
+    } else if (state.calendarMode === "week") {
+      date.setDate(date.getDate() + dir * 7);
+    } else {
+      date.setDate(date.getDate() + dir);
+    }
+    state.calendarDate = dateKeyFromDate(date);
+    renderEvents();
+  }
+
+  function openMonthPicker() {
+    closeMonthPicker();
+    const ref = parseDateKey(state.calendarDate);
+    let pickerYear = ref.getFullYear();
+    const picker = document.createElement("div");
+    picker.id = "calMonthPicker";
+    picker.className = "cal-month-picker";
+    document.body.appendChild(picker);
+    const rect = els.calendarNavLabel.getBoundingClientRect();
+    picker.style.top = (rect.bottom + window.scrollY + 6) + "px";
+    picker.style.left = (rect.left + window.scrollX) + "px";
+
+    function paint() {
+      const MONTHS = ["1\u6708","2\u6708","3\u6708","4\u6708","5\u6708","6\u6708","7\u6708","8\u6708","9\u6708","10\u6708","11\u6708","12\u6708"];
+      const today = new Date();
+      picker.innerHTML = `
+        <div class="cal-picker-year">
+          <button type="button" data-py="-1">&#8249;</button>
+          <strong>${pickerYear}\u5e74</strong>
+          <button type="button" data-py="1">&#8250;</button>
+        </div>
+        <div class="cal-picker-months">
+          ${MONTHS.map((label, i) => {
+            const isCurrent = ref.getFullYear() === pickerYear && ref.getMonth() === i;
+            const isToday = today.getFullYear() === pickerYear && today.getMonth() === i;
+            return `<button class="cal-picker-month${isCurrent ? " is-selected" : ""}${isToday ? " is-today" : ""}" type="button" data-pm="${pickerYear}-${String(i + 1).padStart(2, "0")}">${label}</button>`;
+          }).join("")}
+        </div>`;
+    }
+
+    paint();
+    picker.addEventListener("click", (e) => {
+      const py = e.target.closest("[data-py]");
+      if (py) { pickerYear += Number(py.dataset.py); paint(); return; }
+      const pm = e.target.closest("[data-pm]");
+      if (pm) {
+        const [y, mo] = pm.dataset.pm.split("-").map(Number);
+        const today = new Date();
+        const isCurrentMonth = today.getFullYear() === y && today.getMonth() + 1 === mo;
+        state.calendarDate = isCurrentMonth ? dateKeyFromDate(today) : y + "-" + String(mo).padStart(2, "0") + "-01";
+        closeMonthPicker();
+        renderEvents();
+      }
+    });
+    window.setTimeout(() => document.addEventListener("click", onPickerOutside), 0);
+  }
+
+  function onPickerOutside(e) {
+    const picker = document.getElementById("calMonthPicker");
+    if (!picker) return;
+    if (!picker.contains(e.target) && e.target !== els.calendarNavLabel) {
+      closeMonthPicker();
+    } else {
+      document.addEventListener("click", onPickerOutside, { once: true });
+    }
+  }
+
+  function closeMonthPicker() {
+    const el = document.getElementById("calMonthPicker");
+    if (el) el.remove();
+    document.removeEventListener("click", onPickerOutside);
   }
 
   function showEvent(id) {
@@ -932,9 +1041,17 @@
     els.modalForm.addEventListener("submit", submitModal);
     [els.caseDetail, els.eventDetail, els.legalDetail].forEach((node) => node.addEventListener("click", handleDetailClick));
     els.navItems.forEach((item) => item.addEventListener("click", () => switchView(item.dataset.view)));
-    els.calendarModeButtons.forEach((button) => button.addEventListener("click", () => { state.calendarMode = button.dataset.calendarMode || "month"; els.calendarModeButtons.forEach((item) => item.classList.toggle("is-active", item === button)); renderEvents(); }));
+    els.calendarModeButtons.forEach((button) => button.addEventListener("click", () => {
+      state.calendarMode = button.dataset.calendarMode || "month";
+      if (!state.calendarDate) state.calendarDate = dateKeyFromDate(new Date());
+      els.calendarModeButtons.forEach((item) => item.classList.toggle("is-active", item === button));
+      renderEvents();
+    }));
+    els.calendarPrev.addEventListener("click", () => navigateCalendar(-1));
+    els.calendarNext.addEventListener("click", () => navigateCalendar(1));
+    els.calendarNavLabel.addEventListener("click", () => openMonthPicker());
     [els.caseSearch, els.caseStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("cases"); renderCases(); }));
-    [els.eventMonth, els.eventStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("events"); renderEvents(); }));
+    els.eventStatusFilter.addEventListener("input", () => { resetPage("events"); renderEvents(); });
     els.registrationEventSelect.addEventListener("change", (event) => loadEventRegistrations(event.target.value));
     els.refreshRegistrationsButton.addEventListener("click", () => loadEventRegistrations(els.registrationEventSelect.value));
     [els.legalSearch, els.legalStatusFilter, els.legalCategoryFilter].forEach((el) => el.addEventListener("input", () => { resetPage("legal"); renderLegal(); }));

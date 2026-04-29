@@ -328,14 +328,125 @@ h3 {
 }
 
 .toolbar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(150px, 220px)) auto;
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: end;
 }
 
 .registration-toolbar {
   grid-template-columns: minmax(320px, 1fr) auto;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cal-nav-arrow {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.3rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cal-nav-arrow:hover {
+  background: var(--surface-2);
+}
+
+.cal-nav-label {
+  min-width: 130px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.cal-nav-label:hover {
+  background: var(--surface-2);
+}
+
+.cal-month-picker {
+  position: absolute;
+  z-index: 50;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 12px;
+  min-width: 200px;
+}
+
+.cal-picker-year {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.88rem;
+}
+
+.cal-picker-year button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.cal-picker-year button:hover {
+  background: var(--surface-2);
+}
+
+.cal-picker-months {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.cal-picker-month {
+  padding: 6px 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.cal-picker-month:hover {
+  background: var(--surface-2);
+}
+
+.cal-picker-month.is-today {
+  border-color: var(--brand);
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.cal-picker-month.is-selected {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  font-weight: 800;
 }
 
 .registration-empty {
