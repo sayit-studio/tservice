@@ -616,7 +616,7 @@
       { label: "負責人員", value: item.ownerName || item.owner || "未指派" },
       { label: "聯絡資訊", value: `${item.contact || ""} ${item.phone || ""}`.trim() },
       { label: "報名表單", value: item.registrationEnabled === "true" || item.registrationEnabled === true ? "開放報名" : "未開放" },
-      { label: "報名網址", value: item.registrationUrl || "未設定" },
+      { label: "報名網址", value: eventRegistrationUrl(item) || "未設定" },
       { label: "報名截止", value: formatDateTime(item.registrationDeadline) },
       { label: "名額上限", value: item.registrationLimit },
       { label: "活動詳情", value: item.detail, multiline: true }
