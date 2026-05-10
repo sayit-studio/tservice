@@ -77,6 +77,7 @@
     taskDate: document.getElementById("taskDate"),
     taskTypeFilter: document.getElementById("taskTypeFilter"),
     taskStatusFilter: document.getElementById("taskStatusFilter"),
+    taskStaffFilter: document.getElementById("taskStaffFilter"),
     taskTodayButton: document.getElementById("taskTodayButton"),
     taskSummary: document.getElementById("taskSummary"),
     taskList: document.getElementById("taskList"),
@@ -459,14 +460,17 @@
       renderLegal();
     }
     if (view === "tasks") {
-      const [cases, events, legal] = await Promise.all([
+      const [cases, events, legal, staff] = await Promise.all([
         AdminApi.listCases(),
         AdminApi.listEvents(),
-        AdminApi.listLegalConsultations()
+        AdminApi.listLegalConsultations(),
+        AdminApi.listStaff()
       ]);
       state.cases = Array.isArray(cases) ? cases : [];
       state.events = Array.isArray(events) ? events : [];
       state.legal = Array.isArray(legal) ? legal : [];
+      state.staff = Array.isArray(staff) ? staff : [];
+      renderTaskStaffOptions();
       renderTaskView();
     }
     if (view === "staff") {
@@ -481,6 +485,7 @@
   function renderAll() {
     renderCases();
     renderEvents();
+    renderTaskStaffOptions();
     renderTaskView();
     renderRegistrationEventOptions();
     renderRegistrations();
@@ -558,7 +563,7 @@
         const hiddenCount = Math.max(0, events.length - visibleEvents.length);
         const dayClass = events.length ? "has-events" : "is-empty";
         const selectedClass = state.calendarDate === dateKey ? " is-selected-day" : "";
-        html += '<div class="calendar-day ' + dayClass + selectedClass + '" data-date="' + dateKey + '"><button class="day-number" type="button" data-date="' + dateKey + '">' + date.getDate() + '</button>' + visibleEvents.map(renderEventChip).join("") + (hiddenCount ? '<button class="more-events-button" type="button" data-date="' + dateKey + '">+' + hiddenCount + ' 更多</button>' : "") + '</div>';
+        html += '<div class="calendar-day ' + dayClass + selectedClass + '" data-date="' + dateKey + '"><button class="day-number" type="button" data-date="' + dateKey + '">' + date.getDate() + '</button>' + visibleEvents.map(renderEventChip).join("") + (hiddenCount ? '<button class="more-events-button" type="button" data-more-date="' + dateKey + '">+' + hiddenCount + ' 更多</button>' : "") + '</div>';
       });
       els.calendarGrid.innerHTML = html;
     }
@@ -571,6 +576,61 @@
     const category = event.category || event.type || event.status || "";
     const selectedClass = state.selected.eventId === event.id && state.eventDetailOpen ? " is-selected" : "";
     return '<button class="event-chip' + selectedClass + '" type="button" data-event-id="' + escapeHtml(event.id) + '" data-status="' + escapeHtml(event.status || "") + '" data-category-tone="' + escapeHtml(categoryTone(category)) + '"><span class="event-chip-main"><strong>' + escapeHtml(event.title || "\u672a\u547d\u540d\u6d3b\u52d5") + '</strong><time>' + escapeHtml(formatTime(eventDateValue(event))) + '</time></span><small>' + escapeHtml(event.community || event.venue || "") + '</small></button>';
+  }
+
+  function closeDayEventsModal() {
+    document.querySelector(".day-events-layer")?.remove();
+  }
+
+  function openDayEventsModal(dateKey) {
+    closeDayEventsModal();
+    const status = els.eventStatusFilter.value;
+    const events = state.events
+      .filter((item) => dateKeyFromValue(eventDateValue(item)) === dateKey && (!status || item.status === status))
+      .sort((a, b) => scheduleTimeValue(eventDateValue(a)) - scheduleTimeValue(eventDateValue(b)));
+    const layer = document.createElement("div");
+    layer.className = "day-events-layer";
+    layer.innerHTML = `
+      <section class="day-events-modal" role="dialog" aria-modal="true" aria-labelledby="dayEventsTitle">
+        <header class="day-events-head">
+          <div>
+            <h3 id="dayEventsTitle">${escapeHtml(dateKey)} 活動</h3>
+            <p>${events.length} 筆活動，依時間排序</p>
+          </div>
+          <button class="icon-button day-events-close" type="button" aria-label="關閉">×</button>
+        </header>
+        <div class="day-events-list">
+          ${events.length ? events.map((event) => `
+            <article class="day-event-card">
+              <div class="day-event-card-head">
+                <time>${escapeHtml(formatTime(eventDateValue(event)) || "未指定時間")}</time>
+                ${badge(event.status)}
+              </div>
+              <h4>${escapeHtml(event.title || "未命名活動")}</h4>
+              <dl>
+                <div><dt>社區/地點</dt><dd>${escapeHtml([event.community, event.venue].filter(Boolean).join("｜") || "無")}</dd></div>
+                <div><dt>負責人</dt><dd>${escapeHtml(event.ownerName || event.owner || "未指派")}</dd></div>
+                <div><dt>聯絡資訊</dt><dd>${escapeHtml(`${event.contact || ""} ${event.phone || ""}`.trim() || "無")}</dd></div>
+              </dl>
+              ${event.detail ? `<p>${escapeHtml(event.detail)}</p>` : ""}
+              <button class="secondary-button compact" type="button" data-day-event-id="${escapeHtml(event.id)}">查看活動</button>
+            </article>
+          `).join("") : '<div class="empty-state">當日沒有符合條件的活動。</div>'}
+        </div>
+      </section>
+    `;
+    layer.addEventListener("click", (event) => {
+      if (event.target === layer || event.target.closest(".day-events-close")) {
+        closeDayEventsModal();
+        return;
+      }
+      const button = event.target.closest("[data-day-event-id]");
+      if (button) {
+        closeDayEventsModal();
+        showEvent(button.dataset.dayEventId);
+      }
+    });
+    document.body.append(layer);
   }
 
   function renderWeekCalendar(days, scopedEvents) {
@@ -867,6 +927,43 @@
     return task.status || "未設定";
   }
 
+  function taskOwnerKeys(task) {
+    const source = task.source || {};
+    return [task.owner, source.owner, source.ownerName, source.ownerAccount, source.ownerId]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
+  }
+
+  function staffFilterKeys(value) {
+    if (!value) return [];
+    const staff = state.staff.find((item) => String(item.id) === value || String(item.name) === value || String(item.account) === value);
+    if (!staff) return [String(value)];
+    return [staff.id, staff.name, staff.account].map((item) => String(item || "").trim()).filter(Boolean);
+  }
+
+  function taskMatchesStaff(task, staffValue) {
+    if (!staffValue) return true;
+    const ownerKeys = taskOwnerKeys(task);
+    if (staffValue === "__unassigned") return !ownerKeys.length;
+    if (task.type === "legal" && !ownerKeys.length) return false;
+    const filterKeys = staffFilterKeys(staffValue);
+    return ownerKeys.some((owner) => filterKeys.some((key) => owner === key));
+  }
+
+  function renderTaskStaffOptions() {
+    if (!els.taskStaffFilter) return;
+    const selected = els.taskStaffFilter.value;
+    els.taskStaffFilter.innerHTML = [
+      '<option value="">全部人員</option>',
+      '<option value="__unassigned">未指派</option>',
+      ...state.staff.map((staff) => {
+        const value = staff.id || staff.name || staff.account;
+        const label = staff.name || staff.account || staff.id;
+        return `<option value="${escapeHtml(value)}" ${String(selected) === String(value) ? "selected" : ""}>${escapeHtml(label)}</option>`;
+      })
+    ].join("");
+  }
+
   function buildTaskItems() {
     return [
       ...state.events.map((item) => ({
@@ -920,7 +1017,8 @@
     if (!els.taskDate.value) els.taskDate.value = dateKeyFromDate(new Date());
     const dateKey = els.taskDate.value;
     const type = els.taskTypeFilter.value;
-    const allTasks = buildTaskItems().filter((task) => task.dateKey === dateKey && (!type || task.type === type));
+    const staff = els.taskStaffFilter.value;
+    const allTasks = buildTaskItems().filter((task) => task.dateKey === dateKey && (!type || task.type === type) && taskMatchesStaff(task, staff));
     renderTaskStatusOptions(allTasks);
     const status = els.taskStatusFilter.value;
     const tasks = allTasks
@@ -935,6 +1033,7 @@
       <span>活動 ${counts.event || 0}</span>
       <span>陳情案件 ${counts.case || 0}</span>
       <span>法扶諮詢 ${counts.legal || 0}</span>
+      ${staff ? `<span>人員 ${escapeHtml(staff === "__unassigned" ? "未指派" : (state.staff.find((item) => String(item.id) === staff || String(item.name) === staff || String(item.account) === staff)?.name || staff))}</span>` : ""}
     `;
     els.taskList.innerHTML = tasks.length ? tasks.map((task) => `
       <button class="task-card ${state.selected.taskId === `${task.type}:${task.id}` ? "is-selected" : ""}" type="button" data-task-type="${escapeHtml(task.type)}" data-task-id="${escapeHtml(task.id)}">
@@ -1391,7 +1490,7 @@
     els.calendarNavLabel.addEventListener("click", () => openMonthPicker());
     [els.caseSearch, els.caseStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("cases"); renderCases(); }));
     els.eventStatusFilter.addEventListener("input", () => { resetPage("events"); renderEvents(); });
-    [els.taskDate, els.taskTypeFilter, els.taskStatusFilter].forEach((el) => el.addEventListener("input", renderTaskView));
+    [els.taskDate, els.taskTypeFilter, els.taskStatusFilter, els.taskStaffFilter].forEach((el) => el.addEventListener("input", renderTaskView));
     els.taskTodayButton.addEventListener("click", () => {
       els.taskDate.value = dateKeyFromDate(new Date());
       renderTaskView();
@@ -1423,6 +1522,13 @@
       if (row && isAdminUser()) openStaffForm(state.staff.find((item) => item.id === row.dataset.id));
     });
     els.calendarGrid.addEventListener("click", (event) => {
+      const more = event.target.closest("[data-more-date]");
+      if (more) {
+        state.calendarDate = more.dataset.moreDate;
+        openDayEventsModal(more.dataset.moreDate);
+        renderEvents();
+        return;
+      }
       const button = event.target.closest("[data-event-id]");
       if (button) {
         showEvent(button.dataset.eventId);

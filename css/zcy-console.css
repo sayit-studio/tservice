@@ -1089,6 +1089,109 @@ tr.is-selected {
   font-weight: 800;
 }
 
+.day-events-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(17, 24, 39, 0.5);
+}
+
+.day-events-modal {
+  width: min(920px, 100%);
+  max-height: min(86vh, 820px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.day-events-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.day-events-head h3,
+.day-events-head p {
+  margin: 0;
+}
+
+.day-events-head p {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.day-events-list {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  overflow: auto;
+}
+
+.day-event-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+}
+
+.day-event-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.day-event-card time {
+  color: var(--brand);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.day-event-card h4,
+.day-event-card p {
+  margin: 0;
+}
+
+.day-event-card h4 {
+  font-size: 1rem;
+}
+
+.day-event-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.day-event-card dt {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.day-event-card dd {
+  margin: 3px 0 0;
+  line-height: 1.45;
+}
+
+.day-event-card p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 [hidden] {
   display: none !important;
 }
@@ -1328,6 +1431,10 @@ button:disabled {
   }
 
   .task-card {
+    grid-template-columns: 1fr;
+  }
+
+  .day-event-card dl {
     grid-template-columns: 1fr;
   }
 
