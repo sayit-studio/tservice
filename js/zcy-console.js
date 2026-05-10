@@ -74,6 +74,13 @@
     eventDetail: document.getElementById("eventDetail"),
     eventPager: document.getElementById("eventPager"),
     calendarModeButtons: Array.from(document.querySelectorAll("[data-calendar-mode]")),
+    taskDate: document.getElementById("taskDate"),
+    taskTypeFilter: document.getElementById("taskTypeFilter"),
+    taskStatusFilter: document.getElementById("taskStatusFilter"),
+    taskTodayButton: document.getElementById("taskTodayButton"),
+    taskSummary: document.getElementById("taskSummary"),
+    taskList: document.getElementById("taskList"),
+    taskDetail: document.getElementById("taskDetail"),
     registrationEventSelect: document.getElementById("registrationEventSelect"),
     refreshRegistrationsButton: document.getElementById("refreshRegistrationsButton"),
     registrationsTable: document.getElementById("registrationsTable"),
@@ -163,6 +170,14 @@
     return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
   }
 
+  function dateKeyFromValue(value) {
+    if (!value) return "";
+    if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) return String(value).slice(0, 10);
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return dateKeyFromDate(date);
+  }
+
   function parseDateKey(value) {
     const parts = String(value || "").split("-").map(Number);
     if (parts.length < 3 || parts.some(Number.isNaN)) return new Date();
@@ -199,9 +214,16 @@
 
   function formatTime(value) {
     if (!value) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return "未指定時間";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
     return new Intl.DateTimeFormat("zh-TW", { hour: "2-digit", minute: "2-digit" }).format(date);
+  }
+
+  function scheduleDateTime(value) {
+    if (!value) return "未設定";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return `${value} 未指定時間`;
+    return formatDateTime(value);
   }
 
   function formatMonthDay(value) {
@@ -215,9 +237,16 @@
   }
 
   function eventHour(value) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return 9;
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return 9;
     return Math.min(21, Math.max(8, date.getHours()));
+  }
+
+  function scheduleTimeValue(value) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return Number.MAX_SAFE_INTEGER;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
   }
 
   function staffOptions(selected) {
@@ -429,6 +458,17 @@
       state.legal = Array.isArray(legal) ? legal : [];
       renderLegal();
     }
+    if (view === "tasks") {
+      const [cases, events, legal] = await Promise.all([
+        AdminApi.listCases(),
+        AdminApi.listEvents(),
+        AdminApi.listLegalConsultations()
+      ]);
+      state.cases = Array.isArray(cases) ? cases : [];
+      state.events = Array.isArray(events) ? events : [];
+      state.legal = Array.isArray(legal) ? legal : [];
+      renderTaskView();
+    }
     if (view === "staff") {
       const staff = await AdminApi.listStaff();
       state.staff = Array.isArray(staff) ? staff : [];
@@ -441,6 +481,7 @@
   function renderAll() {
     renderCases();
     renderEvents();
+    renderTaskView();
     renderRegistrationEventOptions();
     renderRegistrations();
     renderLegal();
@@ -512,15 +553,17 @@
       days.forEach((date) => {
         const dateKey = dateKeyFromDate(date);
         const events = scopedEvents.filter((item) => String(eventDateValue(item)).startsWith(dateKey))
-          .sort((a, b) => new Date(eventDateValue(a)).getTime() - new Date(eventDateValue(b)).getTime());
+          .sort((a, b) => scheduleTimeValue(eventDateValue(a)) - scheduleTimeValue(eventDateValue(b)));
+        const visibleEvents = events.slice(0, 3);
+        const hiddenCount = Math.max(0, events.length - visibleEvents.length);
         const dayClass = events.length ? "has-events" : "is-empty";
         const selectedClass = state.calendarDate === dateKey ? " is-selected-day" : "";
-        html += '<div class="calendar-day ' + dayClass + selectedClass + '" data-date="' + dateKey + '"><button class="day-number" type="button" data-date="' + dateKey + '">' + date.getDate() + '</button>' + events.map(renderEventChip).join("") + '</div>';
+        html += '<div class="calendar-day ' + dayClass + selectedClass + '" data-date="' + dateKey + '"><button class="day-number" type="button" data-date="' + dateKey + '">' + date.getDate() + '</button>' + visibleEvents.map(renderEventChip).join("") + (hiddenCount ? '<button class="more-events-button" type="button" data-date="' + dateKey + '">+' + hiddenCount + ' 更多</button>' : "") + '</div>';
       });
       els.calendarGrid.innerHTML = html;
     }
     const visibleEvents = scopedEvents.filter((item) => days.some((date) => String(eventDateValue(item)).startsWith(dateKeyFromDate(date))));
-    els.eventPager.innerHTML = '<span>' + (state.calendarMode === "month" ? "\u672c\u6708" : "\u672c\u9031") + '\u6d3b\u52d5 ' + visibleEvents.length + ' \u7b46</span>';
+    els.eventPager.innerHTML = '<span>' + (state.calendarMode === "month" ? "\u672c\u6708" : "\u672c\u9031") + '\u6d3b\u52d5 ' + visibleEvents.length + ' \u7b46' + (state.calendarMode === "month" ? "，日期格最多顯示 3 筆" : "") + '</span>';
     if (!visibleEvents.some((item) => item.id === state.selected.eventId)) closeEventDetail();
   }
 
@@ -815,6 +858,144 @@
     markSelected(els.legalTable, id);
   }
 
+  function taskTypeLabel(type) {
+    return { event: "活動", case: "陳情案件", legal: "法扶諮詢" }[type] || type;
+  }
+
+  function taskStatusLabel(task) {
+    if (task.type === "legal") return LEGAL_STATUSES.find((item) => item.value === task.status)?.label || task.status || "未設定";
+    return task.status || "未設定";
+  }
+
+  function buildTaskItems() {
+    return [
+      ...state.events.map((item) => ({
+        id: item.id,
+        type: "event",
+        date: eventDateValue(item),
+        dateKey: dateKeyFromValue(eventDateValue(item)),
+        title: item.title || "未命名活動",
+        subtitle: [item.community, item.venue].filter(Boolean).join("｜"),
+        owner: item.ownerName || item.owner,
+        status: item.status,
+        source: item
+      })),
+      ...state.cases.map((item) => ({
+        id: item.id,
+        type: "case",
+        date: item.startDate,
+        dateKey: dateKeyFromValue(item.startDate),
+        title: item.title || item.content || "未命名案件",
+        subtitle: [item.caseNo, casePetitionerName(item.petitioner)].filter((value) => value && value !== "未填寫").join("｜"),
+        owner: item.ownerName || item.owner,
+        status: item.status,
+        source: item
+      })),
+      ...state.legal.map((item) => ({
+        id: item.id,
+        type: "legal",
+        date: item.appointmentDate,
+        dateKey: dateKeyFromValue(item.appointmentDate),
+        title: item.appointmentId || "未編號",
+        subtitle: [item.name, asText(item.category)].filter(Boolean).join("｜"),
+        owner: "",
+        status: item.status,
+        source: item
+      }))
+    ].filter((item) => item.dateKey);
+  }
+
+  function renderTaskStatusOptions(tasks) {
+    if (!els.taskStatusFilter) return;
+    const selected = els.taskStatusFilter.value;
+    const statuses = Array.from(new Set(tasks.map(taskStatusLabel).filter(Boolean))).sort();
+    els.taskStatusFilter.innerHTML = [
+      '<option value="">全部狀態</option>',
+      ...statuses.map((status) => `<option value="${escapeHtml(status)}" ${status === selected ? "selected" : ""}>${escapeHtml(status)}</option>`)
+    ].join("");
+  }
+
+  function renderTaskView() {
+    if (!els.taskDate) return;
+    if (!els.taskDate.value) els.taskDate.value = dateKeyFromDate(new Date());
+    const dateKey = els.taskDate.value;
+    const type = els.taskTypeFilter.value;
+    const allTasks = buildTaskItems().filter((task) => task.dateKey === dateKey && (!type || task.type === type));
+    renderTaskStatusOptions(allTasks);
+    const status = els.taskStatusFilter.value;
+    const tasks = allTasks
+      .filter((task) => !status || taskStatusLabel(task) === status)
+      .sort((a, b) => scheduleTimeValue(a.date) - scheduleTimeValue(b.date) || taskTypeLabel(a.type).localeCompare(taskTypeLabel(b.type), "zh-Hant"));
+    const counts = tasks.reduce((acc, task) => {
+      acc[task.type] = (acc[task.type] || 0) + 1;
+      return acc;
+    }, {});
+    els.taskSummary.innerHTML = `
+      <strong>${escapeHtml(dateKey)}</strong>
+      <span>活動 ${counts.event || 0}</span>
+      <span>陳情案件 ${counts.case || 0}</span>
+      <span>法扶諮詢 ${counts.legal || 0}</span>
+    `;
+    els.taskList.innerHTML = tasks.length ? tasks.map((task) => `
+      <button class="task-card ${state.selected.taskId === `${task.type}:${task.id}` ? "is-selected" : ""}" type="button" data-task-type="${escapeHtml(task.type)}" data-task-id="${escapeHtml(task.id)}">
+        <span class="task-time">${escapeHtml(formatTime(task.date) || "未指定時間")}</span>
+        <span class="task-content">
+          <strong>${escapeHtml(task.title)}</strong>
+          <small>${escapeHtml(task.subtitle || task.owner || "無補充資訊")}</small>
+        </span>
+        <span class="task-type">${escapeHtml(taskTypeLabel(task.type))}</span>
+      </button>
+    `).join("") : `<div class="empty-state">當日沒有符合條件的任務。</div>`;
+    const selected = tasks.find((task) => `${task.type}:${task.id}` === state.selected.taskId) || tasks[0];
+    if (selected) showTask(selected.type, selected.id, false);
+    else els.taskDetail.innerHTML = detail("尚無任務", [{ label: "提示", value: "請切換日期、類型或狀態查看行程。" }]);
+  }
+
+  function showTask(type, id, rerender = true) {
+    const task = buildTaskItems().find((item) => item.type === type && item.id === id);
+    if (!task) return;
+    state.selected.taskId = `${type}:${id}`;
+    if (rerender) {
+      els.taskList.querySelectorAll(".task-card").forEach((node) => {
+        node.classList.toggle("is-selected", node.dataset.taskType === type && node.dataset.taskId === id);
+      });
+    }
+    const source = task.source;
+    const rows = [
+      { label: "類型", value: taskTypeLabel(type) },
+      { label: "時間", value: scheduleDateTime(task.date) },
+      { label: "狀態", value: taskStatusLabel(task) },
+      { label: "負責人", value: task.owner || "未指派" }
+    ];
+    if (type === "event") {
+      rows.push(
+        { label: "社區/地點", value: [source.community, source.venue].filter(Boolean).join("｜") || "無" },
+        { label: "聯絡資訊", value: `${source.contact || ""} ${source.phone || ""}`.trim() || "無" },
+        { label: "活動內容", value: source.detail, multiline: true, wide: true }
+      );
+    }
+    if (type === "case") {
+      rows.push(
+        { label: "陳情人", value: casePetitionerDetail(source) || "無" },
+        { label: "1999案號", value: source.caseNo || "無" },
+        { label: "案件摘要", value: source.summary || source.content, multiline: true, wide: true }
+      );
+    }
+    if (type === "legal") {
+      rows.push(
+        { label: "民眾資訊", value: `${source.name || ""} ${source.phone || ""}`.trim() || "無" },
+        { label: "諮詢類型", value: asText(source.category) || "無" },
+        { label: "1999案號", value: source.case1999 || "無" },
+        { label: "陳述內容", value: source.statement, multiline: true, wide: true }
+      );
+    }
+    const actions = `<div class="detail-actions">
+      <button class="secondary-button compact" type="button" data-open-task="${escapeHtml(type)}" data-id="${escapeHtml(id)}">前往管理頁</button>
+      <button class="secondary-button compact" type="button" data-edit="${escapeHtml(type)}" data-id="${escapeHtml(id)}">編輯</button>
+    </div>`;
+    els.taskDetail.innerHTML = detail(task.title, rows, actions, { compact: true });
+  }
+
   function renderStaff() {
     const keyword = els.staffSearch.value.trim();
     const items = state.staff.filter((item) => {
@@ -1085,6 +1266,29 @@
       copyText(copyUrl.dataset.copyUrl, copyUrl);
       return;
     }
+    const openTask = event.target.closest("[data-open-task]");
+    if (openTask) {
+      const type = openTask.dataset.openTask;
+      const id = openTask.dataset.id;
+      if (type === "case") {
+        state.selected.caseId = id;
+        switchView("cases");
+        renderCases();
+      }
+      if (type === "event") {
+        const item = state.events.find((entry) => entry.id === id);
+        state.selected.eventId = id;
+        state.calendarDate = dateKeyFromValue(eventDateValue(item || {})) || state.calendarDate;
+        switchView("events");
+        showEvent(id);
+      }
+      if (type === "legal") {
+        state.selected.legalId = id;
+        switchView("legal");
+        renderLegal();
+      }
+      return;
+    }
     const edit = event.target.closest("[data-edit]");
     const del = event.target.closest("[data-delete]");
     const registration = event.target.closest("[data-registration]");
@@ -1174,7 +1378,7 @@
       }
     });
     els.modalForm.addEventListener("submit", submitModal);
-    [els.caseDetail, els.eventDetail, els.legalDetail].forEach((node) => node.addEventListener("click", handleDetailClick));
+    [els.caseDetail, els.eventDetail, els.legalDetail, els.taskDetail].forEach((node) => node.addEventListener("click", handleDetailClick));
     els.navItems.forEach((item) => item.addEventListener("click", () => switchView(item.dataset.view)));
     els.calendarModeButtons.forEach((button) => button.addEventListener("click", () => {
       state.calendarMode = button.dataset.calendarMode || "month";
@@ -1187,6 +1391,11 @@
     els.calendarNavLabel.addEventListener("click", () => openMonthPicker());
     [els.caseSearch, els.caseStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("cases"); renderCases(); }));
     els.eventStatusFilter.addEventListener("input", () => { resetPage("events"); renderEvents(); });
+    [els.taskDate, els.taskTypeFilter, els.taskStatusFilter].forEach((el) => el.addEventListener("input", renderTaskView));
+    els.taskTodayButton.addEventListener("click", () => {
+      els.taskDate.value = dateKeyFromDate(new Date());
+      renderTaskView();
+    });
     els.registrationEventSelect.addEventListener("change", (event) => loadEventRegistrations(event.target.value));
     els.refreshRegistrationsButton.addEventListener("click", () => loadEventRegistrations(els.registrationEventSelect.value));
     els.registrationsTable.addEventListener("click", (event) => {
@@ -1224,6 +1433,10 @@
         state.calendarDate = day.dataset.date;
         renderEvents();
       }
+    });
+    els.taskList.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-task-id]");
+      if (button) showTask(button.dataset.taskType, button.dataset.taskId);
     });
     document.addEventListener("click", (event) => {
       const button = event.target.closest("[data-page]");

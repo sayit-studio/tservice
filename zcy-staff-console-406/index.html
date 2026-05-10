@@ -41,6 +41,7 @@
         <nav class="side-nav" aria-label="後台導覽">
           <button class="nav-item is-active" type="button" data-view="cases">陳情案件</button>
           <button class="nav-item" type="button" data-view="events">活動管理</button>
+          <button class="nav-item" type="button" data-view="tasks">任務查看</button>
           <button class="nav-item" type="button" data-view="registrations">活動報名名單</button>
           <button class="nav-item" type="button" data-view="legal">法扶諮詢</button>
           <button class="nav-item admin-only" type="button" data-view="staff">人員管理</button>
@@ -126,6 +127,38 @@
             <article class="detail-pane detail-drawer" id="eventDetail"></article>
           </div>
           <div class="pager" id="eventPager"></div>
+        </section>
+
+        <section class="view-panel" id="tasksView" data-title="任務查看">
+          <div class="toolbar task-toolbar">
+            <label class="select-field">
+              <span>日期</span>
+              <input id="taskDate" type="date" />
+            </label>
+            <label class="select-field">
+              <span>類型</span>
+              <select id="taskTypeFilter">
+                <option value="">全部類型</option>
+                <option value="event">活動</option>
+                <option value="case">陳情案件</option>
+                <option value="legal">法扶諮詢</option>
+              </select>
+            </label>
+            <label class="select-field">
+              <span>狀態</span>
+              <select id="taskStatusFilter">
+                <option value="">全部狀態</option>
+              </select>
+            </label>
+            <button class="secondary-button compact" id="taskTodayButton" type="button">今天</button>
+          </div>
+          <div class="task-layout">
+            <section class="task-list-panel">
+              <div class="task-summary" id="taskSummary"></div>
+              <div class="task-list" id="taskList"></div>
+            </section>
+            <article class="detail-pane" id="taskDetail"></article>
+          </div>
         </section>
 
         <section class="view-panel" id="registrationsView" data-title="活動報名名單">
