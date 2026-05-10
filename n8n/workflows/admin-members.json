@@ -1,0 +1,206 @@
+{
+  "name": "Admin Members",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-members",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "admin-members-webhook",
+      "name": "Admin Members Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-700, 0],
+      "webhookId": "admin-members"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.action }}", "rightValue": "members.list", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "list"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.action }}", "rightValue": "members.update", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "update"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "id": "admin-members-route",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [-480, 0]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "292b3ad1d1cd8075b2d5e86e08d3d68f"
+        },
+        "returnAll": true,
+        "options": {},
+        "simple": false
+      },
+      "id": "admin-members-query",
+      "name": "Query Members",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-260, -120],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((entry) => entry.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.created_time) return String(value.created_time);\n  if (value.last_edited_time) return String(value.last_edited_time);\n  return '';\n}\nfunction prop(json, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (json[name] != null) return textFromValue(json[name]).trim();\n    const prefixed = json['property_' + name];\n    if (prefixed != null) return textFromValue(prefixed).trim();\n    const p = json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\nfunction listFromText(value) {\n  return String(value || '').split(/[、,，\\n]/).map((item) => item.trim()).filter(Boolean);\n}\nconst data = items.map((item) => {\n  const json = item.json;\n  const lineId = prop(json, ['LINE ID', 'LINE User ID']);\n  return {\n    id: json.id,\n    name: prop(json, ['會員姓名', '姓名', 'Name']),\n    phone: prop(json, ['行動電話', '電話', '手機']),\n    lineId,\n    lineName: prop(json, ['LINE名稱', 'LINE 名稱']),\n    status: prop(json, ['狀態']),\n    attribute: prop(json, ['人員屬性']),\n    interactionTags: listFromText(prop(json, ['互動記錄標籤'])),\n    activityRecord: prop(json, ['活動紀錄']),\n    activityRecord2: prop(json, ['活動紀錄2', '活動報名模板庫']),\n    caseRecord: prop(json, ['案件記錄']),\n    legalRecord: prop(json, ['法扶紀錄']),\n    note: prop(json, ['備註']),\n    address: prop(json, ['戶籍地址']),\n    submittedAt: prop(json, ['提交時間']) || json.created_time || '',\n    createdAt: prop(json, ['建立時間']) || json.created_time || '',\n    lastEditedAt: prop(json, ['上次編輯時間']) || json.last_edited_time || ''\n  };\n}).filter((item) => item.lineId);\nreturn [{ json: { ok: true, data } }];"
+      },
+      "id": "admin-members-normalize",
+      "name": "Normalize Members",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-40, -120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "admin-members-list-response",
+      "name": "Respond Members",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [180, -120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Members Webhook').first().json.body || {};\nconst data = body.data || {};\nconst id = String(data.id || '').trim();\nif (!id) return [{ json: { ok: false, statusCode: 400, message: '缺少會員 ID' } }];\nfunction tagText(value) {\n  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean).join(',');\n  return String(value || '').split(/[、,，\\n]/).map((item) => item.trim()).filter(Boolean).join(',');\n}\nreturn [{ json: {\n  ok: true,\n  pageId: id,\n  status: String(data.status || '').trim(),\n  attribute: String(data.attribute || '').trim(),\n  interactionTags: tagText(data.interactionTags),\n  note: String(data.note || '').trim()\n} }];"
+      },
+      "id": "admin-members-validate-update",
+      "name": "Validate Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-260, 120]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.pageId }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "狀態|select",
+              "selectValue": "={{ $json.status }}"
+            },
+            {
+              "key": "人員屬性|select",
+              "selectValue": "={{ $json.attribute }}"
+            },
+            {
+              "key": "互動記錄標籤|multi_select",
+              "multiSelectValue": "={{ $json.interactionTags }}"
+            },
+            {
+              "key": "備註|rich_text",
+              "textContent": "={{ $json.note }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "admin-members-update-page",
+      "name": "Update Member",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-40, 120],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, message: '會員資料已更新' } }}",
+        "options": {}
+      },
+      "id": "admin-members-update-response",
+      "name": "Respond Update",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [180, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: 'Unsupported action' } }}",
+        "options": { "responseCode": 400 }
+      },
+      "id": "admin-members-fallback",
+      "name": "Respond Unsupported",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-260, 300]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Admin Members Webhook": {
+      "main": [[{ "node": "Route Action", "type": "main", "index": 0 }]]
+    },
+    "Route Action": {
+      "main": [
+        [{ "node": "Query Members", "type": "main", "index": 0 }],
+        [{ "node": "Validate Update", "type": "main", "index": 0 }],
+        [{ "node": "Respond Unsupported", "type": "main", "index": 0 }]
+      ]
+    },
+    "Query Members": {
+      "main": [[{ "node": "Normalize Members", "type": "main", "index": 0 }]]
+    },
+    "Normalize Members": {
+      "main": [[{ "node": "Respond Members", "type": "main", "index": 0 }]]
+    },
+    "Validate Update": {
+      "main": [[{ "node": "Update Member", "type": "main", "index": 0 }]]
+    },
+    "Update Member": {
+      "main": [[{ "node": "Respond Update", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "admin-members-v1",
+  "meta": { "templateCredsSetupCompleted": false },
+  "id": "admin-members",
+  "tags": []
+}

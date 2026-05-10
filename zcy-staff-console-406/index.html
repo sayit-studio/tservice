@@ -43,6 +43,7 @@
           <button class="nav-item" type="button" data-view="events">活動管理</button>
           <button class="nav-item" type="button" data-view="tasks">任務查看</button>
           <button class="nav-item" type="button" data-view="registrations">活動報名名單</button>
+          <button class="nav-item" type="button" data-view="members">會員名單</button>
           <button class="nav-item" type="button" data-view="legal">法扶諮詢</button>
           <button class="nav-item admin-only" type="button" data-view="staff">人員管理</button>
         </nav>
@@ -195,6 +196,49 @@
             </table>
           </div>
           <div class="pager" id="registrationsPager"></div>
+        </section>
+
+        <section class="view-panel" id="membersView" data-title="會員名單">
+          <div class="toolbar member-toolbar">
+            <label class="search-field">
+              <span>搜尋</span>
+              <input id="memberSearch" placeholder="姓名、電話、LINE ID、LINE 名稱" />
+            </label>
+            <label class="select-field">
+              <span>互動標籤</span>
+              <input id="memberTagFilter" placeholder="輸入標籤關鍵字" />
+            </label>
+            <label class="select-field">
+              <span>人員屬性</span>
+              <select id="memberAttributeFilter">
+                <option value="">全部屬性</option>
+              </select>
+            </label>
+            <label class="select-field">
+              <span>狀態</span>
+              <select id="memberStatusFilter">
+                <option value="">全部狀態</option>
+              </select>
+            </label>
+          </div>
+          <div class="data-layout">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>會員</th>
+                    <th>電話</th>
+                    <th>LINE</th>
+                    <th>互動標籤</th>
+                    <th>最後互動</th>
+                  </tr>
+                </thead>
+                <tbody id="membersTable"></tbody>
+              </table>
+            </div>
+            <article class="detail-pane" id="memberDetail"></article>
+          </div>
+          <div class="pager" id="memberPager"></div>
         </section>
 
         <section class="view-panel" id="legalView" data-title="法扶諮詢">

@@ -41,6 +41,7 @@
       { id: "reg-012", registrationId: "R20260012", eventId: "351b3ad1-d1cd-8134-8a3f-f33caa2d4235", name: "曾柏翰", phone: "0958-222-333", companions: 1, lineDisplayName: "柏翰", lineUserId: "Uc2d3e4f5a6b7c8d9e0f1a2b3", status: "registered", createdAt: "2026-04-29T17:40:00+08:00", note: "" }
     ],
     legal: [],
+    members: [],
     staff: []
   };
 
@@ -115,6 +116,13 @@
     async deleteLegalConsultation(id) {
       if (config.useMockData) return mutateMock("legal", "delete", { id });
       return post(config.endpoints.legalList, { action: "legal.delete", id });
+    },
+    async listMembers() {
+      return config.useMockData ? (mock.members || []) : post(config.endpoints.membersList, { action: "members.list" });
+    },
+    async saveMember(payload) {
+      if (config.useMockData) return mutateMock("members", "update", payload);
+      return post(config.endpoints.membersList, { action: "members.update", data: payload });
     },
     async listStaff() {
       return config.useMockData ? mock.staff : post(config.endpoints.staffList, { action: "staff.list" });

@@ -29,6 +29,7 @@
     events: [],
     eventRegistrations: [],
     legal: [],
+    members: [],
     staff: [],
     selected: {},
     calendarMode: "month",
@@ -42,6 +43,7 @@
       events: 1,
       registrations: 1,
       legal: 1,
+      members: 1,
       staff: 1
     }
   };
@@ -92,6 +94,13 @@
     legalSearch: document.getElementById("legalSearch"),
     legalStatusFilter: document.getElementById("legalStatusFilter"),
     legalCategoryFilter: document.getElementById("legalCategoryFilter"),
+    membersTable: document.getElementById("membersTable"),
+    memberDetail: document.getElementById("memberDetail"),
+    memberPager: document.getElementById("memberPager"),
+    memberSearch: document.getElementById("memberSearch"),
+    memberTagFilter: document.getElementById("memberTagFilter"),
+    memberAttributeFilter: document.getElementById("memberAttributeFilter"),
+    memberStatusFilter: document.getElementById("memberStatusFilter"),
     staffTable: document.getElementById("staffTable"),
     staffSearch: document.getElementById("staffSearch"),
     staffPager: document.getElementById("staffPager"),
@@ -316,6 +325,7 @@
       state.events = Array.isArray(cached.events) ? cached.events : [];
       state.eventRegistrations = [];
       state.legal = Array.isArray(cached.legal) ? cached.legal : [];
+      state.members = Array.isArray(cached.members) ? cached.members : [];
       state.staff = Array.isArray(cached.staff) ? cached.staff : [];
       els.syncStatus.textContent = `快取 ${new Date(cached.savedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}`;
       return true;
@@ -330,6 +340,7 @@
       cases: state.cases,
       events: state.events,
       legal: state.legal,
+      members: state.members,
       staff: state.staff
     }));
   }
@@ -405,16 +416,18 @@
       return;
     }
     els.syncStatus.textContent = "同步中";
-    const [cases, events, legal, staff] = await Promise.all([
+    const [cases, events, legal, members, staff] = await Promise.all([
       AdminApi.listCases(),
       AdminApi.listEvents(),
       AdminApi.listLegalConsultations(),
+      AdminApi.listMembers().catch(() => []),
       AdminApi.listStaff()
     ]);
     state.cases = Array.isArray(cases) ? cases : [];
     state.events = Array.isArray(events) ? events : [];
     state.eventRegistrations = [];
     state.legal = Array.isArray(legal) ? legal : [];
+    state.members = Array.isArray(members) ? members : [];
     state.staff = Array.isArray(staff) ? staff : [];
     els.syncStatus.textContent = "已同步";
     writeCache();
@@ -459,6 +472,12 @@
       state.legal = Array.isArray(legal) ? legal : [];
       renderLegal();
     }
+    if (view === "members") {
+      const members = await AdminApi.listMembers();
+      state.members = Array.isArray(members) ? members : [];
+      renderMemberFilters();
+      renderMembers();
+    }
     if (view === "tasks") {
       const [cases, events, legal, staff] = await Promise.all([
         AdminApi.listCases(),
@@ -490,6 +509,8 @@
     renderRegistrationEventOptions();
     renderRegistrations();
     renderLegal();
+    renderMemberFilters();
+    renderMembers();
     renderStaff();
   }
 
@@ -918,6 +939,84 @@
     markSelected(els.legalTable, id);
   }
 
+  function memberTagList(value) {
+    if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
+    return String(value || "").split(/[、,，\n\s]+/).map((item) => item.trim()).filter(Boolean);
+  }
+
+  function memberTagText(value) {
+    return memberTagList(value).join("、");
+  }
+
+  function memberLastInteraction(item) {
+    return item.lastInteractionAt || item.lastEditedAt || item.submittedAt || item.createdAt || "";
+  }
+
+  function renderMemberFilters() {
+    if (!els.memberAttributeFilter || !els.memberStatusFilter) return;
+    const selectedAttribute = els.memberAttributeFilter.value;
+    const selectedStatus = els.memberStatusFilter.value;
+    const attributes = Array.from(new Set(state.members.map((item) => item.attribute).filter(Boolean))).sort();
+    const statuses = Array.from(new Set(state.members.map((item) => item.status).filter(Boolean))).sort();
+    els.memberAttributeFilter.innerHTML = [
+      '<option value="">全部屬性</option>',
+      ...attributes.map((value) => `<option value="${escapeHtml(value)}" ${value === selectedAttribute ? "selected" : ""}>${escapeHtml(value)}</option>`)
+    ].join("");
+    els.memberStatusFilter.innerHTML = [
+      '<option value="">全部狀態</option>',
+      ...statuses.map((value) => `<option value="${escapeHtml(value)}" ${value === selectedStatus ? "selected" : ""}>${escapeHtml(value)}</option>`)
+    ].join("");
+  }
+
+  function renderMembers() {
+    if (!els.membersTable) return;
+    const keyword = els.memberSearch.value.trim();
+    const tag = els.memberTagFilter.value.trim();
+    const attribute = els.memberAttributeFilter.value;
+    const status = els.memberStatusFilter.value;
+    const items = state.members.filter((item) => {
+      const tags = memberTagText(item.interactionTags);
+      const text = `${item.name} ${item.phone} ${item.lineId} ${item.lineName} ${tags} ${item.attribute} ${item.status}`;
+      return (!item.lineId ? false : true)
+        && (!keyword || text.includes(keyword))
+        && (!tag || tags.includes(tag))
+        && (!attribute || item.attribute === attribute)
+        && (!status || item.status === status);
+    }).sort((a, b) => new Date(memberLastInteraction(b)).getTime() - new Date(memberLastInteraction(a)).getTime());
+    const { pageItems, totalPages } = paginate(items, "members");
+    renderPager(els.memberPager, "members", items.length, totalPages);
+    els.membersTable.innerHTML = pageItems.map((item) => `
+      <tr data-id="${escapeHtml(item.id)}" class="${state.selected.memberId === item.id ? "is-selected" : ""}">
+        <td><span class="title-cell"><strong>${escapeHtml(item.name || item.lineName || "未命名會員")}</strong><small>${escapeHtml(item.attribute || item.status || "")}</small></span></td>
+        <td>${escapeHtml(item.phone || "")}</td>
+        <td><span class="title-cell"><strong>${escapeHtml(item.lineName || "")}</strong><small>${escapeHtml(item.lineId || "")}</small></span></td>
+        <td>${escapeHtml(memberTagText(item.interactionTags))}</td>
+        <td>${formatDateTime(memberLastInteraction(item))}</td>
+      </tr>
+    `).join("");
+    const selected = pageItems.find((item) => item.id === state.selected.memberId) || pageItems[0];
+    if (selected) showMember(selected.id);
+    if (!selected) els.memberDetail.innerHTML = detail("尚無會員", [{ label: "提示", value: "目前沒有符合條件且具 LINE ID 的會員。" }]);
+  }
+
+  function showMember(id) {
+    state.selected.memberId = id;
+    const item = state.members.find((entry) => entry.id === id);
+    if (!item) return;
+    els.memberDetail.innerHTML = detail(item.name || item.lineName || "未命名會員", [
+      { label: "LINE ID", value: item.lineId },
+      { label: "LINE 名稱", value: item.lineName },
+      { label: "行動電話", value: item.phone },
+      { label: "狀態", value: item.status },
+      { label: "人員屬性", value: item.attribute },
+      { label: "互動記錄標籤", value: memberTagText(item.interactionTags) || "無" },
+      { label: "活動紀錄", value: item.activityRecord || item.activityRecord2 || "無", multiline: true },
+      { label: "最後互動", value: formatDateTime(memberLastInteraction(item)) },
+      { label: "備註", value: item.note, multiline: true, wide: true }
+    ], `<div class="detail-actions"><button class="secondary-button compact" type="button" data-edit="member" data-id="${escapeHtml(item.id)}">編輯標籤</button></div>`);
+    markSelected(els.membersTable, id);
+  }
+
   function taskTypeLabel(type) {
     return { event: "活動", case: "陳情案件", legal: "法扶諮詢" }[type] || type;
   }
@@ -1331,6 +1430,21 @@
     ], (data) => AdminApi.saveLegalConsultation({ ...item, ...data }), item.id ? () => deleteItem("legal", item.id) : null);
   }
 
+  function openMemberForm(item = {}) {
+    openModal(`編輯會員標籤：${item.name || item.lineName || "未命名會員"}`, [
+      { name: "status", label: "狀態", value: item.status },
+      { name: "attribute", label: "人員屬性", value: item.attribute },
+      { name: "interactionTags", label: "互動記錄標籤", type: "textarea", value: memberTagText(item.interactionTags) },
+      { name: "note", label: "備註", type: "textarea", value: item.note }
+    ], (data) => AdminApi.saveMember({
+      ...item,
+      status: data.status,
+      attribute: data.attribute,
+      interactionTags: memberTagList(data.interactionTags),
+      note: data.note
+    }), null);
+  }
+
   function openStaffForm(item = {}) {
     if (!isAdminUser()) return;
     openModal(item.id ? "編輯人員" : "新增人員", [
@@ -1401,6 +1515,7 @@
       if (type === "case") openCaseForm(state.cases.find((item) => item.id === id));
       if (type === "event") openEventForm(state.events.find((item) => item.id === id));
       if (type === "legal") openLegalForm(state.legal.find((item) => item.id === id));
+      if (type === "member") openMemberForm(state.members.find((item) => item.id === id));
     }
     if (del) deleteItem(del.dataset.delete, del.dataset.id);
     const preview = event.target.closest("[data-preview-image]");
@@ -1477,7 +1592,7 @@
       }
     });
     els.modalForm.addEventListener("submit", submitModal);
-    [els.caseDetail, els.eventDetail, els.legalDetail, els.taskDetail].forEach((node) => node.addEventListener("click", handleDetailClick));
+    [els.caseDetail, els.eventDetail, els.legalDetail, els.memberDetail, els.taskDetail].forEach((node) => node.addEventListener("click", handleDetailClick));
     els.navItems.forEach((item) => item.addEventListener("click", () => switchView(item.dataset.view)));
     els.calendarModeButtons.forEach((button) => button.addEventListener("click", () => {
       state.calendarMode = button.dataset.calendarMode || "month";
@@ -1504,6 +1619,7 @@
       if (restoreBtn) updateRegistrationStatus(restoreBtn.dataset.restoreReg, "registered");
     });
     [els.legalSearch, els.legalStatusFilter, els.legalCategoryFilter].forEach((el) => el.addEventListener("input", () => { resetPage("legal"); renderLegal(); }));
+    [els.memberSearch, els.memberTagFilter, els.memberAttributeFilter, els.memberStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("members"); renderMembers(); }));
     els.staffSearch.addEventListener("input", () => { resetPage("staff"); renderStaff(); });
     els.addCaseButton.addEventListener("click", () => openCaseForm());
     els.addEventButton.addEventListener("click", () => openEventForm());
@@ -1516,6 +1632,10 @@
     els.legalTable.addEventListener("click", (event) => {
       const row = event.target.closest("tr[data-id]");
       if (row) showLegal(row.dataset.id);
+    });
+    els.membersTable.addEventListener("click", (event) => {
+      const row = event.target.closest("tr[data-id]");
+      if (row) showMember(row.dataset.id);
     });
     els.staffTable.addEventListener("click", (event) => {
       const row = event.target.closest("tr[data-id]");
@@ -1553,6 +1673,7 @@
       if (key === "events") renderEvents();
       if (key === "registrations") renderRegistrations();
       if (key === "legal") renderLegal();
+      if (key === "members") renderMembers();
       if (key === "staff") renderStaff();
     });
   }

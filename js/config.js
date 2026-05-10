@@ -7,6 +7,7 @@ window.ADMIN_CONFIG = {
     eventsList: "/admin-events",
     eventRegistrationsList: "/admin-event-registrations",
     legalList: "/admin-legal-consultation",
+    membersList: "/admin-members",
     staffList: "/admin-auth-staff"
   },
   notionDatabases: {
@@ -14,6 +15,7 @@ window.ADMIN_CONFIG = {
     eventRegistrations: "350b3ad1d1cd8094aaa3fb6bbf6c6d34",
     cases: "29cb3ad1d1cd80da82b5fddde82ebe4d",
     staff: "350b3ad1d1cd801797a7dcf6f06c7f13",
+    members: "292b3ad1d1cd8075b2d5e86e08d3d68f",
     legalConsultation: "2ccb3ad1d1cd8175aba6e21110f71145"
   }
 };

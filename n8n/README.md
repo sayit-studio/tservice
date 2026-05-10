@@ -9,6 +9,7 @@ This folder contains import targets for the management backend and public legal-
 | `workflows/admin-auth-staff.json` | `admin-auth-staff` | Login and staff list |
 | `workflows/admin-cases.json` | `admin-cases` | Case list/create/update |
 | `workflows/admin-events.json` | `admin-events` | Event calendar/list/create/update |
+| `workflows/admin-members.json` | `admin-members` | Member list and tag/status update |
 | `workflows/admin-legal-consultation.json` | `admin-legal-consultation` | Legal consultation backend list/update |
 | `workflows/public-legal-consultation.json` | `legal-consultation` | Public booking availability/book/query/cancel |
 | `workflows/public-event-registration.json` | `event-registration` | Public LINE LIFF event registration |
@@ -19,6 +20,7 @@ This folder contains import targets for the management backend and public legal-
   - Staff: `350b3ad1d1cd801797a7dcf6f06c7f13`
   - Cases: `29cb3ad1d1cd80da82b5fddde82ebe4d`
   - Events: `2cab3ad1d1cd804aa922caf1a7621f78`
+  - Members: `292b3ad1d1cd8075b2d5e86e08d3d68f`
   - Legal consultation: `2ccb3ad1d1cd8175aba6e21110f71145`
 - LINE Messaging API channel access token for the public legal-consultation workflow.
 - `TEAM_LINE_TARGET` environment variable or matching workflow value for internal LINE notification recipients.
@@ -35,6 +37,7 @@ window.ADMIN_CONFIG = {
     login: "/admin-auth-staff",
     casesList: "/admin-cases",
     eventsList: "/admin-events",
+    membersList: "/admin-members",
     legalList: "/admin-legal-consultation",
     staffList: "/admin-auth-staff"
   }
