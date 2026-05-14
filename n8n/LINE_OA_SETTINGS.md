@@ -25,7 +25,7 @@ LINE OA 設定資料庫：
 
 | Property | Type | Notes |
 |---|---|---|
-| `OA 名稱` | Title | 後台顯示名稱 |
+| `OA名稱` | Title | 後台顯示名稱 |
 | `設定代碼` | Rich text | 固定使用 `internal-team` 或 `public-service` |
 | `用途說明` | Rich text | OA 使用目的 |
 | `啟用狀態` | Select | `啟用` 或 `停用` |
@@ -33,10 +33,10 @@ LINE OA 設定資料庫：
 | `Basic ID` | Rich text | LINE OA Basic ID，例如 `@xxxxxxx` |
 | `Webhook URL` | URL | n8n webhook endpoint |
 | `LIFF ID 清單` | Rich text | 一行一個 LIFF ID |
-| `LIFF URL 清單` | Rich text | 一行一個 LIFF URL |
-| `n8n workflow 名稱` | Rich text | 對應 n8n workflow |
-| `Access Token 環境變數` | Rich text | 目前改存加密後的 Channel Access Token，不存明碼 |
-| `Channel Secret 環境變數` | Rich text | 目前改存加密後的 Channel Secret，不存明碼 |
+| `LIFF URL清單` | Rich text | 一行一個 LIFF URL |
+| `n8n workflow名稱` | Rich text | 對應 n8n workflow |
+| `Access Token環境變數` | Rich text | 目前改存加密後的 Channel Access Token，不存明碼 |
+| `Channel Secret環境變數` | Rich text | 目前改存加密後的 Channel Secret，不存明碼 |
 | `備註` | Rich text | 管理註記 |
 | `最後檢查時間` | Date | 人工檢查時間 |
 
@@ -45,16 +45,18 @@ LINE OA 設定資料庫：
 - 後台表單可輸入 `Channel Access Token` 與 `Channel Secret`。
 - 輸入欄位是 password，不提供再次確認或顯示明碼。
 - 欄位留空代表保留原本加密值。
-- `admin-line-accounts.json` 使用 `LINE_CONFIG_ENCRYPTION_KEY` 將 Token/Secret 加密後寫入 Notion。
-- `public-line-oa-members.json` 讀取 `public-service` 設定並用同一把 `LINE_CONFIG_ENCRYPTION_KEY` 解密 Token，再呼叫 LINE profile API。
+- `admin-line-accounts.json` 使用 `Prepare LINE OA Save` Code node 內的 `LINE_CONFIG_ENCRYPTION_KEY` 常數，將 Token/Secret 加密後寫入 Notion。
+- `public-line-oa-members.json` 讀取 `public-service` 設定，並用 `Prepare LINE Member Upsert` Code node 內同一把 `LINE_CONFIG_ENCRYPTION_KEY` 解密 Token，再呼叫 LINE profile API。
 - 儲存後後台 list API 只回傳 `hasAccessToken` / `hasChannelSecret`，不回傳明碼或加密值。
 - n8n Code node 需要可使用 Node.js `crypto` builtin；若環境限制 require builtin，需在 n8n 環境允許 `crypto`。
 
-部署時需在 n8n/Zeabur 設定：
+匯入 n8n 後，請在兩個 Code node 內填入同一組隨機字串：
 
 ```text
 LINE_CONFIG_ENCRYPTION_KEY=<至少32字元的隨機字串>
 ```
+
+不要把填入真實 key 後的 workflow JSON 匯出並提交到 GitHub。
 
 ## Public LINE OA Member Mapping
 

@@ -132,7 +132,7 @@ function ifNode(id, name, leftValue, rightValue, position) {
 }
 
 const lineAccountProps = [
-  { key: 'OA 名稱|title', title: '={{ $json.name }}' },
+  { key: 'OA名稱|title', title: '={{ $json.name }}' },
   { key: '設定代碼|rich_text', textContent: '={{ $json.key }}' },
   { key: '用途說明|rich_text', textContent: '={{ $json.purpose }}' },
   { key: '啟用狀態|select', selectValue: '={{ $json.enabledLabel }}' },
@@ -140,10 +140,10 @@ const lineAccountProps = [
   { key: 'Basic ID|rich_text', textContent: '={{ $json.basicId }}' },
   { key: 'Webhook URL|url', urlValue: '={{ $json.webhookUrl }}' },
   { key: 'LIFF ID 清單|rich_text', textContent: '={{ $json.liffIds }}' },
-  { key: 'LIFF URL 清單|rich_text', textContent: '={{ $json.liffUrls }}' },
-  { key: 'n8n workflow 名稱|rich_text', textContent: '={{ $json.workflowName }}' },
-  { key: 'Access Token 環境變數|rich_text', textContent: '={{ $json.encryptedAccessToken }}' },
-  { key: 'Channel Secret 環境變數|rich_text', textContent: '={{ $json.encryptedChannelSecret }}' },
+  { key: 'LIFF URL清單|rich_text', textContent: '={{ $json.liffUrls }}' },
+  { key: 'n8n workflow名稱|rich_text', textContent: '={{ $json.workflowName }}' },
+  { key: 'Access Token環境變數|rich_text', textContent: '={{ $json.encryptedAccessToken }}' },
+  { key: 'Channel Secret環境變數|rich_text', textContent: '={{ $json.encryptedChannelSecret }}' },
   { key: '備註|rich_text', textContent: '={{ $json.note }}' },
   { key: '最後檢查時間|date', includeTime: true, date: '={{ $json.lastCheckedAt || undefined }}', timezone: 'Asia/Taipei' }
 ];
@@ -166,9 +166,18 @@ function text(value) {
   return '';
 }
 function prop(json, name) {
-  if (json[name] != null) return text(json[name]).trim();
-  if (json['property_' + name] != null) return text(json['property_' + name]).trim();
-  if (json.properties?.[name] != null) return text(json.properties[name]).trim();
+  const names = Array.isArray(name) ? name : [name];
+  const compactNames = names.map((entry) => String(entry).replace(/\s+/g, ''));
+  for (const key of names) {
+    if (json[key] != null) return text(json[key]).trim();
+    if (json['property_' + key] != null) return text(json['property_' + key]).trim();
+    if (json.properties?.[key] != null) return text(json.properties[key]).trim();
+  }
+  const props = json.properties || {};
+  for (const [key, value] of Object.entries({ ...json, ...props })) {
+    if (compactNames.includes(String(key).replace(/\s+/g, ''))) return text(value).trim();
+    if (String(key).startsWith('property_') && compactNames.includes(String(key).replace(/^property_/, '').replace(/\s+/g, ''))) return text(value).trim();
+  }
   return '';
 }
 const saved = items.map((item) => {
@@ -177,17 +186,17 @@ const saved = items.map((item) => {
   return {
     id: json.id,
     key: prop(json, '設定代碼'),
-    name: prop(json, 'OA 名稱'),
+    name: prop(json, ['OA名稱', 'OA 名稱']),
     purpose: prop(json, '用途說明'),
     enabled: enabledText === '停用' || enabledText === 'false' ? 'false' : 'true',
     channelId: prop(json, 'Channel ID'),
     basicId: prop(json, 'Basic ID'),
     webhookUrl: prop(json, 'Webhook URL'),
     liffIds: prop(json, 'LIFF ID 清單'),
-    liffUrls: prop(json, 'LIFF URL 清單'),
-    workflowName: prop(json, 'n8n workflow 名稱'),
-    hasAccessToken: Boolean(prop(json, 'Access Token 環境變數')),
-    hasChannelSecret: Boolean(prop(json, 'Channel Secret 環境變數')),
+    liffUrls: prop(json, ['LIFF URL清單', 'LIFF URL 清單']),
+    workflowName: prop(json, ['n8n workflow名稱', 'n8n workflow 名稱']),
+    hasAccessToken: prop(json, ['Access Token環境變數', 'Access Token 環境變數']).startsWith('v1:'),
+    hasChannelSecret: prop(json, ['Channel Secret環境變數', 'Channel Secret 環境變數']).startsWith('v1:'),
     accessTokenEnv: '',
     channelSecretEnv: '',
     note: prop(json, '備註'),
@@ -223,13 +232,22 @@ function text(value) {
   return '';
 }
 function prop(json, name) {
-  if (json[name] != null) return text(json[name]).trim();
-  if (json.properties?.[name] != null) return text(json.properties[name]).trim();
+  const names = Array.isArray(name) ? name : [name];
+  const compactNames = names.map((entry) => String(entry).replace(/\s+/g, ''));
+  for (const key of names) {
+    if (json[key] != null) return text(json[key]).trim();
+    if (json.properties?.[key] != null) return text(json.properties[key]).trim();
+  }
+  const props = json.properties || {};
+  for (const [key, value] of Object.entries({ ...json, ...props })) {
+    if (compactNames.includes(String(key).replace(/\s+/g, ''))) return text(value).trim();
+  }
   return '';
 }
+const LINE_CONFIG_ENCRYPTION_KEY = 'PASTE_RANDOM_ENCRYPTION_KEY_HERE';
 function encryptionKey() {
-  const secret = String(process.env.LINE_CONFIG_ENCRYPTION_KEY || '').trim();
-  if (!secret) throw new Error('請先在 n8n/Zeabur 設定 LINE_CONFIG_ENCRYPTION_KEY。');
+  const secret = String(LINE_CONFIG_ENCRYPTION_KEY || '').trim();
+  if (!secret || secret.includes('PASTE_')) throw new Error('請先在 Prepare LINE OA Save 節點填入 LINE_CONFIG_ENCRYPTION_KEY。');
   const crypto = require('crypto');
   return crypto.createHash('sha256').update(secret).digest();
 }
@@ -244,8 +262,8 @@ function encryptSecret(value) {
   return ['v1', iv.toString('base64'), tag.toString('base64'), encrypted.toString('base64')].join(':');
 }
 const existing = $('Query LINE OA Settings For Update').all().find((item) => prop(item.json, '設定代碼') === base.key);
-const existingAccessToken = existing ? prop(existing.json, 'Access Token 環境變數') : '';
-const existingChannelSecret = existing ? prop(existing.json, 'Channel Secret 環境變數') : '';
+const existingAccessToken = existing ? prop(existing.json, ['Access Token環境變數', 'Access Token 環境變數']) : '';
+const existingChannelSecret = existing ? prop(existing.json, ['Channel Secret環境變數', 'Channel Secret 環境變數']) : '';
 const incomingAccessToken = String(data.channelAccessToken || '').trim();
 const incomingChannelSecret = String(data.channelSecret || '').trim();
 let encryptedAccessToken = existingAccessToken;
@@ -298,16 +316,25 @@ function text(value) {
   return '';
 }
 function prop(json, name) {
-  if (json[name] != null) return text(json[name]).trim();
-  if (json.properties?.[name] != null) return text(json.properties[name]).trim();
+  const names = Array.isArray(name) ? name : [name];
+  const compactNames = names.map((entry) => String(entry).replace(/\s+/g, ''));
+  for (const key of names) {
+    if (json[key] != null) return text(json[key]).trim();
+    if (json.properties?.[key] != null) return text(json.properties[key]).trim();
+  }
+  const props = json.properties || {};
+  for (const [key, value] of Object.entries({ ...json, ...props })) {
+    if (compactNames.includes(String(key).replace(/\s+/g, ''))) return text(value).trim();
+  }
   return '';
 }
+const LINE_CONFIG_ENCRYPTION_KEY = 'PASTE_RANDOM_ENCRYPTION_KEY_HERE';
 function decryptSecret(value) {
   const encrypted = String(value || '').trim();
   if (!encrypted) return '';
   const parts = encrypted.split(':');
   if (parts.length !== 4 || parts[0] !== 'v1') return '';
-  const secret = String(process.env.LINE_CONFIG_ENCRYPTION_KEY || '').trim();
+  const secret = String(LINE_CONFIG_ENCRYPTION_KEY || '').trim();
   if (!secret) return '';
   const crypto = require('crypto');
   const key = crypto.createHash('sha256').update(secret).digest();
@@ -356,7 +383,7 @@ function memberAttribute(existing) {
 }
 const lineSettings = $('Query LINE OA Settings For Token').all();
 const publicSetting = lineSettings.find((item) => prop(item.json, '設定代碼') === 'public-service');
-const token = publicSetting ? decryptSecret(prop(publicSetting.json, 'Access Token 環境變數')) : '';
+const token = publicSetting ? decryptSecret(prop(publicSetting.json, ['Access Token環境變數', 'Access Token 環境變數'])) : '';
 async function profile(userId) {
   if (!token) return { userId };
   try {
@@ -389,7 +416,7 @@ if (bindData) {
   }
 }
 if (events.length && !token) {
-  return [{ json: { ok: false, statusCode: 500, message: '請先在 LINE OA 設定填入 Channel Access Token，並確認 n8n/Zeabur 已設定 LINE_CONFIG_ENCRYPTION_KEY。', noOperation: true, shouldUpdate: false } }];
+  return [{ json: { ok: false, statusCode: 500, message: '請先在 LINE OA 設定填入 Channel Access Token，並確認 Prepare LINE Member Upsert 節點已填入 LINE_CONFIG_ENCRYPTION_KEY。', noOperation: true, shouldUpdate: false } }];
 }
 for (const event of events) {
   const userId = event.source?.userId;
