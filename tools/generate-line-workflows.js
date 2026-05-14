@@ -139,17 +139,18 @@ const lineAccountProps = [
   { key: 'Channel ID|rich_text', textContent: '={{ $json.channelId }}' },
   { key: 'Basic ID|rich_text', textContent: '={{ $json.basicId }}' },
   { key: 'Webhook URL|url', urlValue: '={{ $json.webhookUrl }}' },
+  { key: 'LIFF ID 清單|rich_text', textContent: '={{ $json.liffIds }}' },
   { key: 'LIFF URL 清單|rich_text', textContent: '={{ $json.liffUrls }}' },
   { key: 'n8n workflow 名稱|rich_text', textContent: '={{ $json.workflowName }}' },
-  { key: 'Access Token 環境變數|rich_text', textContent: '={{ $json.accessTokenEnv }}' },
-  { key: 'Channel Secret 環境變數|rich_text', textContent: '={{ $json.channelSecretEnv }}' },
+  { key: 'Access Token 環境變數|rich_text', textContent: '={{ $json.encryptedAccessToken }}' },
+  { key: 'Channel Secret 環境變數|rich_text', textContent: '={{ $json.encryptedChannelSecret }}' },
   { key: '備註|rich_text', textContent: '={{ $json.note }}' },
   { key: '最後檢查時間|date', includeTime: true, date: '={{ $json.lastCheckedAt || undefined }}', timezone: 'Asia/Taipei' }
 ];
 
 const adminNormalizeCode = String.raw`const defaults = [
-  { key: 'internal-team', name: '內部團隊 LINE OA', purpose: '同仁手機端新增/編輯資料、查看行事曆、追蹤案件進度。', enabled: 'true', channelId: '', basicId: '', webhookUrl: '', liffUrls: 'https://tseng-service.pages.dev/liff/internal-team/', workflowName: 'internal-team-line-oa', accessTokenEnv: 'LINE_INTERNAL_CHANNEL_ACCESS_TOKEN', channelSecretEnv: 'LINE_INTERNAL_CHANNEL_SECRET', note: '', lastCheckedAt: '' },
-  { key: 'public-service', name: '對外民眾 LINE OA', purpose: '民眾加好友、留言、點擊 LIFF 或選單互動後取得 LINE User ID 並建立會員資料。', enabled: 'true', channelId: '', basicId: '', webhookUrl: 'https://drwu.zeabur.app/webhook/line-oa-members', liffUrls: 'https://liff.line.me/2009640939-ACYipKCx\nhttps://liff.line.me/2009640939-vwvDFasL', workflowName: 'public-line-oa-members', accessTokenEnv: 'LINE_PUBLIC_CHANNEL_ACCESS_TOKEN', channelSecretEnv: 'LINE_PUBLIC_CHANNEL_SECRET', note: '', lastCheckedAt: '' }
+  { key: 'internal-team', name: '內部團隊 LINE OA', purpose: '同仁手機端新增/編輯資料、查看行事曆、追蹤案件進度。', enabled: 'true', channelId: '', basicId: '', webhookUrl: '', liffIds: '', liffUrls: 'https://tseng-service.pages.dev/liff/internal-team/', workflowName: 'internal-team-line-oa', accessTokenEnv: 'LINE_INTERNAL_CHANNEL_ACCESS_TOKEN', channelSecretEnv: 'LINE_INTERNAL_CHANNEL_SECRET', hasAccessToken: false, hasChannelSecret: false, note: '', lastCheckedAt: '' },
+  { key: 'public-service', name: '對外民眾 LINE OA', purpose: '民眾加好友、留言、點擊 LIFF 或選單互動後取得 LINE User ID 並建立會員資料。', enabled: 'true', channelId: '', basicId: '', webhookUrl: 'https://drwu.zeabur.app/webhook/line-oa-members', liffIds: '2009640939-ACYipKCx\n2009640939-vwvDFasL', liffUrls: 'https://liff.line.me/2009640939-ACYipKCx\nhttps://liff.line.me/2009640939-vwvDFasL', workflowName: 'public-line-oa-members', accessTokenEnv: 'LINE_PUBLIC_CHANNEL_ACCESS_TOKEN', channelSecretEnv: 'LINE_PUBLIC_CHANNEL_SECRET', hasAccessToken: false, hasChannelSecret: false, note: '', lastCheckedAt: '' }
 ];
 function text(value) {
   if (value == null) return '';
@@ -182,8 +183,11 @@ const saved = items.map((item) => {
     channelId: prop(json, 'Channel ID'),
     basicId: prop(json, 'Basic ID'),
     webhookUrl: prop(json, 'Webhook URL'),
+    liffIds: prop(json, 'LIFF ID 清單'),
     liffUrls: prop(json, 'LIFF URL 清單'),
     workflowName: prop(json, 'n8n workflow 名稱'),
+    hasAccessToken: Boolean(prop(json, 'Access Token 環境變數')),
+    hasChannelSecret: Boolean(prop(json, 'Channel Secret 環境變數')),
     accessTokenEnv: '',
     channelSecretEnv: '',
     note: prop(json, '備註'),
@@ -223,7 +227,35 @@ function prop(json, name) {
   if (json.properties?.[name] != null) return text(json.properties[name]).trim();
   return '';
 }
+function encryptionKey() {
+  const secret = String(process.env.LINE_CONFIG_ENCRYPTION_KEY || '').trim();
+  if (!secret) throw new Error('請先在 n8n/Zeabur 設定 LINE_CONFIG_ENCRYPTION_KEY。');
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(secret).digest();
+}
+function encryptSecret(value) {
+  const plain = String(value || '').trim();
+  if (!plain) return '';
+  const crypto = require('crypto');
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return ['v1', iv.toString('base64'), tag.toString('base64'), encrypted.toString('base64')].join(':');
+}
 const existing = $('Query LINE OA Settings For Update').all().find((item) => prop(item.json, '設定代碼') === base.key);
+const existingAccessToken = existing ? prop(existing.json, 'Access Token 環境變數') : '';
+const existingChannelSecret = existing ? prop(existing.json, 'Channel Secret 環境變數') : '';
+const incomingAccessToken = String(data.channelAccessToken || '').trim();
+const incomingChannelSecret = String(data.channelSecret || '').trim();
+let encryptedAccessToken = existingAccessToken;
+let encryptedChannelSecret = existingChannelSecret;
+try {
+  if (incomingAccessToken) encryptedAccessToken = encryptSecret(incomingAccessToken);
+  if (incomingChannelSecret) encryptedChannelSecret = encryptSecret(incomingChannelSecret);
+} catch (error) {
+  return [{ json: { ok: false, statusCode: 500, message: error.message, shouldUpdate: false } }];
+}
 const payload = {
   ...base,
   name: String(data.name || base.name).trim(),
@@ -233,8 +265,13 @@ const payload = {
   channelId: String(data.channelId || '').trim(),
   basicId: String(data.basicId || '').trim(),
   webhookUrl: String(data.webhookUrl || '').trim(),
+  liffIds: Array.isArray(data.liffIds) ? data.liffIds.join('\n') : String(data.liffIds || '').trim(),
   liffUrls: Array.isArray(data.liffUrls) ? data.liffUrls.join('\n') : String(data.liffUrls || '').trim(),
   workflowName: String(data.workflowName || '').trim(),
+  encryptedAccessToken,
+  encryptedChannelSecret,
+  hasAccessToken: Boolean(encryptedAccessToken),
+  hasChannelSecret: Boolean(encryptedChannelSecret),
   note: String(data.note || '').trim(),
   lastCheckedAt: String(data.lastCheckedAt || '').trim(),
   pageId: existing?.json?.id || '',
@@ -242,13 +279,7 @@ const payload = {
 };
 return [{ json: payload }];`;
 
-const publicConfigCode = String.raw`// Fill only the LINE token here after import. Notion token is handled by the Notion credential.
-const LINE_PUBLIC_CHANNEL_ACCESS_TOKEN = 'PASTE_LINE_PUBLIC_CHANNEL_ACCESS_TOKEN_HERE';
-return [{ json: { LINE_PUBLIC_CHANNEL_ACCESS_TOKEN } }];`;
-
-const publicPrepareCode = String.raw`const config = $('Config LINE Token').first().json;
-const token = String(config.LINE_PUBLIC_CHANNEL_ACCESS_TOKEN || '').trim();
-const body = $('LINE OA Members Webhook').first().json.body || {};
+const publicPrepareCode = String.raw`const body = $('LINE OA Members Webhook').first().json.body || {};
 const events = Array.isArray(body.events) ? body.events : [];
 const bindData = body.action === 'member.bind' || body.source === 'line-liff' ? (body.data || {}) : null;
 function text(value) {
@@ -270,6 +301,19 @@ function prop(json, name) {
   if (json[name] != null) return text(json[name]).trim();
   if (json.properties?.[name] != null) return text(json.properties[name]).trim();
   return '';
+}
+function decryptSecret(value) {
+  const encrypted = String(value || '').trim();
+  if (!encrypted) return '';
+  const parts = encrypted.split(':');
+  if (parts.length !== 4 || parts[0] !== 'v1') return '';
+  const secret = String(process.env.LINE_CONFIG_ENCRYPTION_KEY || '').trim();
+  if (!secret) return '';
+  const crypto = require('crypto');
+  const key = crypto.createHash('sha256').update(secret).digest();
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(parts[1], 'base64'));
+  decipher.setAuthTag(Buffer.from(parts[2], 'base64'));
+  return Buffer.concat([decipher.update(Buffer.from(parts[3], 'base64')), decipher.final()]).toString('utf8');
 }
 function splitTags(value) {
   if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
@@ -310,8 +354,11 @@ function memberName(existing) {
 function memberAttribute(existing) {
   return existing ? prop(existing.json, '人員屬性') || '一般民眾' : '一般民眾';
 }
+const lineSettings = $('Query LINE OA Settings For Token').all();
+const publicSetting = lineSettings.find((item) => prop(item.json, '設定代碼') === 'public-service');
+const token = publicSetting ? decryptSecret(prop(publicSetting.json, 'Access Token 環境變數')) : '';
 async function profile(userId) {
-  if (!token || token.includes('PASTE_')) return { userId };
+  if (!token) return { userId };
   try {
     return await this.helpers.httpRequest({ method: 'GET', url: 'https://api.line.me/v2/bot/profile/' + encodeURIComponent(userId), headers: { Authorization: 'Bearer ' + token }, json: true });
   } catch (_) {
@@ -341,8 +388,8 @@ if (bindData) {
     });
   }
 }
-if (events.length && (!token || token.includes('PASTE_'))) {
-  return [{ json: { ok: false, statusCode: 500, message: '請先在 Config LINE Token 節點填入 LINE_PUBLIC_CHANNEL_ACCESS_TOKEN。', noOperation: true, shouldUpdate: false } }];
+if (events.length && !token) {
+  return [{ json: { ok: false, statusCode: 500, message: '請先在 LINE OA 設定填入 Channel Access Token，並確認 n8n/Zeabur 已設定 LINE_CONFIG_ENCRYPTION_KEY。', noOperation: true, shouldUpdate: false } }];
 }
 for (const event of events) {
   const userId = event.source?.userId;
@@ -396,7 +443,7 @@ const adminWorkflow = {
     ifNode('admin-line-accounts-if-existing', 'Has Existing LINE OA Page', '={{ $json.shouldUpdate }}', true, [280, 80]),
     notionUpdate('admin-line-accounts-update-page', 'Update LINE OA Setting', '={{ $json.pageId }}', lineAccountProps, [520, -20]),
     notionCreate('admin-line-accounts-create-page', 'Create LINE OA Setting', '35db3ad1d1cd80c28616dc1e2bc8917c', '={{ $json.name }}', lineAccountProps, [520, 180]),
-    respond('admin-line-accounts-save-response', 'Respond LINE OA Save', '={{ $json.ok === false ? $json : { ok: true, data: $json } }}', [760, 120], '={{ $json.statusCode || 200 }}'),
+    respond('admin-line-accounts-save-response', 'Respond LINE OA Save', '={{ $json.ok === false ? $json : { ok: true, data: { saved: true } } }}', [760, 120], '={{ $json.statusCode || 200 }}'),
     respond('admin-line-accounts-fallback', 'Respond Unsupported', '={{ { ok: false, message: "Unsupported action" } }}', [-440, 340], 400)
   ],
   pinData: {},
@@ -424,7 +471,7 @@ const publicWorkflow = {
   name: 'Public LINE OA Members - Notion Nodes',
   nodes: [
     webhook('line-oa-members-webhook', 'LINE OA Members Webhook', 'line-oa-members', [-980, 0]),
-    code('line-oa-members-config', 'Config LINE Token', publicConfigCode, [-760, 0]),
+    notionGetAll('line-oa-members-line-settings', 'Query LINE OA Settings For Token', '35db3ad1d1cd80c28616dc1e2bc8917c', [-760, 0]),
     notionGetAll('line-oa-members-query', 'Query Members', MEMBERS_DATABASE_ID, [-540, 0]),
     code('line-oa-members-prepare', 'Prepare LINE Member Upsert', publicPrepareCode, [-300, 0]),
     ifNode('line-oa-members-if-noop', 'Is No Operation', '={{ $json.noOperation === true }}', true, [-60, 0]),
@@ -435,8 +482,8 @@ const publicWorkflow = {
   ],
   pinData: {},
   connections: {
-    'LINE OA Members Webhook': { main: [[{ node: 'Config LINE Token', type: 'main', index: 0 }]] },
-    'Config LINE Token': { main: [[{ node: 'Query Members', type: 'main', index: 0 }]] },
+    'LINE OA Members Webhook': { main: [[{ node: 'Query LINE OA Settings For Token', type: 'main', index: 0 }]] },
+    'Query LINE OA Settings For Token': { main: [[{ node: 'Query Members', type: 'main', index: 0 }]] },
     'Query Members': { main: [[{ node: 'Prepare LINE Member Upsert', type: 'main', index: 0 }]] },
     'Prepare LINE Member Upsert': { main: [[{ node: 'Is No Operation', type: 'main', index: 0 }]] },
     'Is No Operation': { main: [[{ node: 'Respond LINE', type: 'main', index: 0 }], [{ node: 'Has Existing Member', type: 'main', index: 0 }]] },

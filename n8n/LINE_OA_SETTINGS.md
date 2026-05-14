@@ -1,10 +1,21 @@
 # LINE OA 設定
 
+## 目標
+
+後台的 `LINE OA 設定` 讓客戶自行填入 LINE Developers 需要的資料。`Channel Access Token` 與 `Channel Secret` 只在輸入當下出現，送出後不回顯明碼，也不在 API response 裡回傳。
+
+目前已關聯的公開 LIFF：
+
+| 用途 | LIFF ID | LIFF URL | Webhook |
+|---|---|---|---|
+| 活動報名 | `2009640939-ACYipKCx` | `https://liff.line.me/2009640939-ACYipKCx` | `https://drwu.zeabur.app/webhook/event-registration` |
+| 法律諮詢 | `2009640939-vwvDFasL` | `https://liff.line.me/2009640939-vwvDFasL` | `https://drwu.zeabur.app/webhook/legal-consultation` |
+
+兩個 LIFF 都會另外呼叫 `https://drwu.zeabur.app/webhook/line-oa-members`，把 LINE User ID 與互動來源寫入會員資料庫。
+
 ## Notion Database
 
-資料庫名稱：`曾辦LINEOA`
-
-Database ID：
+LINE OA 設定資料庫：
 
 ```text
 35db3ad1d1cd80c28616dc1e2bc8917c
@@ -14,35 +25,36 @@ Database ID：
 
 | Property | Type | Notes |
 |---|---|---|
-| `OA 名稱` | Title | 顯示在後台的 LINE OA 名稱 |
-| `設定代碼` | Rich text | 固定為 `internal-team` 或 `public-service` |
-| `用途說明` | Rich text | 此 OA 負責的用途 |
+| `OA 名稱` | Title | 後台顯示名稱 |
+| `設定代碼` | Rich text | 固定使用 `internal-team` 或 `public-service` |
+| `用途說明` | Rich text | OA 使用目的 |
 | `啟用狀態` | Select | `啟用` 或 `停用` |
 | `Channel ID` | Rich text | LINE Developers Channel ID |
-| `Basic ID` | Rich text | LINE OA Basic ID |
+| `Basic ID` | Rich text | LINE OA Basic ID，例如 `@xxxxxxx` |
 | `Webhook URL` | URL | n8n webhook endpoint |
+| `LIFF ID 清單` | Rich text | 一行一個 LIFF ID |
 | `LIFF URL 清單` | Rich text | 一行一個 LIFF URL |
-| `n8n workflow 名稱` | Rich text | 負責處理的 n8n workflow |
-| `Access Token 環境變數` | Rich text | 只記錄名稱，不放 token 值 |
-| `Channel Secret 環境變數` | Rich text | 只記錄名稱，不放 secret 值 |
-| `備註` | Rich text | 管理備註 |
-| `最後檢查時間` | Date | 最後人工檢查時間 |
+| `n8n workflow 名稱` | Rich text | 對應 n8n workflow |
+| `Access Token 環境變數` | Rich text | 目前改存加密後的 Channel Access Token，不存明碼 |
+| `Channel Secret 環境變數` | Rich text | 目前改存加密後的 Channel Secret，不存明碼 |
+| `備註` | Rich text | 管理註記 |
+| `最後檢查時間` | Date | 人工檢查時間 |
 
-## n8n Notion Nodes
+## Secret Handling
 
-這兩個 workflow 已改用 n8n 內建 Notion node，不再在 Code node 內填 Notion token：
+- 後台表單可輸入 `Channel Access Token` 與 `Channel Secret`。
+- 輸入欄位是 password，不提供再次確認或顯示明碼。
+- 欄位留空代表保留原本加密值。
+- `admin-line-accounts.json` 使用 `LINE_CONFIG_ENCRYPTION_KEY` 將 Token/Secret 加密後寫入 Notion。
+- `public-line-oa-members.json` 讀取 `public-service` 設定並用同一把 `LINE_CONFIG_ENCRYPTION_KEY` 解密 Token，再呼叫 LINE profile API。
+- 儲存後後台 list API 只回傳 `hasAccessToken` / `hasChannelSecret`，不回傳明碼或加密值。
+- n8n Code node 需要可使用 Node.js `crypto` builtin；若環境限制 require builtin，需在 n8n 環境允許 `crypto`。
 
-- `workflows/admin-line-accounts.json`
-- `workflows/public-line-oa-members.json`
+部署時需在 n8n/Zeabur 設定：
 
-匯入後請確認所有 Notion node 都選到同一組 Notion credential，例如 `Notion-n8n`。
-
-## Token Handling
-
-- Notion token：由 n8n Notion credential 管理。
-- LINE public channel access token：匯入 `public-line-oa-members.json` 後，在 `Config LINE Token` Code node 填入 `LINE_PUBLIC_CHANNEL_ACCESS_TOKEN`。
-- LINE channel secret：目前 workflow 尚未做簽章驗證，暫時不需要填。
-- 不要把真實 token 或 secret 存進 Notion、前端檔案或匯出的 workflow JSON。
+```text
+LINE_CONFIG_ENCRYPTION_KEY=<至少32字元的隨機字串>
+```
 
 ## Public LINE OA Member Mapping
 
@@ -52,26 +64,24 @@ Database ID：
 35cb3ad1d1cd802bad62da0e74deb58f
 ```
 
-已確認資料庫名稱為 `曾辦_民眾資料庫`。n8n Notion node 實際使用 data source ID：
+n8n Notion node 使用 data source ID：
 
 ```text
 292b3ad1d1cd8066b50c000b82565915
 ```
-
-workflow 只使用既有欄位：
 
 | LINE / Workflow value | Notion property |
 |---|---|
 | LINE display name 或 userId | `會員姓名` |
 | LINE userId | `LINE ID` |
 | LINE display name | `LINE名稱` |
-| 預設一般民眾，既有資料保留原值 | `人員屬性` |
-| 文字內容判斷：法扶/活動/案件 | `互動記錄標籤` |
-| webhook 事件類型、時間、最後文字訊息 | `備註` |
+| 預設或既有分類 | `人員屬性` |
+| LIFF / follow / message / postback 來源 | `互動記錄標籤` |
+| webhook 互動時間、頁面、訊息摘要 | `備註` |
 
 ## Workflow Generator
 
-若需要重建 LINE OA workflow JSON，請在 `C:\dev\tseng-service` 執行：
+重建 LINE OA workflow JSON：
 
 ```powershell
 node tools\generate-line-workflows.js

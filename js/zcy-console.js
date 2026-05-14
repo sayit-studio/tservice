@@ -35,6 +35,9 @@
       workflowName: "internal-team-line-oa",
       accessTokenEnv: "LINE_INTERNAL_CHANNEL_ACCESS_TOKEN",
       channelSecretEnv: "LINE_INTERNAL_CHANNEL_SECRET",
+      hasAccessToken: false,
+      hasChannelSecret: false,
+      liffIds: "",
       note: "",
       lastCheckedAt: ""
     },
@@ -50,6 +53,9 @@
       workflowName: "public-line-oa-members",
       accessTokenEnv: "LINE_PUBLIC_CHANNEL_ACCESS_TOKEN",
       channelSecretEnv: "LINE_PUBLIC_CHANNEL_SECRET",
+      hasAccessToken: false,
+      hasChannelSecret: false,
+      liffIds: "2009640939-ACYipKCx\n2009640939-vwvDFasL",
       note: "",
       lastCheckedAt: ""
     }
@@ -1257,6 +1263,9 @@
     els.lineAccountsGrid.innerHTML = accounts.map((item) => {
       const enabled = String(item.enabled) !== "false";
       const liffUrls = lineList(item.liffUrls);
+      const liffIds = lineList(item.liffIds || item.liffId);
+      const tokenStatus = item.hasAccessToken ? "已設定" : "未設定";
+      const secretStatus = item.hasChannelSecret ? "已設定" : "未設定";
       const hint = item.key === "public-service"
         ? "處理 follow、message、postback 與 LIFF userId，寫入會員管理。"
         : "提供同仁外出時手機端新增/編輯案件、查看行事曆與輸入追蹤進度。";
@@ -1274,9 +1283,11 @@
             <div class="detail-row"><span>Channel ID</span><strong>${escapeHtml(item.channelId || "未填寫")}</strong></div>
             <div class="detail-row"><span>Basic ID</span><strong>${escapeHtml(item.basicId || "未填寫")}</strong></div>
             <div class="detail-row"><span>Webhook URL</span><strong>${escapeHtml(item.webhookUrl || "未設定")}</strong></div>
+            <div class="detail-row"><span>LIFF ID</span><p>${liffIds.length ? liffIds.map(escapeHtml).join("<br>") : "未設定"}</p></div>
             <div class="detail-row"><span>LIFF URL</span><p>${liffUrls.length ? liffUrls.map(escapeHtml).join("<br>") : "未設定"}</p></div>
             <div class="detail-row"><span>n8n workflow</span><strong>${escapeHtml(item.workflowName || "未設定")}</strong></div>
-            <div class="detail-row token-row"><span>Token 管理</span><strong>已由 n8n Config 節點管理</strong><small>${escapeHtml(item.accessTokenEnv)} / ${escapeHtml(item.channelSecretEnv)}</small></div>
+            <div class="detail-row token-row"><span>Channel access token</span><strong>${escapeHtml(tokenStatus)}</strong><small>儲存後不回顯明碼</small></div>
+            <div class="detail-row token-row"><span>Channel secret</span><strong>${escapeHtml(secretStatus)}</strong><small>Webhook 簽章驗證使用</small></div>
             <div class="detail-row"><span>最後檢查</span><strong>${escapeHtml(formatDateTime(item.lastCheckedAt))}</strong></div>
             <div class="detail-row"><span>備註</span><p>${escapeHtml(item.note || "無")}</p></div>
           </div>
@@ -1397,6 +1408,8 @@
 
   function renderField(field) {
     const value = field.value == null ? "" : field.value;
+    const placeholder = field.placeholder ? ` placeholder="${escapeHtml(field.placeholder)}"` : "";
+    const autocomplete = field.autocomplete ? ` autocomplete="${escapeHtml(field.autocomplete)}"` : "";
     if (field.type === "copy-url") {
       return `
         <label class="field wide copy-field">
@@ -1410,7 +1423,7 @@
       `;
     }
     if (field.type === "textarea") {
-      return `<label class="field wide"><span>${escapeHtml(field.label)}</span><textarea name="${field.name}" rows="4">${escapeHtml(value)}</textarea></label>`;
+      return `<label class="field wide"><span>${escapeHtml(field.label)}</span><textarea name="${field.name}" rows="4"${placeholder}>${escapeHtml(value)}</textarea></label>`;
     }
     if (field.type === "select") {
       return `<label class="field"><span>${escapeHtml(field.label)}</span><select name="${field.name}">${field.options}</select></label>`;
@@ -1431,7 +1444,7 @@
           <span class="upload-progress" id="progress-${escapeHtml(field.name)}"></span>
         </div>`;
     }
-    return `<label class="field ${field.wide ? "wide" : ""}"><span>${escapeHtml(field.label)}</span><input name="${field.name}" type="${field.type || "text"}" value="${escapeHtml(value)}" ${field.readonly ? "readonly" : ""} /></label>`;
+    return `<label class="field ${field.wide ? "wide" : ""}"><span>${escapeHtml(field.label)}</span><input name="${field.name}" type="${field.type || "text"}" value="${escapeHtml(value)}"${placeholder}${autocomplete} ${field.readonly ? "readonly" : ""} /></label>`;
   }
 
   async function copyFieldValue(event) {
@@ -1644,21 +1657,25 @@
       { name: "enabled", label: "啟用狀態", type: "select", options: selectOptions([{ value: "true", label: "啟用" }, { value: "false", label: "停用" }], String(item.enabled === false || item.enabled === "false" ? "false" : "true")) },
       { name: "channelId", label: "Channel ID", value: item.channelId },
       { name: "basicId", label: "Basic ID", value: item.basicId },
+      { name: "channelSecret", label: "Channel Secret", type: "password", value: "", placeholder: item.hasChannelSecret ? "已設定，留空不變" : "貼上 LINE Channel Secret", wide: true, autocomplete: "new-password" },
+      { name: "channelAccessToken", label: "Channel Access Token", type: "password", value: "", placeholder: item.hasAccessToken ? "已設定，留空不變" : "貼上 long-lived Channel Access Token", wide: true, autocomplete: "new-password" },
+      { name: "liffIds", label: "LIFF ID 清單（一行一個）", type: "textarea", value: lineList(item.liffIds || item.liffId).join("\n"), placeholder: "例如：2009640939-ACYipKCx" },
       { name: "webhookUrl", label: "Webhook URL", value: item.webhookUrl, wide: true },
       { name: "liffUrls", label: "LIFF URL 清單（一行一個）", type: "textarea", value: lineList(item.liffUrls).join("\n") },
       { name: "workflowName", label: "n8n workflow 名稱", value: item.workflowName },
-      { name: "accessTokenEnv", label: "Access token 環境變數", value: item.accessTokenEnv, readonly: true },
-      { name: "channelSecretEnv", label: "Channel secret 環境變數", value: item.channelSecretEnv, readonly: true },
       { name: "lastCheckedAt", label: "最後檢查時間", type: "datetime-local", value: datetimeForInput(item.lastCheckedAt) },
       { name: "purpose", label: "用途說明", type: "textarea", value: item.purpose },
       { name: "note", label: "備註", type: "textarea", value: item.note },
-      { name: "tokenNotice", label: "Token 欄位", value: "已由 n8n Config 節點管理，後台不接收明文 token。", wide: true, readonly: true }
+      { name: "tokenNotice", label: "安全提示", value: "Token 與 Secret 儲存後不會在後台回顯；欄位留空代表保留原值。", wide: true, readonly: true }
     ], (data) => AdminApi.saveLineAccount({
       ...item,
       ...data,
       key: item.key,
       accessTokenEnv: item.accessTokenEnv,
       channelSecretEnv: item.channelSecretEnv,
+      hasAccessToken: item.hasAccessToken,
+      hasChannelSecret: item.hasChannelSecret,
+      liffIds: lineList(data.liffIds).join("\n"),
       liffUrls: lineList(data.liffUrls).join("\n")
     }), null);
   }

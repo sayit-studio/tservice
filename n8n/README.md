@@ -10,7 +10,7 @@ This folder contains import targets for the management backend and public legal-
 | `workflows/admin-cases.json` | `admin-cases` | Case list/create/update |
 | `workflows/admin-events.json` | `admin-events` | Event calendar/list/create/update |
 | `workflows/admin-members.json` | `admin-members` | Member list and tag/status update |
-| `workflows/admin-line-accounts.json` | `admin-line-accounts` | Admin-only non-secret LINE OA settings |
+| `workflows/admin-line-accounts.json` | `admin-line-accounts` | Admin-only LINE OA settings with encrypted Token/Secret storage |
 | `workflows/admin-legal-consultation.json` | `admin-legal-consultation` | Legal consultation backend list/update |
 | `workflows/public-line-oa-members.json` | `line-oa-members` | Public LINE OA webhook for follow/message/postback member capture |
 | `workflows/public-legal-consultation.json` | `legal-consultation` | Public booking availability/book/query/cancel |
@@ -26,11 +26,11 @@ This folder contains import targets for the management backend and public legal-
   - Members data source used by n8n Notion nodes: `292b3ad1d1cd8066b50c000b82565915`
   - LINE OA settings: `35db3ad1d1cd80c28616dc1e2bc8917c`
   - Legal consultation: `2ccb3ad1d1cd8175aba6e21110f71145`
-- LINE Messaging API channel access token for workflows that call LINE APIs.
-- This Zeabur plan cannot reliably expose runtime environment variables to n8n Code nodes.
+- `LINE_CONFIG_ENCRYPTION_KEY` environment variable for encrypting/decrypting LINE Token and Secret entered in the admin backend.
 - `admin-line-accounts.json` and `public-line-oa-members.json` use n8n Notion nodes for Notion access. Confirm each Notion node uses the `Notion-n8n` credential after import.
-- For `public-line-oa-members.json`, fill only `LINE_PUBLIC_CHANNEL_ACCESS_TOKEN` in the `Config LINE Token` Code node after import.
-- Do not export or commit workflow JSON after real LINE token values are filled in n8n UI.
+- `admin-line-accounts.json` encrypts LINE Token/Secret before saving them to the LINE OA settings database.
+- `public-line-oa-members.json` decrypts the saved public-service token at runtime before calling LINE APIs.
+- Do not export workflow execution data containing decrypted LINE values.
 - `TEAM_LINE_TARGET` environment variable or matching workflow value for internal LINE notification recipients.
 
 ## Backend config
