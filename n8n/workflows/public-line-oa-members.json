@@ -1,0 +1,387 @@
+{
+  "name": "Public LINE OA Members - Notion Nodes",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line-oa-members",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "line-oa-members-webhook",
+      "name": "LINE OA Members Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -980,
+        0
+      ],
+      "webhookId": "line-oa-members"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fill only the LINE token here after import. Notion token is handled by the Notion credential.\nconst LINE_PUBLIC_CHANNEL_ACCESS_TOKEN = 'PASTE_LINE_PUBLIC_CHANNEL_ACCESS_TOKEN_HERE';\nreturn [{ json: { LINE_PUBLIC_CHANNEL_ACCESS_TOKEN } }];"
+      },
+      "id": "line-oa-members-config",
+      "name": "Config LINE Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "292b3ad1d1cd8066b50c000b82565915"
+        },
+        "returnAll": true,
+        "options": {},
+        "simple": false
+      },
+      "id": "line-oa-members-query",
+      "name": "Query Members",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -540,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Config LINE Token').first().json;\nconst token = String(config.LINE_PUBLIC_CHANNEL_ACCESS_TOKEN || '').trim();\nconst body = $('LINE OA Members Webhook').first().json.body || {};\nconst events = Array.isArray(body.events) ? body.events : [];\nconst bindData = body.action === 'member.bind' || body.source === 'line-liff' ? (body.data || {}) : null;\nfunction text(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(text).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return text(value.title);\n  if (value.rich_text) return text(value.rich_text);\n  if (value.select) return text(value.select);\n  if (value.multi_select) return text(value.multi_select);\n  if (value.date) return value.date.start || '';\n  if (value.url) return value.url || '';\n  if (value.phone_number) return value.phone_number || '';\n  return '';\n}\nfunction prop(json, name) {\n  if (json[name] != null) return text(json[name]).trim();\n  if (json.properties?.[name] != null) return text(json.properties[name]).trim();\n  return '';\n}\nfunction splitTags(value) {\n  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);\n  return String(value || '').split(/[、,，\\n]/).map((item) => item.trim()).filter(Boolean);\n}\nfunction mergeTags(existingTags, incomingTags) {\n  return Array.from(new Set([...splitTags(existingTags), ...splitTags(incomingTags)])).join(',');\n}\nfunction eventTags(event, existingTags) {\n  const tags = splitTags(existingTags);\n  if (event.type === 'follow') tags.push('已加好友');\n  if (event.type === 'message') tags.push('曾傳訊息');\n  if (event.type === 'postback') tags.push('曾點選選單');\n  const msg = event.message?.type === 'text' ? String(event.message.text || '') : '';\n  if (msg.includes('法扶') || msg.includes('法律')) tags.push('115年法扶');\n  if (msg.includes('活動') || msg.includes('報名')) tags.push('115年活動');\n  if (msg.includes('陳情') || msg.includes('案件')) tags.push('115年案件');\n  return mergeTags('', tags);\n}\nfunction noteLine(source, detail, at) {\n  return [source, at || new Date().toISOString(), detail].filter(Boolean).join(' / ');\n}\nfunction appendNote(oldNote, line) {\n  return [String(oldNote || '').trim(), line].filter(Boolean).join('\\n');\n}\nfunction memberTags(existing) {\n  return existing ? prop(existing.json, '標籤') || prop(existing.json, '互動記錄標籤') : '';\n}\nfunction memberNote(existing) {\n  return existing ? prop(existing.json, '備註') : '';\n}\nfunction memberPhone(existing) {\n  return existing ? prop(existing.json, '行動電話') || prop(existing.json, '電話') || prop(existing.json, '手機') : '';\n}\nfunction memberName(existing) {\n  return existing ? prop(existing.json, '會員姓名') || prop(existing.json, '姓名') || prop(existing.json, 'Name') : '';\n}\nfunction memberAttribute(existing) {\n  return existing ? prop(existing.json, '人員屬性') || '一般民眾' : '一般民眾';\n}\nasync function profile(userId) {\n  if (!token || token.includes('PASTE_')) return { userId };\n  try {\n    return await this.helpers.httpRequest({ method: 'GET', url: 'https://api.line.me/v2/bot/profile/' + encodeURIComponent(userId), headers: { Authorization: 'Bearer ' + token }, json: true });\n  } catch (_) {\n    return { userId };\n  }\n}\nconst members = $('Query Members').all();\nconst out = [];\nif (bindData) {\n  const userId = String(bindData.lineUserId || bindData.userId || '').trim();\n  if (userId) {\n    const existing = members.find((item) => prop(item.json, 'LINE User ID') === userId || prop(item.json, 'LINE ID') === userId);\n    const at = body.submittedAt || bindData.submittedAt || new Date().toISOString();\n    const stage = String(bindData.stage || 'liff_use').trim();\n    const detail = [stage, bindData.sourcePage, bindData.name, bindData.phone].filter(Boolean).join(' / ');\n    out.push({\n      pageId: existing?.json?.id || '',\n      shouldUpdate: Boolean(existing?.json?.id),\n      memberName: String(bindData.name || bindData.displayName || '').trim() || memberName(existing) || userId,\n      phone: String(bindData.phone || '').trim() || memberPhone(existing),\n      lineUserId: userId,\n      lineDisplayName: String(bindData.displayName || '').trim() || prop(existing?.json || {}, 'LINE名稱') || prop(existing?.json || {}, 'LINE 名稱'),\n      tags: mergeTags(memberTags(existing), bindData.tags || ['LIFF 綁定']),\n      attribute: memberAttribute(existing),\n      note: appendNote(memberNote(existing), noteLine('LIFF member.bind', detail, at)),\n      eventType: stage\n    });\n  }\n}\nif (events.length && (!token || token.includes('PASTE_'))) {\n  return [{ json: { ok: false, statusCode: 500, message: '請先在 Config LINE Token 節點填入 LINE_PUBLIC_CHANNEL_ACCESS_TOKEN。', noOperation: true, shouldUpdate: false } }];\n}\nfor (const event of events) {\n  const userId = event.source?.userId;\n  if (!userId) continue;\n  const existing = members.find((item) => prop(item.json, 'LINE User ID') === userId || prop(item.json, 'LINE ID') === userId);\n  const p = await profile(userId);\n  const now = event.timestamp ? new Date(event.timestamp).toISOString() : new Date().toISOString();\n  const message = event.message?.type === 'text' ? String(event.message.text || '').trim() : '';\n  out.push({\n    pageId: existing?.json?.id || '',\n    shouldUpdate: Boolean(existing?.json?.id),\n    memberName: p.displayName || memberName(existing) || userId,\n    phone: memberPhone(existing),\n    lineUserId: userId,\n    lineDisplayName: p.displayName || '',\n    pictureUrl: p.pictureUrl || '',\n    statusMessage: p.statusMessage || '',\n    tags: eventTags(event, memberTags(existing)),\n    attribute: memberAttribute(existing),\n    note: appendNote(memberNote(existing), noteLine('LINE OA ' + event.type, message, now)),\n    joinedAt: event.type === 'follow' && !existing ? now : '',\n    lastInteractionAt: now,\n    lastMessage: message,\n    eventType: event.type\n  });\n}\nif (!out.length) return [{ json: { ok: true, processed: 0, message: 'No LINE member data to process.', noOperation: true, shouldUpdate: false } }];\nreturn out.map((json) => ({ json }));"
+      },
+      "id": "line-oa-members-prepare",
+      "name": "Prepare LINE Member Upsert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.noOperation === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "line-oa-members-if-noop",
+      "name": "Is No Operation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -60,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.shouldUpdate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "line-oa-members-if-existing",
+      "name": "Has Existing Member",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        180,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.pageId }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "會員姓名|title",
+              "title": "={{ $json.memberName }}"
+            },
+            {
+              "key": "行動電話|phone_number",
+              "phoneValue": "={{ $json.phone }}"
+            },
+            {
+              "key": "LINE ID|rich_text",
+              "textContent": "={{ $json.lineUserId }}"
+            },
+            {
+              "key": "LINE名稱|rich_text",
+              "textContent": "={{ $json.lineDisplayName }}"
+            },
+            {
+              "key": "人員屬性|select",
+              "selectValue": "={{ $json.attribute }}"
+            },
+            {
+              "key": "互動記錄標籤|multi_select",
+              "multiSelectValue": "={{ $json.tags }}"
+            },
+            {
+              "key": "備註|rich_text",
+              "textContent": "={{ $json.note }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "line-oa-members-update",
+      "name": "Update Member",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        -20
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "292b3ad1d1cd8066b50c000b82565915"
+        },
+        "title": "={{ $json.memberName }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "會員姓名|title",
+              "title": "={{ $json.memberName }}"
+            },
+            {
+              "key": "行動電話|phone_number",
+              "phoneValue": "={{ $json.phone }}"
+            },
+            {
+              "key": "LINE ID|rich_text",
+              "textContent": "={{ $json.lineUserId }}"
+            },
+            {
+              "key": "LINE名稱|rich_text",
+              "textContent": "={{ $json.lineDisplayName }}"
+            },
+            {
+              "key": "人員屬性|select",
+              "selectValue": "={{ $json.attribute }}"
+            },
+            {
+              "key": "互動記錄標籤|multi_select",
+              "multiSelectValue": "={{ $json.tags }}"
+            },
+            {
+              "key": "備註|rich_text",
+              "textContent": "={{ $json.note }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "line-oa-members-create",
+      "name": "Create Member",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        180
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.ok === false || $json.noOperation ? $json : { ok: true, processed: 1, action: \"saved\" } }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode || 200 }}"
+        }
+      },
+      "id": "line-oa-members-response",
+      "name": "Respond LINE",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        80
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "LINE OA Members Webhook": {
+      "main": [
+        [
+          {
+            "node": "Config LINE Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config LINE Token": {
+      "main": [
+        [
+          {
+            "node": "Query Members",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Members": {
+      "main": [
+        [
+          {
+            "node": "Prepare LINE Member Upsert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare LINE Member Upsert": {
+      "main": [
+        [
+          {
+            "node": "Is No Operation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is No Operation": {
+      "main": [
+        [
+          {
+            "node": "Respond LINE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Has Existing Member",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Existing Member": {
+      "main": [
+        [
+          {
+            "node": "Update Member",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Member",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Member": {
+      "main": [
+        [
+          {
+            "node": "Respond LINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Member": {
+      "main": [
+        [
+          {
+            "node": "Respond LINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "public-line-oa-members-notion-nodes-v2",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "public-line-oa-members",
+  "tags": []
+}

@@ -42,6 +42,7 @@
 
   const state = {
     liffReady: false,
+    profile: null,
     eventId: readEventId(),
     eventName: readParamFromUrlOrLiffState(["eventName", "eventTitle", "title"]),
     eventDate: readParamFromUrlOrLiffState(["eventDate", "eventTime", "date", "time"])
@@ -75,6 +76,38 @@
     return String(message || "").replace(/報名/g, "簽到");
   }
 
+  function hasMemberWebhook() {
+    return Boolean(config.memberWebhookBaseUrl && !config.memberWebhookBaseUrl.includes("YOUR_N8N_DOMAIN"));
+  }
+
+  async function captureMember(stage, extraData = {}) {
+    const profile = state.profile || {};
+    const lineUserId = document.getElementById("lineUserId").value.trim() || profile.userId || "";
+    if (!hasMemberWebhook() || !lineUserId) return;
+
+    try {
+      await fetch(config.memberWebhookBaseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "member.bind",
+          source: "line-liff",
+          submittedAt: new Date().toISOString(),
+          data: {
+            lineUserId,
+            displayName: document.getElementById("lineDisplayName").value.trim() || profile.displayName || "",
+            sourcePage: "event-registration",
+            stage,
+            tags: ["LIFF 綁定", "活動報名"],
+            ...extraData
+          }
+        })
+      });
+    } catch (_) {
+      // Member capture should not block public registration.
+    }
+  }
+
   async function initLiff() {
     setValue("eventId", state.eventId);
     if (state.eventName || state.eventDate) {
@@ -103,8 +136,10 @@
         return;
       }
       const profile = await liff.getProfile();
+      state.profile = profile;
       setValue("lineUserId", profile.userId);
       setValue("lineDisplayName", profile.displayName);
+      captureMember("event_liff_open");
     } catch (error) {
       showNotice("LIFF 初始化失敗，請確認 LIFF ID 與 Endpoint URL。", "error");
     }
@@ -133,6 +168,12 @@
           isInClient: window.liff?.isInClient ? liff.isInClient() : false
         }
       };
+      await captureMember("event_registration_submit", {
+        name: payload.data.name,
+        phone: payload.data.phone,
+        note: payload.data.note,
+        tags: ["LIFF 綁定", "活動報名", "已填聯絡資料"]
+      });
       const response = await fetch(config.webhookBaseUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -3,6 +3,7 @@
   const state = {
     mode: new URLSearchParams(window.location.search).get("mode") || "book",
     liffReady: false,
+    profile: null,
     availabilityByDate: {}
   };
 
@@ -104,6 +105,44 @@
 
   function hasConfiguredWebhook() {
     return config.enableAvailabilityLookup !== false && Boolean(config.webhookBaseUrl && !config.webhookBaseUrl.includes("your-n8n-domain.example"));
+  }
+
+  function hasMemberWebhook() {
+    return Boolean(config.memberWebhookBaseUrl && !config.memberWebhookBaseUrl.includes("YOUR_N8N_DOMAIN"));
+  }
+
+  async function captureMember(stage, formData = {}) {
+    const profile = state.profile || {};
+    const lineUserId = profile.userId || formData.lineUserId || "";
+    if (!hasMemberWebhook() || !lineUserId) return;
+
+    const tags = ["LIFF 綁定", "法扶諮詢"];
+    if (stage === "legal_book_submit") tags.push("已填聯絡資料");
+    if (stage === "legal_query_submit") tags.push("預約查詢");
+    if (stage === "legal_cancel_submit") tags.push("預約取消");
+
+    try {
+      await fetch(config.memberWebhookBaseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "member.bind",
+          source: "line-liff",
+          submittedAt: new Date().toISOString(),
+          data: {
+            lineUserId,
+            displayName: profile.displayName || "",
+            name: formData.name || "",
+            phone: formData.phone || "",
+            sourcePage: "legal-consultation",
+            stage,
+            tags
+          }
+        })
+      });
+    } catch (_) {
+      // Member capture should not block legal consultation workflows.
+    }
   }
 
   function normalizeAvailability(body) {
@@ -242,13 +281,18 @@
   }
 
   function buildPayload(mode, form) {
+    const profile = state.profile || {};
     return {
       action: mode,
       actionLabel: actionLabels[mode],
       source: "line-liff",
       submittedAt: new Date().toISOString(),
       teamLineTarget: config.teamLineTarget || "",
-      data: formToObject(form)
+      data: {
+        ...formToObject(form),
+        lineUserId: profile.userId || "",
+        lineDisplayName: profile.displayName || ""
+      }
     };
   }
 
@@ -311,7 +355,9 @@
     hideNotice();
 
     try {
-      const result = await submitToN8n(buildPayload(mode, form));
+      const payload = buildPayload(mode, form);
+      await captureMember(`legal_${mode}_submit`, payload.data);
+      const result = await submitToN8n(payload);
       const titleMap = {
         book: "預約已送出",
         query: "查詢已送出",
@@ -342,6 +388,12 @@
     try {
       await liff.init({ liffId: config.liffId });
       state.liffReady = true;
+      if (!liff.isLoggedIn()) {
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+      state.profile = await liff.getProfile();
+      captureMember("legal_liff_open");
       setStatus("表單已就緒", "success");
     } catch (error) {
       setStatus("LINE 連線失敗", "error");
