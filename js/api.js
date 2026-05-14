@@ -53,9 +53,14 @@
       return item;
     }
     if (action === "update") {
-      const index = list.findIndex((item) => item.id === payload.id);
-      if (index >= 0) list[index] = { ...list[index], ...payload };
-      return list[index];
+      const index = list.findIndex((item) => (payload.id && item.id === payload.id) || (payload.key && item.key === payload.key));
+      if (index >= 0) {
+        list[index] = { ...list[index], ...payload };
+        return list[index];
+      }
+      const item = { ...payload, id: payload.id || `${collection}-${Date.now()}` };
+      list.unshift(item);
+      return item;
     }
     if (action === "delete") {
       const index = list.findIndex((item) => item.id === payload.id);
@@ -123,6 +128,13 @@
     async saveMember(payload) {
       if (config.useMockData) return mutateMock("members", "update", payload);
       return post(config.endpoints.membersList, { action: "members.update", data: payload });
+    },
+    async listLineAccounts() {
+      return config.useMockData ? mock.lineAccounts : post(config.endpoints.lineAccounts, { action: "lineAccounts.list" });
+    },
+    async saveLineAccount(payload) {
+      if (config.useMockData) return mutateMock("lineAccounts", "update", payload);
+      return post(config.endpoints.lineAccounts, { action: "lineAccounts.update", data: payload });
     },
     async listStaff() {
       return config.useMockData ? mock.staff : post(config.endpoints.staffList, { action: "staff.list" });

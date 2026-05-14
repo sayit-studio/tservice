@@ -46,6 +46,7 @@
           <button class="nav-item" type="button" data-view="members">會員名單</button>
           <button class="nav-item" type="button" data-view="legal">法扶諮詢</button>
           <button class="nav-item admin-only" type="button" data-view="staff">人員管理</button>
+          <button class="nav-item admin-only" type="button" data-view="lineAccounts">LINE OA 設定</button>
         </nav>
         <button class="ghost-button" id="logoutButton" type="button">登出</button>
       </aside>
@@ -65,31 +66,61 @@
           <div class="toolbar">
             <label class="search-field">
               <span>搜尋</span>
-              <input id="caseSearch" placeholder="案件、陳情人、案號" />
+              <input id="caseSearch" placeholder="案號、類別、當事人名、託辦事項" />
             </label>
             <label class="select-field">
               <span>狀態</span>
               <select id="caseStatusFilter">
                 <option value="">全部狀態</option>
                 <option>新案件</option>
+                <option>處理中</option>
                 <option>進行中</option>
                 <option>追蹤中</option>
                 <option>未完成案件</option>
                 <option>已完成案件</option>
               </select>
             </label>
+            <button class="secondary-button compact" id="importCasesButton" type="button">匯入 Excel</button>
             <button class="primary-button compact" id="addCaseButton" type="button">新增案件</button>
           </div>
+
+          <!-- Excel 匯入區塊（預設隱藏）-->
+          <div class="import-panel" id="importPanel" hidden>
+            <div class="import-panel-inner">
+              <div class="import-drop-zone" id="importDropZone">
+                <input type="file" id="importFileInput" accept=".xlsx,.xls" hidden />
+                <p>拖拉 Excel 檔案至此，或<button type="button" class="link-button" id="importBrowseBtn">點此選擇</button></p>
+                <small>支援 .xlsx / .xls，欄位需包含「請託案號」</small>
+              </div>
+              <div class="import-preview-wrap" id="importPreviewWrap" hidden>
+                <div class="import-preview-header">
+                  <strong id="importPreviewTitle">預覽（前 5 筆）</strong>
+                  <div class="import-preview-actions">
+                    <button class="secondary-button compact" id="importCancelBtn" type="button">取消</button>
+                    <button class="primary-button compact" id="importConfirmBtn" type="button">確認匯入</button>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table id="importPreviewTable">
+                    <thead id="importPreviewHead"></thead>
+                    <tbody id="importPreviewBody"></tbody>
+                  </table>
+                </div>
+                <div class="import-status" id="importStatus"></div>
+              </div>
+            </div>
+          </div>
+
           <div class="data-layout">
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>案件</th>
-                    <th>負責人員</th>
+                    <th>請託案號 / 類別</th>
+                    <th>接案秘書</th>
                     <th>狀態</th>
-                    <th>陳情人</th>
-                    <th>操作</th>
+                    <th>當事人名</th>
+                    <th>請託日期</th>
                   </tr>
                 </thead>
                 <tbody id="casesTable"></tbody>
@@ -282,6 +313,17 @@
           <div class="pager" id="legalPager"></div>
         </section>
 
+
+        <section class="view-panel" id="lineAccountsView" data-title="LINE OA 設定">
+          <div class="line-account-head">
+            <div>
+              <p class="eyebrow">雙 LINE OA 分工</p>
+              <h3>內部團隊與對外民眾帳號</h3>
+            </div>
+            <p>Channel access token 與 Channel secret 僅填在 n8n Config Code 節點，不會存入後台或瀏覽器。</p>
+          </div>
+          <div class="line-account-grid" id="lineAccountsGrid"></div>
+        </section>
         <section class="view-panel" id="staffView" data-title="人員管理">
           <div class="toolbar">
             <label class="search-field">
@@ -319,8 +361,9 @@
       </section>
     </div>
 
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="../js/config.js"></script>
     <script src="../js/api.js"></script>
-    <script src="../js/zcy-console.js?v=20260429-calendar-drawer"></script>
+    <script src="../js/zcy-console.js?v=20260513-excel-import"></script>
   </body>
 </html>

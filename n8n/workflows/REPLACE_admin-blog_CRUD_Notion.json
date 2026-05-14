@@ -1,0 +1,300 @@
+{
+  "name": "Admin Blog",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-blog",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "admin-blog-webhook",
+      "name": "Admin Blog Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-900, 0],
+      "webhookId": "admin-blog"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.action }}", "rightValue": "blog.list", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "blog.list"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.action }}", "rightValue": "blog.create", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "blog.create"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.action }}", "rightValue": "blog.update", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "blog.update"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.action }}", "rightValue": "blog.delete", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "blog.delete"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "id": "route-action",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [-680, 0]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": { "__rl": true, "mode": "id", "value": "360b3ad1d1cd80b8a870de2164fedb7b" },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "query-blog",
+      "name": "Query Blog",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-420, -260],
+      "credentials": { "notionApi": { "id": "TUc2PAbFfQKWYUgA", "name": "Notion-n8n" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.multi_select) return (value.multi_select || []).map(v => v.name).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  if (value.files) return (value.files || []).map(f => f.external?.url || f.file?.url || '').filter(Boolean).join(',');\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some(name => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  title: prop(item, ['標題']),\n  category: prop(item, ['分類']),\n  summary: prop(item, ['摘要']),\n  content: prop(item, ['內容']),\n  coverImage: prop(item, ['封面圖']),\n  bodyImages: prop(item, ['內文圖片']),\n  publishStatus: prop(item, ['發布狀態']),\n  publishDate: prop(item, ['發布日期']),\n  author: prop(item, ['作者']),\n  tags: prop(item, ['標籤']),\n  isPublic: prop(item, ['是否公開']),\n  externalUrl: prop(item, ['外部連結'])\n})) } }];"
+      },
+      "id": "normalize-blog",
+      "name": "Normalize Blog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-180, -260]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-blog",
+      "name": "Respond Blog",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [40, -260]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Blog Webhook').first().json.body || {};\nconst data = body.data || {};\nreturn [{ json: { data, now: new Date().toISOString() } }];"
+      },
+      "id": "prepare-create-blog",
+      "name": "Prepare Create Blog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-420, -60]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": { "__rl": true, "mode": "id", "value": "360b3ad1d1cd80b8a870de2164fedb7b" },
+        "title": "={{ $json.data.title }}",
+        "propertiesUi": {
+          "propertyValues": [
+            { "key": "分類|select", "selectValue": "={{ $json.data.category }}" },
+            { "key": "摘要|rich_text", "textContent": "={{ $json.data.summary }}" },
+            { "key": "內容|rich_text", "textContent": "={{ $json.data.content }}" },
+            { "key": "封面圖|files", "fileUrls": "={{ $json.data.coverImage }}" },
+            { "key": "內文圖片|files", "fileUrls": "={{ $json.data.bodyImages }}" },
+            { "key": "發布狀態|select", "selectValue": "={{ $json.data.publishStatus }}" },
+            { "key": "發布日期|date", "includeTime": false, "date": "={{ $json.data.publishDate }}", "timezone": "Asia/Taipei" },
+            { "key": "作者|rich_text", "textContent": "={{ $json.data.author }}" },
+            { "key": "標籤|multi_select", "multiSelectValue": "={{ $json.data.tags }}" },
+            { "key": "是否公開|checkbox", "checkboxValue": "={{ $json.data.isPublic === true || $json.data.isPublic === 'true' }}" },
+            { "key": "外部連結|url", "urlValue": "={{ $json.data.externalUrl }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-blog",
+      "name": "Create Blog",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-180, -60],
+      "credentials": { "notionApi": { "id": "TUc2PAbFfQKWYUgA", "name": "Notion-n8n" } }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: { id: $json.id, title: $json.properties?.['標題']?.title?.[0]?.plain_text || '' } } }}",
+        "options": {}
+      },
+      "id": "respond-create-blog",
+      "name": "Respond Create Blog",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [40, -60]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Blog Webhook').first().json.body || {};\nconst data = body.data || {};\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
+      },
+      "id": "prepare-update-blog",
+      "name": "Prepare Update Blog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-420, 140]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": { "__rl": true, "mode": "id", "value": "={{ $json.id }}" },
+        "propertiesUi": {
+          "propertyValues": [
+            { "key": "標題|title", "textContent": "={{ $json.data.title }}" },
+            { "key": "分類|select", "selectValue": "={{ $json.data.category }}" },
+            { "key": "摘要|rich_text", "textContent": "={{ $json.data.summary }}" },
+            { "key": "內容|rich_text", "textContent": "={{ $json.data.content }}" },
+            { "key": "封面圖|files", "fileUrls": "={{ $json.data.coverImage }}" },
+            { "key": "內文圖片|files", "fileUrls": "={{ $json.data.bodyImages }}" },
+            { "key": "發布狀態|select", "selectValue": "={{ $json.data.publishStatus }}" },
+            { "key": "發布日期|date", "includeTime": false, "date": "={{ $json.data.publishDate }}", "timezone": "Asia/Taipei" },
+            { "key": "作者|rich_text", "textContent": "={{ $json.data.author }}" },
+            { "key": "標籤|multi_select", "multiSelectValue": "={{ $json.data.tags }}" },
+            { "key": "是否公開|checkbox", "checkboxValue": "={{ $json.data.isPublic === true || $json.data.isPublic === 'true' }}" },
+            { "key": "外部連結|url", "urlValue": "={{ $json.data.externalUrl }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-blog",
+      "name": "Update Blog",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-180, 140],
+      "credentials": { "notionApi": { "id": "TUc2PAbFfQKWYUgA", "name": "Notion-n8n" } }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: { id: $json.id } } }}",
+        "options": {}
+      },
+      "id": "respond-update-blog",
+      "name": "Respond Update Blog",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [40, 140]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Blog Webhook').first().json.body || {};\nconst data = body.data || {};\nreturn [{ json: { id: String(data.id || body.id || '').trim() } }];"
+      },
+      "id": "prepare-delete-blog",
+      "name": "Prepare Delete Blog",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-420, 340]
+    },
+    {
+      "parameters": {
+        "resource": "page",
+        "operation": "archive",
+        "pageId": { "__rl": true, "mode": "id", "value": "={{ $json.id }}" },
+        "options": {}
+      },
+      "id": "archive-blog",
+      "name": "Archive Blog",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [-180, 340],
+      "credentials": { "notionApi": { "id": "TUc2PAbFfQKWYUgA", "name": "Notion-n8n" } }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: { id: $json.id } } }}",
+        "options": {}
+      },
+      "id": "respond-delete-blog",
+      "name": "Respond Delete Blog",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [40, 340]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: 'Unsupported action: ' + ($json.body?.action || '') } }}",
+        "options": {}
+      },
+      "id": "respond-unsupported-action",
+      "name": "Respond Unsupported Action",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-420, 520]
+    }
+  ],
+  "connections": {
+    "Admin Blog Webhook": {
+      "main": [[{ "node": "Route Action", "type": "main", "index": 0 }]]
+    },
+    "Route Action": {
+      "main": [
+        [{ "node": "Query Blog", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Create Blog", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Update Blog", "type": "main", "index": 0 }],
+        [{ "node": "Prepare Delete Blog", "type": "main", "index": 0 }],
+        [{ "node": "Respond Unsupported Action", "type": "main", "index": 0 }]
+      ]
+    },
+    "Query Blog": {
+      "main": [[{ "node": "Normalize Blog", "type": "main", "index": 0 }]]
+    },
+    "Normalize Blog": {
+      "main": [[{ "node": "Respond Blog", "type": "main", "index": 0 }]]
+    },
+    "Prepare Create Blog": {
+      "main": [[{ "node": "Create Blog", "type": "main", "index": 0 }]]
+    },
+    "Create Blog": {
+      "main": [[{ "node": "Respond Create Blog", "type": "main", "index": 0 }]]
+    },
+    "Prepare Update Blog": {
+      "main": [[{ "node": "Update Blog", "type": "main", "index": 0 }]]
+    },
+    "Update Blog": {
+      "main": [[{ "node": "Respond Update Blog", "type": "main", "index": 0 }]]
+    },
+    "Prepare Delete Blog": {
+      "main": [[{ "node": "Archive Blog", "type": "main", "index": 0 }]]
+    },
+    "Archive Blog": {
+      "main": [[{ "node": "Respond Delete Blog", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "admin-blog-crud-v1",
+  "id": "admin-blog",
+  "tags": []
+}

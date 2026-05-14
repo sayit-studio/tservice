@@ -58,6 +58,8 @@ Notion fields:
 
 Endpoint: `/admin-cases`
 
+**Notion DB:** `330b3ad1d1cd8047aabfc9e95de6658d`
+
 | Action | Purpose |
 |---|---|
 | `cases.list` | List cases |
@@ -72,34 +74,51 @@ Payload:
   "action": "cases.update",
   "data": {
     "id": "notion-page-id",
-    "title": "案件主題",
-    "petitioner": "陳情人",
+    "caseNo": "1150508001",
+    "requestDate": "2026-05-08",
+    "category": "醫療院所",
+    "staff": "接案秘書姓名",
+    "petitioner": "當事人名",
+    "homePhone": "04-2345678",
     "phone": "0912345678",
-    "caseNo": "1999案號",
-    "startDate": "2026-04-28",
-    "status": "進行中",
-    "owner": "staff-page-id",
-    "category": "建議事項類別",
-    "summary": "執行狀況敘述",
-    "content": "案件詳細說明"
+    "address": "通訊地址",
+    "registeredAddress": "戶籍地址",
+    "commissioner": "委託人名",
+    "relation": "關係",
+    "content": "託辦事項內容",
+    "status": "處理中",
+    "processingDays": 3,
+    "inspectionNote": "交辦會勘記錄",
+    "summary": "公開摘要（前台顯示）"
   }
 }
 ```
 
-Notion fields:
+Notion fields (欄位名稱依 Excel 原始格式):
 
-| Payload | Notion property |
-|---|---|
-| `title` | `案件主題&詳情` |
-| `petitioner` | `陳情人姓名` |
-| `phone` | `陳情人連絡電話` |
-| `caseNo` | `1999案號` |
-| `startDate` | `處理起始日期` |
-| `status` | `執行狀態` |
-| `owner` | `負責人員` relation to 工作人員管理DB |
-| `category` | `建議事項類別` |
-| `summary` | `局處回覆摘要` |
-| `content` | `案件詳細說明` |
+| Payload field | Notion property | Type | 前台顯示 |
+|---|---|---|---|
+| `caseNo` | `請託案號` | Rich Text | ✅ |
+| `requestDate` | `請託日期` | Date | ✅ |
+| `category` | `託辦類別` | Select | ✅ |
+| `staff` | `接案秘書` | Rich Text | ❌ |
+| `petitioner` | `當事人名` | Rich Text | ❌ 個資 |
+| `homePhone` | `住家電話` | Phone Number | ❌ 個資 |
+| `phone` | `行動電話` | Phone Number | ❌ 個資 |
+| `address` | `通訊地址` | Rich Text | ❌ 個資 |
+| `registeredAddress` | `戶籍地址` | Rich Text | ❌ 個資 |
+| `commissioner` | `委託人名` | Rich Text | ❌ 個資 |
+| `relation` | `關係` | Rich Text | ❌ |
+| `content` | `託辦事項` | Rich Text | ❌ |
+| `status` | `處理狀況` | Select | ✅ |
+| `processingDays` | `處理天數` | Number | ❌ |
+| `inspectionNote` | `交辦會勘記錄` | Rich Text | ❌ |
+| `summary` | `公開摘要` | Rich Text | ✅ |
+| — | `改善前圖片` | Files | ✅ |
+| — | `改善後圖片` | Files | ✅ |
+| — | `是否公開` | Checkbox | 控制前台可見 |
+
+**注意：** 前台查詢（petition_query/petition_list workflow）繼續使用 `案件編號` 欄位，供市民提交的案件使用（格式 SVC-YYYYMMDD-XXXX）。後台內部案件使用 `請託案號` 欄位（格式 YYYYMMDDXXX）。
 
 ## Events
 

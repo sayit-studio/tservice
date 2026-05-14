@@ -1,0 +1,599 @@
+{
+  "name": "Admin LINE OA Settings - Notion Nodes",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-line-accounts",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "admin-line-accounts-webhook",
+      "name": "Admin LINE Accounts Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        0
+      ],
+      "webhookId": "admin-line-accounts"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "lineAccounts.list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "list"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "lineAccounts.update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "update"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "admin-line-accounts-route",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "35db3ad1d1cd80c28616dc1e2bc8917c"
+        },
+        "returnAll": true,
+        "options": {},
+        "simple": false
+      },
+      "id": "admin-line-accounts-query-list",
+      "name": "Query LINE OA Settings",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -440,
+        -160
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const defaults = [\n  { key: 'internal-team', name: '內部團隊 LINE OA', purpose: '同仁手機端新增/編輯資料、查看行事曆、追蹤案件進度。', enabled: 'true', channelId: '', basicId: '', webhookUrl: '', liffUrls: 'https://tseng-service.pages.dev/liff/internal-team/', workflowName: 'internal-team-line-oa', accessTokenEnv: 'LINE_INTERNAL_CHANNEL_ACCESS_TOKEN', channelSecretEnv: 'LINE_INTERNAL_CHANNEL_SECRET', note: '', lastCheckedAt: '' },\n  { key: 'public-service', name: '對外民眾 LINE OA', purpose: '民眾加好友、留言、點擊 LIFF 或選單互動後取得 LINE User ID 並建立會員資料。', enabled: 'true', channelId: '', basicId: '', webhookUrl: 'https://drwu.zeabur.app/webhook/line-oa-members', liffUrls: 'https://liff.line.me/2009640939-ACYipKCx\\nhttps://liff.line.me/2009640939-vwvDFasL', workflowName: 'public-line-oa-members', accessTokenEnv: 'LINE_PUBLIC_CHANNEL_ACCESS_TOKEN', channelSecretEnv: 'LINE_PUBLIC_CHANNEL_SECRET', note: '', lastCheckedAt: '' }\n];\nfunction text(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(text).filter(Boolean).join('');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return text(value.title);\n  if (value.rich_text) return text(value.rich_text);\n  if (value.select) return text(value.select);\n  if (value.date) return value.date.start || '';\n  if (value.url) return value.url || '';\n  return '';\n}\nfunction prop(json, name) {\n  if (json[name] != null) return text(json[name]).trim();\n  if (json['property_' + name] != null) return text(json['property_' + name]).trim();\n  if (json.properties?.[name] != null) return text(json.properties[name]).trim();\n  return '';\n}\nconst saved = items.map((item) => {\n  const json = item.json;\n  const enabledText = prop(json, '啟用狀態');\n  return {\n    id: json.id,\n    key: prop(json, '設定代碼'),\n    name: prop(json, 'OA 名稱'),\n    purpose: prop(json, '用途說明'),\n    enabled: enabledText === '停用' || enabledText === 'false' ? 'false' : 'true',\n    channelId: prop(json, 'Channel ID'),\n    basicId: prop(json, 'Basic ID'),\n    webhookUrl: prop(json, 'Webhook URL'),\n    liffUrls: prop(json, 'LIFF URL 清單'),\n    workflowName: prop(json, 'n8n workflow 名稱'),\n    accessTokenEnv: '',\n    channelSecretEnv: '',\n    note: prop(json, '備註'),\n    lastCheckedAt: prop(json, '最後檢查時間'),\n    updatedAt: json.last_edited_time || ''\n  };\n}).filter((item) => item.key);\nconst data = defaults.map((base) => {\n  const item = saved.find((entry) => entry.key === base.key) || {};\n  return { ...base, ...item, key: base.key, accessTokenEnv: base.accessTokenEnv, channelSecretEnv: base.channelSecretEnv };\n});\nreturn [{ json: { ok: true, data } }];"
+      },
+      "id": "admin-line-accounts-normalize",
+      "name": "Normalize LINE OA Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "admin-line-accounts-list-response",
+      "name": "Respond LINE OA List",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        40,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "35db3ad1d1cd80c28616dc1e2bc8917c"
+        },
+        "returnAll": true,
+        "options": {},
+        "simple": false
+      },
+      "id": "admin-line-accounts-query-update",
+      "name": "Query LINE OA Settings For Update",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -440,
+        120
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin LINE Accounts Webhook').first().json.body || {};\nconst data = body.data || {};\nconst defaults = {\n  'internal-team': { key: 'internal-team', name: '內部團隊 LINE OA', purpose: '同仁手機端新增/編輯資料、查看行事曆、追蹤案件進度。', accessTokenEnv: 'LINE_INTERNAL_CHANNEL_ACCESS_TOKEN', channelSecretEnv: 'LINE_INTERNAL_CHANNEL_SECRET' },\n  'public-service': { key: 'public-service', name: '對外民眾 LINE OA', purpose: '民眾加好友、留言、點擊 LIFF 或選單互動後取得 LINE User ID 並建立會員資料。', accessTokenEnv: 'LINE_PUBLIC_CHANNEL_ACCESS_TOKEN', channelSecretEnv: 'LINE_PUBLIC_CHANNEL_SECRET' }\n};\nconst base = defaults[data.key];\nif (!base) return [{ json: { ok: false, statusCode: 400, message: '只允許更新 internal-team 或 public-service。', shouldUpdate: false } }];\nfunction text(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(text).filter(Boolean).join('');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return text(value.title);\n  if (value.rich_text) return text(value.rich_text);\n  if (value.select) return text(value.select);\n  if (value.date) return value.date.start || '';\n  if (value.url) return value.url || '';\n  return '';\n}\nfunction prop(json, name) {\n  if (json[name] != null) return text(json[name]).trim();\n  if (json.properties?.[name] != null) return text(json.properties[name]).trim();\n  return '';\n}\nconst existing = $('Query LINE OA Settings For Update').all().find((item) => prop(item.json, '設定代碼') === base.key);\nconst payload = {\n  ...base,\n  name: String(data.name || base.name).trim(),\n  purpose: String(data.purpose || base.purpose).trim(),\n  enabled: String(data.enabled) === 'false' ? 'false' : 'true',\n  enabledLabel: String(data.enabled) === 'false' ? '停用' : '啟用',\n  channelId: String(data.channelId || '').trim(),\n  basicId: String(data.basicId || '').trim(),\n  webhookUrl: String(data.webhookUrl || '').trim(),\n  liffUrls: Array.isArray(data.liffUrls) ? data.liffUrls.join('\\n') : String(data.liffUrls || '').trim(),\n  workflowName: String(data.workflowName || '').trim(),\n  note: String(data.note || '').trim(),\n  lastCheckedAt: String(data.lastCheckedAt || '').trim(),\n  pageId: existing?.json?.id || '',\n  shouldUpdate: Boolean(existing?.json?.id)\n};\nreturn [{ json: payload }];"
+      },
+      "id": "admin-line-accounts-prepare-update",
+      "name": "Prepare LINE OA Save",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok !== false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "admin-line-accounts-if-valid-save",
+      "name": "Is Valid LINE OA Save",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        40,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.shouldUpdate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "admin-line-accounts-if-existing",
+      "name": "Has Existing LINE OA Page",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        280,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.pageId }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "OA 名稱|title",
+              "title": "={{ $json.name }}"
+            },
+            {
+              "key": "設定代碼|rich_text",
+              "textContent": "={{ $json.key }}"
+            },
+            {
+              "key": "用途說明|rich_text",
+              "textContent": "={{ $json.purpose }}"
+            },
+            {
+              "key": "啟用狀態|select",
+              "selectValue": "={{ $json.enabledLabel }}"
+            },
+            {
+              "key": "Channel ID|rich_text",
+              "textContent": "={{ $json.channelId }}"
+            },
+            {
+              "key": "Basic ID|rich_text",
+              "textContent": "={{ $json.basicId }}"
+            },
+            {
+              "key": "Webhook URL|url",
+              "urlValue": "={{ $json.webhookUrl }}"
+            },
+            {
+              "key": "LIFF URL 清單|rich_text",
+              "textContent": "={{ $json.liffUrls }}"
+            },
+            {
+              "key": "n8n workflow 名稱|rich_text",
+              "textContent": "={{ $json.workflowName }}"
+            },
+            {
+              "key": "Access Token 環境變數|rich_text",
+              "textContent": "={{ $json.accessTokenEnv }}"
+            },
+            {
+              "key": "Channel Secret 環境變數|rich_text",
+              "textContent": "={{ $json.channelSecretEnv }}"
+            },
+            {
+              "key": "備註|rich_text",
+              "textContent": "={{ $json.note }}"
+            },
+            {
+              "key": "最後檢查時間|date",
+              "includeTime": true,
+              "date": "={{ $json.lastCheckedAt || undefined }}",
+              "timezone": "Asia/Taipei"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "admin-line-accounts-update-page",
+      "name": "Update LINE OA Setting",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        -20
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "35db3ad1d1cd80c28616dc1e2bc8917c"
+        },
+        "title": "={{ $json.name }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "OA 名稱|title",
+              "title": "={{ $json.name }}"
+            },
+            {
+              "key": "設定代碼|rich_text",
+              "textContent": "={{ $json.key }}"
+            },
+            {
+              "key": "用途說明|rich_text",
+              "textContent": "={{ $json.purpose }}"
+            },
+            {
+              "key": "啟用狀態|select",
+              "selectValue": "={{ $json.enabledLabel }}"
+            },
+            {
+              "key": "Channel ID|rich_text",
+              "textContent": "={{ $json.channelId }}"
+            },
+            {
+              "key": "Basic ID|rich_text",
+              "textContent": "={{ $json.basicId }}"
+            },
+            {
+              "key": "Webhook URL|url",
+              "urlValue": "={{ $json.webhookUrl }}"
+            },
+            {
+              "key": "LIFF URL 清單|rich_text",
+              "textContent": "={{ $json.liffUrls }}"
+            },
+            {
+              "key": "n8n workflow 名稱|rich_text",
+              "textContent": "={{ $json.workflowName }}"
+            },
+            {
+              "key": "Access Token 環境變數|rich_text",
+              "textContent": "={{ $json.accessTokenEnv }}"
+            },
+            {
+              "key": "Channel Secret 環境變數|rich_text",
+              "textContent": "={{ $json.channelSecretEnv }}"
+            },
+            {
+              "key": "備註|rich_text",
+              "textContent": "={{ $json.note }}"
+            },
+            {
+              "key": "最後檢查時間|date",
+              "includeTime": true,
+              "date": "={{ $json.lastCheckedAt || undefined }}",
+              "timezone": "Asia/Taipei"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "admin-line-accounts-create-page",
+      "name": "Create LINE OA Setting",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        180
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.ok === false ? $json : { ok: true, data: $json } }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode || 200 }}"
+        }
+      },
+      "id": "admin-line-accounts-save-response",
+      "name": "Respond LINE OA Save",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, message: \"Unsupported action\" } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "admin-line-accounts-fallback",
+      "name": "Respond Unsupported",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -440,
+        340
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Admin LINE Accounts Webhook": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Query LINE OA Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query LINE OA Settings For Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Unsupported",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query LINE OA Settings": {
+      "main": [
+        [
+          {
+            "node": "Normalize LINE OA Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize LINE OA Settings": {
+      "main": [
+        [
+          {
+            "node": "Respond LINE OA List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query LINE OA Settings For Update": {
+      "main": [
+        [
+          {
+            "node": "Prepare LINE OA Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare LINE OA Save": {
+      "main": [
+        [
+          {
+            "node": "Is Valid LINE OA Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid LINE OA Save": {
+      "main": [
+        [
+          {
+            "node": "Has Existing LINE OA Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond LINE OA Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Existing LINE OA Page": {
+      "main": [
+        [
+          {
+            "node": "Update LINE OA Setting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create LINE OA Setting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update LINE OA Setting": {
+      "main": [
+        [
+          {
+            "node": "Respond LINE OA Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create LINE OA Setting": {
+      "main": [
+        [
+          {
+            "node": "Respond LINE OA Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "admin-line-accounts-notion-nodes-v2",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "admin-line-accounts",
+  "tags": []
+}

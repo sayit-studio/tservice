@@ -10,7 +10,9 @@ This folder contains import targets for the management backend and public legal-
 | `workflows/admin-cases.json` | `admin-cases` | Case list/create/update |
 | `workflows/admin-events.json` | `admin-events` | Event calendar/list/create/update |
 | `workflows/admin-members.json` | `admin-members` | Member list and tag/status update |
+| `workflows/admin-line-accounts.json` | `admin-line-accounts` | Admin-only non-secret LINE OA settings |
 | `workflows/admin-legal-consultation.json` | `admin-legal-consultation` | Legal consultation backend list/update |
+| `workflows/public-line-oa-members.json` | `line-oa-members` | Public LINE OA webhook for follow/message/postback member capture |
 | `workflows/public-legal-consultation.json` | `legal-consultation` | Public booking availability/book/query/cancel |
 | `workflows/public-event-registration.json` | `event-registration` | Public LINE LIFF event registration |
 
@@ -20,9 +22,15 @@ This folder contains import targets for the management backend and public legal-
   - Staff: `350b3ad1d1cd801797a7dcf6f06c7f13`
   - Cases: `29cb3ad1d1cd80da82b5fddde82ebe4d`
   - Events: `2cab3ad1d1cd804aa922caf1a7621f78`
-  - Members: `292b3ad1d1cd8075b2d5e86e08d3d68f`
+  - Members database page: `35cb3ad1d1cd802bad62da0e74deb58f`
+  - Members data source used by n8n Notion nodes: `292b3ad1d1cd8066b50c000b82565915`
+  - LINE OA settings: `35db3ad1d1cd80c28616dc1e2bc8917c`
   - Legal consultation: `2ccb3ad1d1cd8175aba6e21110f71145`
-- LINE Messaging API channel access token for the public legal-consultation workflow.
+- LINE Messaging API channel access token for workflows that call LINE APIs.
+- This Zeabur plan cannot reliably expose runtime environment variables to n8n Code nodes.
+- `admin-line-accounts.json` and `public-line-oa-members.json` use n8n Notion nodes for Notion access. Confirm each Notion node uses the `Notion-n8n` credential after import.
+- For `public-line-oa-members.json`, fill only `LINE_PUBLIC_CHANNEL_ACCESS_TOKEN` in the `Config LINE Token` Code node after import.
+- Do not export or commit workflow JSON after real LINE token values are filled in n8n UI.
 - `TEAM_LINE_TARGET` environment variable or matching workflow value for internal LINE notification recipients.
 
 ## Backend config
@@ -38,6 +46,7 @@ window.ADMIN_CONFIG = {
     casesList: "/admin-cases",
     eventsList: "/admin-events",
     membersList: "/admin-members",
+    lineAccounts: "/admin-line-accounts",
     legalList: "/admin-legal-consultation",
     staffList: "/admin-auth-staff"
   }
@@ -45,3 +54,7 @@ window.ADMIN_CONFIG = {
 ```
 
 The frontend sends an `action` value in the request body. Each workflow routes by `action`.
+
+## Canonical workspace
+
+Use `C:\dev\tseng-service` as the only working copy for this project. Do not import workflow files from duplicate folders.

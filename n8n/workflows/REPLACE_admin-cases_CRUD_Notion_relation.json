@@ -132,7 +132,7 @@
         "databaseId": {
           "__rl": true,
           "mode": "id",
-          "value": "29cb3ad1d1cd80da82b5fddde82ebe4d"
+          "value": "330b3ad1d1cd8047aabfc9e95de6658d"
         },
         "returnAll": true,
         "options": {}
@@ -154,7 +154,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  title: prop(item, ['案件主題', '案件主題&內容', 'title', 'Name']),\n  petitioner: prop(item, ['陳情人', '姓名']),\n  phone: prop(item, ['陳情人電話', '電話']),\n  owner: prop(item, ['負責人員']),\n  ownerName: prop(item, ['負責人員']),\n  status: prop(item, ['執行狀態', '狀態']),\n  startDate: prop(item, ['處理起始日期', '起始日期']),\n  caseNo: prop(item, ['1999案號']),\n  category: prop(item, ['建議事項類別', '類別']),\n  summary: prop(item, ['執行狀況敘述', '處理摘要']),\n  content: prop(item, ['案件詳細說明', '陳情內容', '內容'])\n})) } }];"
+        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  if (value.files) return (value.files || []).map(f => f.external?.url || f.file?.url || '').filter(Boolean).join(',');\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  caseNo: prop(item, ['請託案號', '案件編號']),\n  requestDate: prop(item, ['請託日期']),\n  category: prop(item, ['託辦類別', '案件類型']),\n  staff: prop(item, ['接案秘書']),\n  petitioner: prop(item, ['當事人名', '陳情人姓名']),\n  phone: prop(item, ['行動電話', '聯絡手機']),\n  address: prop(item, ['通訊地址', '聯絡地址']),\n  commissioner: prop(item, ['委託人名']),\n  relation: prop(item, ['關係']),\n  content: prop(item, ['託辦事項', '案件原始內容', '案件詳細說明']),\n  status: prop(item, ['處理狀況', '案件狀態', '執行狀態']),\n  processingDays: prop(item, ['處理天數']),\n  inspectionNote: prop(item, ['交辦會勘記錄']),\n  summary: prop(item, ['公開摘要']),\n  isPublic: prop(item, ['是否公開']),\n  beforeImages: prop(item, ['改善前圖片']),\n  afterImages: prop(item, ['改善後圖片'])\n})) } }];"
       },
       "id": "normalize-cases",
       "name": "Normalize Cases",
@@ -182,7 +182,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = body.data || {};\nconst owner = String(data.owner || '').trim();\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  title: String(data.title || data.name || data.appointmentId || '').trim(),\n  ownerRelations: owner ? [owner] : [],\n  now: new Date().toISOString()\n} }];"
+        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = body.data || {};\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
       },
       "id": "prepare-create-cases",
       "name": "Prepare Create Cases",
@@ -199,52 +199,72 @@
         "databaseId": {
           "__rl": true,
           "mode": "id",
-          "value": "29cb3ad1d1cd80da82b5fddde82ebe4d"
+          "value": "330b3ad1d1cd8047aabfc9e95de6658d"
         },
-        "title": "={{ $json.title || $json.data.content || \"未命名案件\" }}",
+        "title": "={{ $json.data.caseNo }}",
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "案件主題&詳情|title",
-              "title": "={{ $json.data.title }}"
-            },
-            {
-              "key": "陳情人姓名|rich_text",
-              "textContent": "={{ $json.data.petitioner }}"
-            },
-            {
-              "key": "陳情人連絡電話|phone_number",
-              "phoneValue": "={{ $json.data.phone }}"
-            },
-            {
-              "key": "負責人員|relation",
-              "relationValue": "={{ $json.ownerRelations }}"
-            },
-            {
-              "key": "執行狀態|select",
-              "selectValue": "={{ $json.data.status }}"
-            },
-            {
-              "key": "處理起始日期|date",
+              "key": "請託日期|date",
               "includeTime": false,
-              "date": "={{ $json.data.startDate }}",
+              "date": "={{ $json.data.requestDate }}",
               "timezone": "Asia/Taipei"
             },
             {
-              "key": "1999案號|rich_text",
-              "textContent": "={{ $json.data.caseNo }}"
+              "key": "託辦類別|select",
+              "selectValue": "={{ $json.data.category }}"
             },
             {
-              "key": "建議事項類別|rich_text",
-              "textContent": "={{ $json.data.category }}"
+              "key": "接案秘書|rich_text",
+              "textContent": "={{ $json.data.staff }}"
             },
             {
-              "key": "局處回覆摘要|rich_text",
+              "key": "當事人名|rich_text",
+              "textContent": "={{ $json.data.petitioner }}"
+            },
+            {
+              "key": "行動電話|phone_number",
+              "phoneValue": "={{ $json.data.phone }}"
+            },
+            {
+              "key": "通訊地址|rich_text",
+              "textContent": "={{ $json.data.address }}"
+            },
+            {
+              "key": "委託人名|rich_text",
+              "textContent": "={{ $json.data.commissioner }}"
+            },
+            {
+              "key": "關係|rich_text",
+              "textContent": "={{ $json.data.relation }}"
+            },
+            {
+              "key": "託辦事項|rich_text",
+              "textContent": "={{ $json.data.content }}"
+            },
+            {
+              "key": "處理狀況|select",
+              "selectValue": "={{ $json.data.status }}"
+            },
+            {
+              "key": "處理天數|number",
+              "numberValue": "={{ $json.data.processingDays ? Number($json.data.processingDays) : null }}"
+            },
+            {
+              "key": "交辦會勘記錄|rich_text",
+              "textContent": "={{ $json.data.inspectionNote }}"
+            },
+            {
+              "key": "公開摘要|rich_text",
               "textContent": "={{ $json.data.summary }}"
             },
             {
-              "key": "案件詳細說明|rich_text",
-              "textContent": "={{ $json.data.content }}"
+              "key": "改善前圖片|files",
+              "fileUrls": "={{ $json.data.beforeImages }}"
+            },
+            {
+              "key": "改善後圖片|files",
+              "fileUrls": "={{ $json.data.afterImages }}"
             }
           ]
         },
@@ -282,7 +302,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = body.data || {};\nconst owner = String(data.owner || '').trim();\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  title: String(data.title || data.name || data.appointmentId || '').trim(),\n  ownerRelations: owner ? [owner] : [],\n  now: new Date().toISOString()\n} }];"
+        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = body.data || {};\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
       },
       "id": "prepare-update-cases",
       "name": "Prepare Update Cases",
@@ -305,46 +325,70 @@
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "案件主題&詳情|title",
-              "title": "={{ $json.data.title }}"
-            },
-            {
-              "key": "陳情人姓名|rich_text",
-              "textContent": "={{ $json.data.petitioner }}"
-            },
-            {
-              "key": "陳情人連絡電話|phone_number",
-              "phoneValue": "={{ $json.data.phone }}"
-            },
-            {
-              "key": "負責人員|relation",
-              "relationValue": "={{ $json.ownerRelations }}"
-            },
-            {
-              "key": "執行狀態|select",
-              "selectValue": "={{ $json.data.status }}"
-            },
-            {
-              "key": "處理起始日期|date",
-              "includeTime": false,
-              "date": "={{ $json.data.startDate }}",
-              "timezone": "Asia/Taipei"
-            },
-            {
-              "key": "1999案號|rich_text",
+              "key": "請託案號|title",
               "textContent": "={{ $json.data.caseNo }}"
             },
             {
-              "key": "建議事項類別|rich_text",
-              "textContent": "={{ $json.data.category }}"
+              "key": "請託日期|date",
+              "includeTime": false,
+              "date": "={{ $json.data.requestDate }}",
+              "timezone": "Asia/Taipei"
             },
             {
-              "key": "局處回覆摘要|rich_text",
+              "key": "託辦類別|select",
+              "selectValue": "={{ $json.data.category }}"
+            },
+            {
+              "key": "接案秘書|rich_text",
+              "textContent": "={{ $json.data.staff }}"
+            },
+            {
+              "key": "當事人名|rich_text",
+              "textContent": "={{ $json.data.petitioner }}"
+            },
+            {
+              "key": "行動電話|phone_number",
+              "phoneValue": "={{ $json.data.phone }}"
+            },
+            {
+              "key": "通訊地址|rich_text",
+              "textContent": "={{ $json.data.address }}"
+            },
+            {
+              "key": "委託人名|rich_text",
+              "textContent": "={{ $json.data.commissioner }}"
+            },
+            {
+              "key": "關係|rich_text",
+              "textContent": "={{ $json.data.relation }}"
+            },
+            {
+              "key": "託辦事項|rich_text",
+              "textContent": "={{ $json.data.content }}"
+            },
+            {
+              "key": "處理狀況|select",
+              "selectValue": "={{ $json.data.status }}"
+            },
+            {
+              "key": "處理天數|number",
+              "numberValue": "={{ $json.data.processingDays ? Number($json.data.processingDays) : null }}"
+            },
+            {
+              "key": "交辦會勘記錄|rich_text",
+              "textContent": "={{ $json.data.inspectionNote }}"
+            },
+            {
+              "key": "公開摘要|rich_text",
               "textContent": "={{ $json.data.summary }}"
             },
             {
-              "key": "案件詳細說明|rich_text",
-              "textContent": "={{ $json.data.content }}"
+              "key": "改善前圖片|files",
+              "fileUrls": "={{ $json.data.beforeImages }}"
+            },
+            {
+              "key": "改善後圖片|files",
+              "fileUrls": "={{ $json.data.afterImages }}"
             }
           ]
         },
@@ -382,7 +426,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = body.data || {};\nconst owner = String(data.owner || '').trim();\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  title: String(data.title || data.name || data.appointmentId || '').trim(),\n  ownerRelations: owner ? [owner] : [],\n  now: new Date().toISOString()\n} }];"
+        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = body.data || {};\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
       },
       "id": "prepare-delete-cases",
       "name": "Prepare Delete Cases",
@@ -594,7 +638,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "admin-cases-replace-crud-v1",
+  "versionId": "admin-cases-replace-crud-v2",
   "id": "admin-cases",
   "tags": []
 }

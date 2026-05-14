@@ -22,7 +22,38 @@
   const LEGAL_CATEGORIES = ["民事", "刑事", "行政訴訟", "家事", "勞資糾紛", "消費糾紛", "強制執行"];
   const STAFF_IDENTITIES = ["管理員", "志工", "助理", "主任", "議員", "一般人員"];
   const STAFF_PERMISSIONS = ["小編", "助理", "管理員", "一般人員"];
-
+  const LINE_ACCOUNT_DEFAULTS = [
+    {
+      key: "internal-team",
+      name: "內部團隊 LINE OA",
+      purpose: "同仁手機端新增/編輯資料、查看行事曆、追蹤案件進度。",
+      enabled: "true",
+      channelId: "",
+      basicId: "",
+      webhookUrl: "",
+      liffUrls: "https://tseng-service.pages.dev/liff/internal-team/",
+      workflowName: "internal-team-line-oa",
+      accessTokenEnv: "LINE_INTERNAL_CHANNEL_ACCESS_TOKEN",
+      channelSecretEnv: "LINE_INTERNAL_CHANNEL_SECRET",
+      note: "",
+      lastCheckedAt: ""
+    },
+    {
+      key: "public-service",
+      name: "對外民眾 LINE OA",
+      purpose: "民眾加好友、留言、點擊 LIFF 或選單互動後取得 LINE User ID 並建立會員資料。",
+      enabled: "true",
+      channelId: "",
+      basicId: "",
+      webhookUrl: "https://drwu.zeabur.app/webhook/line-oa-members",
+      liffUrls: "https://liff.line.me/2009640939-ACYipKCx\nhttps://liff.line.me/2009640939-vwvDFasL",
+      workflowName: "public-line-oa-members",
+      accessTokenEnv: "LINE_PUBLIC_CHANNEL_ACCESS_TOKEN",
+      channelSecretEnv: "LINE_PUBLIC_CHANNEL_SECRET",
+      note: "",
+      lastCheckedAt: ""
+    }
+  ];
   const state = {
     user: null,
     cases: [],
@@ -138,6 +169,19 @@
     return String(value || "");
   }
 
+
+  function lineList(value) {
+    if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+    return String(value || "").split(/\n/).map((item) => item.trim()).filter(Boolean);
+  }
+
+  function mergeLineAccountDefaults(items) {
+    const incoming = Array.isArray(items) ? items : [];
+    return LINE_ACCOUNT_DEFAULTS.map((defaults) => {
+      const saved = incoming.find((item) => item.key === defaults.key) || {};
+      return { ...defaults, ...saved, key: defaults.key, accessTokenEnv: defaults.accessTokenEnv, channelSecretEnv: defaults.channelSecretEnv };
+    });
+  }
   function asTextList(value) {
     if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
     return String(value || "")
@@ -158,7 +202,8 @@
 
   function casePetitionerDetail(item) {
     const name = casePetitionerName(item.petitioner);
-    return name === "未填寫" ? name : `${name} ${item.phone || ""}`.trim();
+    const phone = item.phone || "";
+    return name === "未填寫" ? name : `${name} ${phone}`.trim();
   }
 
   function dateForInput(value) {
@@ -492,6 +537,11 @@
       renderTaskStaffOptions();
       renderTaskView();
     }
+    if (view === "lineAccounts") {
+      const lineAccounts = await AdminApi.listLineAccounts();
+      state.lineAccounts = mergeLineAccountDefaults(lineAccounts);
+      renderLineAccounts();
+    }
     if (view === "staff") {
       const staff = await AdminApi.listStaff();
       state.staff = Array.isArray(staff) ? staff : [];
@@ -518,19 +568,18 @@
     const keyword = els.caseSearch.value.trim();
     const status = els.caseStatusFilter.value;
     const items = state.cases.filter((item) => {
-      const petitioner = casePetitionerName(item.petitioner);
-      const text = `${item.title} ${petitioner === "未填寫" ? "" : petitioner} ${item.caseNo} ${item.owner}`;
+      const text = `${item.caseNo} ${item.petitioner || ""} ${item.staff || ""} ${item.category || ""} ${item.content || ""}`;
       return (!keyword || text.includes(keyword)) && (!status || item.status === status);
     }).sort(compareCases);
     const { pageItems, totalPages } = paginate(items, "cases");
     renderPager(els.casePager, "cases", items.length, totalPages);
     els.casesTable.innerHTML = pageItems.map((item) => `
       <tr data-id="${escapeHtml(item.id)}" class="${state.selected.caseId === item.id ? "is-selected" : ""}">
-        <td><span class="title-cell"><strong>${escapeHtml(item.title || item.content || "未命名案件")}</strong><small>${escapeHtml(item.category || "")} ${escapeHtml(item.caseNo || "")}</small></span></td>
-        <td>${escapeHtml(item.ownerName || item.owner || "未指派")}</td>
+        <td><span class="title-cell"><strong>${escapeHtml(item.caseNo || "未編號")}</strong><small>${escapeHtml(item.category || "")} ${escapeHtml(item.requestDate || "")}</small></span></td>
+        <td>${escapeHtml(item.staff || "未指派")}</td>
         <td>${badge(item.status)}</td>
         <td>${escapeHtml(casePetitionerName(item.petitioner))}</td>
-        <td>${escapeHtml(item.startDate || "")}</td>
+        <td>${escapeHtml(item.requestDate || "")}</td>
       </tr>
     `).join("");
     const selected = pageItems.find((item) => item.id === state.selected.caseId) || pageItems[0];
@@ -542,14 +591,20 @@
     state.selected.caseId = id;
     const item = state.cases.find((entry) => entry.id === id);
     if (!item) return;
-    els.caseDetail.innerHTML = detail(item.title || "未命名案件", [
-      { label: "負責人員", value: item.ownerName || item.owner || "未指派" },
-      { label: "執行狀態", value: item.status },
-      { label: "陳情人", value: casePetitionerDetail(item) },
-      { label: "處理起始日期", value: item.startDate },
-      { label: "1999案號", value: item.caseNo || "無" },
-      { label: "執行狀況敘述", value: item.summary, multiline: true },
-      { label: "陳情內容", value: item.content, multiline: true }
+    els.caseDetail.innerHTML = detail(item.caseNo || "未編號案件", [
+      { label: "處理狀況", value: item.status },
+      { label: "請託日期", value: item.requestDate || "無" },
+      { label: "託辦類別", value: item.category || "無" },
+      { label: "接案秘書", value: item.staff || "未指派" },
+      { label: "當事人名", value: item.petitioner || "未填寫" },
+      { label: "行動電話", value: item.phone || "無" },
+      { label: "通訊地址", value: item.address || "無" },
+      { label: "委託人名", value: item.commissioner || "無" },
+      { label: "關係", value: item.relation || "無" },
+      { label: "處理天數", value: item.processingDays || "無" },
+      { label: "託辦事項", value: item.content, multiline: true },
+      { label: "交辦會勘記錄", value: item.inspectionNote, multiline: true },
+      { label: "公開摘要", value: item.summary, multiline: true }
     ], renderActions("case", item.id));
     markSelected(els.casesTable, id);
   }
@@ -1079,11 +1134,11 @@
       ...state.cases.map((item) => ({
         id: item.id,
         type: "case",
-        date: item.startDate,
-        dateKey: dateKeyFromValue(item.startDate),
-        title: item.title || item.content || "未命名案件",
-        subtitle: [item.caseNo, casePetitionerName(item.petitioner)].filter((value) => value && value !== "未填寫").join("｜"),
-        owner: item.ownerName || item.owner,
+        date: item.requestDate,
+        dateKey: dateKeyFromValue(item.requestDate),
+        title: item.caseNo || item.content || "未命名案件",
+        subtitle: [item.category, casePetitionerName(item.petitioner)].filter((value) => value && value !== "未填寫").join("｜"),
+        owner: item.staff || "",
         status: item.status,
         source: item
       })),
@@ -1174,9 +1229,10 @@
     }
     if (type === "case") {
       rows.push(
-        { label: "陳情人", value: casePetitionerDetail(source) || "無" },
-        { label: "1999案號", value: source.caseNo || "無" },
-        { label: "案件摘要", value: source.summary || source.content, multiline: true, wide: true }
+        { label: "請託案號", value: source.caseNo || "無" },
+        { label: "當事人名", value: casePetitionerName(source.petitioner) },
+        { label: "託辦類別", value: source.category || "無" },
+        { label: "公開摘要", value: source.summary || source.content, multiline: true, wide: true }
       );
     }
     if (type === "legal") {
@@ -1194,6 +1250,40 @@
     els.taskDetail.innerHTML = detail(task.title, rows, actions, { compact: true });
   }
 
+
+  function renderLineAccounts() {
+    if (!els.lineAccountsGrid) return;
+    const accounts = mergeLineAccountDefaults(state.lineAccounts);
+    els.lineAccountsGrid.innerHTML = accounts.map((item) => {
+      const enabled = String(item.enabled) !== "false";
+      const liffUrls = lineList(item.liffUrls);
+      const hint = item.key === "public-service"
+        ? "處理 follow、message、postback 與 LIFF userId，寫入會員管理。"
+        : "提供同仁外出時手機端新增/編輯案件、查看行事曆與輸入追蹤進度。";
+      return `
+        <article class="line-account-card">
+          <header class="line-account-title">
+            <div>
+              <span class="status-badge ${enabled ? "done" : "cancelled"}">${enabled ? "啟用" : "停用"}</span>
+              <h3>${escapeHtml(item.name)}</h3>
+              <p>${escapeHtml(hint)}</p>
+            </div>
+            <button class="secondary-button compact" type="button" data-edit="lineAccount" data-id="${escapeHtml(item.key)}">編輯</button>
+          </header>
+          <div class="detail-grid">
+            <div class="detail-row"><span>Channel ID</span><strong>${escapeHtml(item.channelId || "未填寫")}</strong></div>
+            <div class="detail-row"><span>Basic ID</span><strong>${escapeHtml(item.basicId || "未填寫")}</strong></div>
+            <div class="detail-row"><span>Webhook URL</span><strong>${escapeHtml(item.webhookUrl || "未設定")}</strong></div>
+            <div class="detail-row"><span>LIFF URL</span><p>${liffUrls.length ? liffUrls.map(escapeHtml).join("<br>") : "未設定"}</p></div>
+            <div class="detail-row"><span>n8n workflow</span><strong>${escapeHtml(item.workflowName || "未設定")}</strong></div>
+            <div class="detail-row token-row"><span>Token 管理</span><strong>已由 n8n Config 節點管理</strong><small>${escapeHtml(item.accessTokenEnv)} / ${escapeHtml(item.channelSecretEnv)}</small></div>
+            <div class="detail-row"><span>最後檢查</span><strong>${escapeHtml(formatDateTime(item.lastCheckedAt))}</strong></div>
+            <div class="detail-row"><span>備註</span><p>${escapeHtml(item.note || "無")}</p></div>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
   function renderStaff() {
     const keyword = els.staffSearch.value.trim();
     const items = state.staff.filter((item) => {
@@ -1214,6 +1304,47 @@
 
   function markSelected(table, id) {
     table.querySelectorAll("tr[data-id]").forEach((row) => row.classList.toggle("is-selected", row.dataset.id === id));
+  }
+
+  async function uploadToImgbb(file) {
+    const apiKey = (window.ADMIN_CONFIG || {}).imgbbApiKey || "";
+    if (!apiKey) throw new Error("請在 config.js 設定 imgbbApiKey");
+    if (file.size > 5 * 1024 * 1024) throw new Error(`${file.name} 超過 5MB 限制`);
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const form = new FormData();
+    form.append("image", base64);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(apiKey)}`, { method: "POST", body: form });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error?.message || "imgbb 上傳失敗");
+    return json.data.url;
+  }
+
+  function appendUploadUrl(fieldName, url) {
+    const hiddenInput = els.modalForm.querySelector(`input[name="${CSS.escape(fieldName)}"]`);
+    const thumbsEl = document.getElementById(`thumbs-${fieldName}`);
+    if (!hiddenInput || !thumbsEl) return;
+    const existing = hiddenInput.value ? hiddenInput.value.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    if (!existing.includes(url)) existing.push(url);
+    hiddenInput.value = existing.join(",");
+    const thumb = document.createElement("div");
+    thumb.className = "upload-thumb";
+    thumb.dataset.url = url;
+    thumb.innerHTML = `<img src="${escapeHtml(url)}" alt="" /><button type="button" class="upload-thumb-remove" data-remove-url="${escapeHtml(url)}">✕</button>`;
+    thumbsEl.append(thumb);
+  }
+
+  function removeUploadUrl(fieldName, url) {
+    const hiddenInput = els.modalForm.querySelector(`input[name="${CSS.escape(fieldName)}"]`);
+    if (!hiddenInput) return;
+    const existing = hiddenInput.value.split(",").map((s) => s.trim()).filter((u) => u && u !== url);
+    hiddenInput.value = existing.join(",");
+    const thumb = document.getElementById(`thumbs-${fieldName}`)?.querySelector(`[data-url="${CSS.escape(url)}"]`);
+    thumb?.remove();
   }
 
   function openModal(title, fields, onSubmit, onDelete) {
@@ -1237,6 +1368,31 @@
     els.modalForm.querySelectorAll("[data-copy-target]").forEach((button) => {
       button.addEventListener("click", copyFieldValue);
     });
+    els.modalForm.querySelectorAll("input[data-upload-target]").forEach((fileInput) => {
+      fileInput.addEventListener("change", async () => {
+        const fieldName = fileInput.dataset.uploadTarget;
+        const progressEl = document.getElementById(`progress-${fieldName}`);
+        const files = Array.from(fileInput.files);
+        for (const file of files) {
+          if (progressEl) progressEl.textContent = `上傳中：${file.name}…`;
+          try {
+            const url = await uploadToImgbb(file);
+            appendUploadUrl(fieldName, url);
+            if (progressEl) progressEl.textContent = "";
+          } catch (err) {
+            if (progressEl) progressEl.textContent = `⚠️ ${err.message}`;
+          }
+        }
+        fileInput.value = "";
+      });
+    });
+    els.modalForm.addEventListener("click", (event) => {
+      const removeBtn = event.target.closest("[data-remove-url]");
+      if (!removeBtn) return;
+      const url = removeBtn.dataset.removeUrl;
+      const fieldEl = removeBtn.closest("[data-field-name]");
+      if (fieldEl) removeUploadUrl(fieldEl.dataset.fieldName, url);
+    });
   }
 
   function renderField(field) {
@@ -1259,7 +1415,23 @@
     if (field.type === "select") {
       return `<label class="field"><span>${escapeHtml(field.label)}</span><select name="${field.name}">${field.options}</select></label>`;
     }
-    return `<label class="field ${field.wide ? "wide" : ""}"><span>${escapeHtml(field.label)}</span><input name="${field.name}" type="${field.type || "text"}" value="${escapeHtml(value)}" /></label>`;
+    if (field.type === "image-upload") {
+      const urls = String(value).split(",").map((s) => s.trim()).filter(Boolean);
+      const previews = urls.map((url) => `<div class="upload-thumb" data-url="${escapeHtml(url)}"><img src="${escapeHtml(url)}" alt="" /><button type="button" class="upload-thumb-remove" data-remove-url="${escapeHtml(url)}">✕</button></div>`).join("");
+      return `
+        <div class="field wide upload-field" data-field-name="${escapeHtml(field.name)}">
+          <span class="field-label">${escapeHtml(field.label)}</span>
+          <input type="hidden" name="${escapeHtml(field.name)}" value="${escapeHtml(value)}" />
+          <div class="upload-thumbs" id="thumbs-${escapeHtml(field.name)}">${previews}</div>
+          <label class="upload-add-btn">
+            <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden data-upload-target="${escapeHtml(field.name)}" />
+            <span class="secondary-button compact">+ 選擇圖片</span>
+          </label>
+          <span class="upload-hint">支援 jpg/png/gif/webp，單張上限 5MB</span>
+          <span class="upload-progress" id="progress-${escapeHtml(field.name)}"></span>
+        </div>`;
+    }
+    return `<label class="field ${field.wide ? "wide" : ""}"><span>${escapeHtml(field.label)}</span><input name="${field.name}" type="${field.type || "text"}" value="${escapeHtml(value)}" ${field.readonly ? "readonly" : ""} /></label>`;
   }
 
   async function copyFieldValue(event) {
@@ -1301,18 +1473,37 @@
     await refreshCurrentView();
   }
 
+  function generateCaseNo() {
+    const now = new Date();
+    const rocYear = now.getFullYear() - 1911;
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const prefix = `${rocYear}${mm}${dd}`;
+    const todayCount = (state.cases || []).filter((c) => String(c.caseNo || "").startsWith(prefix)).length;
+    return `${prefix}${String(todayCount + 1).padStart(3, "0")}`;
+  }
+
   function openCaseForm(item = {}) {
+    const isNew = !item.id;
+    const autoCaseNo = isNew ? generateCaseNo() : item.caseNo;
+    const today = new Date().toISOString().slice(0, 10);
     openModal(item.id ? "編輯案件" : "新增案件", [
-      { name: "title", label: "案件主題", value: item.title, wide: true },
-      { name: "petitioner", label: "陳情人", value: item.petitioner },
-      { name: "phone", label: "陳情人電話", value: item.phone },
-      { name: "caseNo", label: "1999案號", value: item.caseNo },
-      { name: "startDate", label: "處理起始日期", type: "date", value: dateForInput(item.startDate) },
-      { name: "status", label: "執行狀態", type: "select", options: '<option value="">未設定</option>' + selectOptions(CASE_STATUSES, item.status) },
-      { name: "owner", label: "負責人員", type: "select", options: staffOptions(item.owner) },
-      { name: "category", label: "建議事項類別", type: "select", options: selectOptions(CASE_CATEGORIES, item.category) },
-      { name: "summary", label: "執行狀況敘述", type: "textarea", value: item.summary },
-      { name: "content", label: "案件詳細說明", type: "textarea", value: item.content }
+      { name: "caseNo", label: "請託案號", value: autoCaseNo, wide: true, readonly: isNew },
+      { name: "requestDate", label: "請託日期", type: "date", value: item.requestDate ? dateForInput(item.requestDate) : today },
+      { name: "category", label: "託辦類別", type: "select", options: '<option value="">未設定</option>' + selectOptions(CASE_CATEGORIES, item.category) },
+      { name: "staff", label: "接案秘書", value: item.staff },
+      { name: "petitioner", label: "當事人名", value: item.petitioner },
+      { name: "phone", label: "行動電話", value: item.phone },
+      { name: "address", label: "通訊地址", value: item.address, wide: true },
+      { name: "commissioner", label: "委託人名", value: item.commissioner },
+      { name: "relation", label: "與當事人關係", value: item.relation },
+      { name: "content", label: "託辦事項", type: "textarea", value: item.content, wide: true },
+      { name: "status", label: "處理狀況", type: "select", options: '<option value="">未設定</option>' + selectOptions(CASE_STATUSES, item.status) },
+      { name: "processingDays", label: "處理天數", type: "number", value: item.processingDays },
+      { name: "inspectionNote", label: "交辦會勘記錄", type: "textarea", value: item.inspectionNote },
+      { name: "summary", label: "公開摘要", type: "textarea", value: item.summary },
+      { name: "beforeImages", label: "改善前圖片", type: "image-upload", value: item.beforeImages || "" },
+      { name: "afterImages", label: "改善後圖片", type: "image-upload", value: item.afterImages || "" }
     ], (data) => AdminApi.saveCase({ ...item, ...data }), item.id ? () => deleteItem("case", item.id) : null);
   }
 
@@ -1445,6 +1636,32 @@
     }), null);
   }
 
+
+  function openLineAccountForm(item = {}) {
+    if (!isAdminUser()) return;
+    openModal(`編輯 ${item.name || "LINE OA 設定"}`, [
+      { name: "name", label: "OA 名稱", value: item.name, wide: true },
+      { name: "enabled", label: "啟用狀態", type: "select", options: selectOptions([{ value: "true", label: "啟用" }, { value: "false", label: "停用" }], String(item.enabled === false || item.enabled === "false" ? "false" : "true")) },
+      { name: "channelId", label: "Channel ID", value: item.channelId },
+      { name: "basicId", label: "Basic ID", value: item.basicId },
+      { name: "webhookUrl", label: "Webhook URL", value: item.webhookUrl, wide: true },
+      { name: "liffUrls", label: "LIFF URL 清單（一行一個）", type: "textarea", value: lineList(item.liffUrls).join("\n") },
+      { name: "workflowName", label: "n8n workflow 名稱", value: item.workflowName },
+      { name: "accessTokenEnv", label: "Access token 環境變數", value: item.accessTokenEnv, readonly: true },
+      { name: "channelSecretEnv", label: "Channel secret 環境變數", value: item.channelSecretEnv, readonly: true },
+      { name: "lastCheckedAt", label: "最後檢查時間", type: "datetime-local", value: datetimeForInput(item.lastCheckedAt) },
+      { name: "purpose", label: "用途說明", type: "textarea", value: item.purpose },
+      { name: "note", label: "備註", type: "textarea", value: item.note },
+      { name: "tokenNotice", label: "Token 欄位", value: "已由 n8n Config 節點管理，後台不接收明文 token。", wide: true, readonly: true }
+    ], (data) => AdminApi.saveLineAccount({
+      ...item,
+      ...data,
+      key: item.key,
+      accessTokenEnv: item.accessTokenEnv,
+      channelSecretEnv: item.channelSecretEnv,
+      liffUrls: lineList(data.liffUrls).join("\n")
+    }), null);
+  }
   function openStaffForm(item = {}) {
     if (!isAdminUser()) return;
     openModal(item.id ? "編輯人員" : "新增人員", [
@@ -1516,6 +1733,7 @@
       if (type === "event") openEventForm(state.events.find((item) => item.id === id));
       if (type === "legal") openLegalForm(state.legal.find((item) => item.id === id));
       if (type === "member") openMemberForm(state.members.find((item) => item.id === id));
+      if (type === "lineAccount") openLineAccountForm(mergeLineAccountDefaults(state.lineAccounts).find((item) => item.key === id));
     }
     if (del) deleteItem(del.dataset.delete, del.dataset.id);
     const preview = event.target.closest("[data-preview-image]");
@@ -1523,7 +1741,7 @@
   }
 
   function switchView(view) {
-    if (view === "staff" && !isAdminUser()) return;
+    if ((view === "staff" || view === "lineAccounts") && !isAdminUser()) return;
     els.navItems.forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
     els.panels.forEach((panel) => {
       const active = panel.id === `${view}View`;
@@ -1576,6 +1794,165 @@
     els.loginView.hidden = false;
   }
 
+  const EXCEL_FIELD_MAP = {
+    "請託案號": "caseNo",
+    "請託日期": "requestDate",
+    "託辦類別": "category",
+    "接案秘書": "staff",
+    "當事人名": "petitioner",
+    "行動電話": "phone",
+    "通訊地址": "address",
+    "委託人名": "commissioner",
+    "關係": "relation",
+    "託辦事項": "content",
+    "處理狀況": "status",
+    "處理天數": "processingDays",
+    "交辦會勘記錄": "inspectionNote"
+  };
+
+  function convertRocDate(value) {
+    if (!value) return "";
+    const str = String(value).trim();
+    // 民國格式 115.0508 或 115/05/08
+    const rocDot = str.match(/^(\d{2,3})[./](\d{2})[./](\d{2})$/);
+    if (rocDot) {
+      const year = parseInt(rocDot[1], 10) + 1911;
+      return `${year}-${rocDot[2]}-${rocDot[3]}`;
+    }
+    // 民國格式 1150508（7碼，rocYear=115, mmdd=0508）
+    const rocCompact = str.match(/^(\d{3})(\d{2})(\d{2})$/);
+    if (rocCompact) {
+      const year = parseInt(rocCompact[1], 10) + 1911;
+      return `${year}-${rocCompact[2]}-${rocCompact[3]}`;
+    }
+    // ISO yyyy-mm-dd
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
+    // 西元 yyyy/m/d 或 yyyy/mm/dd
+    const slashMatch = str.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+    if (slashMatch) {
+      const [, y, m, d] = slashMatch;
+      return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    return str;
+  }
+
+  function mapExcelRow(headers, row) {
+    const result = {};
+    headers.forEach((header, i) => {
+      const field = EXCEL_FIELD_MAP[String(header || "").trim()];
+      if (!field) return;
+      let val = row[i];
+      if (field === "requestDate") val = convertRocDate(val);
+      if (field === "processingDays") val = val !== undefined && val !== "" ? Number(val) : undefined;
+      result[field] = val !== undefined && val !== null ? String(val).trim() : "";
+    });
+    return result;
+  }
+
+  let importData = [];
+
+  function toggleImportPanel() {
+    const panel = document.getElementById("importPanel");
+    if (!panel) return;
+    const isHidden = panel.hidden;
+    panel.hidden = !isHidden;
+    if (isHidden) {
+      document.getElementById("importPreviewWrap").hidden = true;
+      document.getElementById("importStatus").textContent = "";
+      importData = [];
+    }
+  }
+
+  function processExcelFile(file) {
+    if (!window.XLSX) { alert("SheetJS 尚未載入，請稍後再試。"); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: "array", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+      if (rows.length < 2) { document.getElementById("importStatus").textContent = "⚠️ 檔案無資料列"; return; }
+      const headers = rows[0];
+      const dataRows = rows.slice(1).filter((r) => r.some((v) => v !== ""));
+      importData = dataRows.map((row) => mapExcelRow(headers, row));
+      const requiredCols = ["請託案號"];
+      const missing = requiredCols.filter((col) => !headers.includes(col));
+      if (missing.length) {
+        document.getElementById("importStatus").textContent = `⚠️ 缺少必要欄位：${missing.join("、")}`;
+        return;
+      }
+      const previewWrap = document.getElementById("importPreviewWrap");
+      document.getElementById("importPreviewTitle").textContent = `預覽（共 ${importData.length} 筆，顯示前 5 筆）`;
+      const previewCols = ["請託案號", "請託日期", "託辦類別", "接案秘書", "當事人名", "處理狀況"];
+      const visibleCols = previewCols.filter((col) => headers.includes(col));
+      document.getElementById("importPreviewHead").innerHTML = `<tr>${visibleCols.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr>`;
+      document.getElementById("importPreviewBody").innerHTML = importData.slice(0, 5).map((item) =>
+        `<tr>${visibleCols.map((col) => {
+          const field = EXCEL_FIELD_MAP[col] || col;
+          return `<td>${escapeHtml(String(item[field] || ""))}</td>`;
+        }).join("")}</tr>`
+      ).join("");
+      document.getElementById("importStatus").textContent = "";
+      previewWrap.hidden = false;
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function runImport() {
+    if (!importData.length) return;
+    const statusEl = document.getElementById("importStatus");
+    const confirmBtn = document.getElementById("importConfirmBtn");
+    confirmBtn.disabled = true;
+    let ok = 0;
+    let fail = 0;
+    for (const item of importData) {
+      statusEl.textContent = `匯入中… ${ok + fail + 1} / ${importData.length}`;
+      try {
+        await AdminApi.saveCase(item);
+        ok++;
+      } catch (_) {
+        fail++;
+      }
+    }
+    statusEl.textContent = `✅ 完成：${ok} 筆成功${fail ? `，${fail} 筆失敗` : ""}`;
+    confirmBtn.disabled = false;
+    if (ok > 0) {
+      clearCache();
+      const cases = await AdminApi.listCases();
+      state.cases = Array.isArray(cases) ? cases : [];
+      renderCases();
+    }
+  }
+
+  function bindImportEvents() {
+    const dropZone = document.getElementById("importDropZone");
+    const fileInput = document.getElementById("importFileInput");
+    const browseBtn = document.getElementById("importBrowseBtn");
+    const cancelBtn = document.getElementById("importCancelBtn");
+    const confirmBtn = document.getElementById("importConfirmBtn");
+    if (!dropZone) return;
+
+    browseBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => { if (fileInput.files[0]) processExcelFile(fileInput.files[0]); });
+
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("is-over"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("is-over"));
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("is-over");
+      const file = e.dataTransfer.files[0];
+      if (file) processExcelFile(file);
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      document.getElementById("importPreviewWrap").hidden = true;
+      document.getElementById("importStatus").textContent = "";
+      importData = [];
+    });
+    confirmBtn.addEventListener("click", runImport);
+  }
+
   function bindEvents() {
     els.loginForm.addEventListener("submit", handleLogin);
     els.logoutButton.addEventListener("click", logout);
@@ -1592,7 +1969,7 @@
       }
     });
     els.modalForm.addEventListener("submit", submitModal);
-    [els.caseDetail, els.eventDetail, els.legalDetail, els.memberDetail, els.taskDetail].forEach((node) => node.addEventListener("click", handleDetailClick));
+    [els.caseDetail, els.eventDetail, els.legalDetail, els.memberDetail, els.taskDetail, els.lineAccountsGrid].forEach((node) => node?.addEventListener("click", handleDetailClick));
     els.navItems.forEach((item) => item.addEventListener("click", () => switchView(item.dataset.view)));
     els.calendarModeButtons.forEach((button) => button.addEventListener("click", () => {
       state.calendarMode = button.dataset.calendarMode || "month";
@@ -1622,6 +1999,9 @@
     [els.memberSearch, els.memberTagFilter, els.memberAttributeFilter, els.memberStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("members"); renderMembers(); }));
     els.staffSearch.addEventListener("input", () => { resetPage("staff"); renderStaff(); });
     els.addCaseButton.addEventListener("click", () => openCaseForm());
+    const importBtn = document.getElementById("importCasesButton");
+    if (importBtn) importBtn.addEventListener("click", toggleImportPanel);
+    bindImportEvents();
     els.addEventButton.addEventListener("click", () => openEventForm());
     els.eventRegistrationButton.addEventListener("click", () => openEventRegistrationForm(state.events.find((item) => item.id === state.selected.eventId)));
     els.addStaffButton.addEventListener("click", () => openStaffForm());
