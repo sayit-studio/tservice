@@ -377,6 +377,7 @@
       state.eventRegistrations = [];
       state.legal = Array.isArray(cached.legal) ? cached.legal : [];
       state.members = Array.isArray(cached.members) ? cached.members : [];
+      state.lineAccounts = mergeLineAccountDefaults(cached.lineAccounts);
       state.staff = Array.isArray(cached.staff) ? cached.staff : [];
       els.syncStatus.textContent = `快取 ${new Date(cached.savedAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}`;
       return true;
@@ -392,6 +393,7 @@
       events: state.events,
       legal: state.legal,
       members: state.members,
+      lineAccounts: state.lineAccounts,
       staff: state.staff
     }));
   }
@@ -467,11 +469,12 @@
       return;
     }
     els.syncStatus.textContent = "同步中";
-    const [cases, events, legal, members, staff] = await Promise.all([
+    const [cases, events, legal, members, lineAccounts, staff] = await Promise.all([
       AdminApi.listCases(),
       AdminApi.listEvents(),
       AdminApi.listLegalConsultations(),
       AdminApi.listMembers().catch(() => []),
+      AdminApi.listLineAccounts().catch(() => []),
       AdminApi.listStaff()
     ]);
     state.cases = Array.isArray(cases) ? cases : [];
@@ -479,6 +482,7 @@
     state.eventRegistrations = [];
     state.legal = Array.isArray(legal) ? legal : [];
     state.members = Array.isArray(members) ? members : [];
+    state.lineAccounts = mergeLineAccountDefaults(lineAccounts);
     state.staff = Array.isArray(staff) ? staff : [];
     els.syncStatus.textContent = "已同步";
     writeCache();
@@ -567,6 +571,7 @@
     renderLegal();
     renderMemberFilters();
     renderMembers();
+    renderLineAccounts();
     renderStaff();
   }
 

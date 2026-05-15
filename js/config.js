@@ -9,6 +9,7 @@ window.ADMIN_CONFIG = {
     eventRegistrationsList: "/admin-event-registrations",
     legalList: "/admin-legal-consultation",
     membersList: "/admin-members",
+    lineAccounts: "/admin-line-accounts",
     staffList: "/admin-auth-staff",
     blogList: "/admin-blog"
   },
@@ -18,6 +19,7 @@ window.ADMIN_CONFIG = {
     cases: "330b3ad1d1cd8047aabfc9e95de6658d",
     staff: "350b3ad1d1cd801797a7dcf6f06c7f13",
     members: "35cb3ad1d1cd802bad62da0e74deb58f",
+    lineAccounts: "35db3ad1d1cd80c28616dc1e2bc8917c",
     legalConsultation: "2ccb3ad1d1cd8175aba6e21110f71145",
     blog: "360b3ad1d1cd80b8a870de2164fedb7b"
   }
