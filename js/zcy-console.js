@@ -67,6 +67,7 @@
     eventRegistrations: [],
     legal: [],
     members: [],
+    lineAccounts: [],
     staff: [],
     selected: {},
     calendarMode: "month",
@@ -1770,6 +1771,7 @@
       panel.classList.toggle("is-active", active);
       if (active) els.viewTitle.textContent = panel.dataset.title;
     });
+    if (view === "lineAccounts") renderLineAccounts();
   }
 
   function isAdminUser() {

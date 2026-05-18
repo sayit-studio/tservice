@@ -322,7 +322,28 @@
             </div>
             <p>Channel access token 與 Channel secret 可在後台輸入，儲存後只顯示設定狀態，不回顯明碼。</p>
           </div>
-          <div class="line-account-grid" id="lineAccountsGrid"></div>
+          <div class="line-account-grid" id="lineAccountsGrid">
+            <article class="line-account-card">
+              <header class="line-account-title">
+                <div>
+                  <span class="status-badge done">啟用</span>
+                  <h3>內部團隊 LINE OA</h3>
+                  <p>提供同仁外出時手機端新增/編輯案件、查看行事曆與輸入追蹤進度。</p>
+                </div>
+                <button class="secondary-button compact" type="button" data-edit="lineAccount" data-id="internal-team">編輯</button>
+              </header>
+            </article>
+            <article class="line-account-card">
+              <header class="line-account-title">
+                <div>
+                  <span class="status-badge done">啟用</span>
+                  <h3>對外民眾 LINE OA</h3>
+                  <p>處理 follow、message、postback 與 LIFF userId，寫入會員管理。</p>
+                </div>
+                <button class="secondary-button compact" type="button" data-edit="lineAccount" data-id="public-service">編輯</button>
+              </header>
+            </article>
+          </div>
         </section>
         <section class="view-panel" id="staffView" data-title="人員管理">
           <div class="toolbar">
@@ -364,6 +385,6 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="../js/config.js?v=20260515-line-oa-endpoint"></script>
     <script src="../js/api.js"></script>
-    <script src="../js/zcy-console.js?v=20260515-line-oa-endpoint"></script>
+    <script src="../js/zcy-console.js?v=20260518-line-oa-render"></script>
   </body>
 </html>
