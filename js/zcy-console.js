@@ -1763,6 +1763,11 @@
     if (preview) openImagePreview(preview.dataset.previewImage);
   }
 
+  function openLineAccountByKey(key) {
+    const item = mergeLineAccountDefaults(state.lineAccounts).find((entry) => entry.key === key);
+    openLineAccountForm(item || LINE_ACCOUNT_DEFAULTS.find((entry) => entry.key === key) || {});
+  }
+
   function switchView(view) {
     if ((view === "staff" || view === "lineAccounts") && !isAdminUser()) return;
     els.navItems.forEach((item) => item.classList.toggle("is-active", item.dataset.view === view));
@@ -1986,6 +1991,12 @@
     });
     els.modalCloseButton.addEventListener("click", closeModal);
     document.addEventListener("click", (event) => {
+      const lineAccountEdit = event.target.closest('[data-edit="lineAccount"]');
+      if (lineAccountEdit) {
+        event.preventDefault();
+        openLineAccountByKey(lineAccountEdit.dataset.id);
+        return;
+      }
       if (event.target.closest(".image-preview-close") || event.target.classList.contains("image-preview-layer")) closeImagePreview();
       if (event.target.closest(".drawer-backdrop")) {
         closeEventDetail();
