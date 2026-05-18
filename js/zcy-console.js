@@ -1372,9 +1372,9 @@
       </div>
       <footer class="modal-actions">
         ${onDelete ? '<button class="danger-button" type="button" id="modalDeleteButton">刪除</button>' : ""}
-        <span></span>
+        <p class="modal-status" id="modalStatus" role="status"></p>
         <button class="secondary-button" type="button" id="modalCancelButton">取消</button>
-        <button class="primary-button" type="submit">儲存</button>
+        <button class="primary-button" id="modalSubmitButton" type="submit">儲存</button>
       </footer>
     `;
     els.modalLayer.hidden = false;
@@ -1486,10 +1486,29 @@
   async function submitModal(event) {
     event.preventDefault();
     if (!state.modal) return;
-    await state.modal.onSubmit(formObject(event.currentTarget));
-    clearCache();
-    closeModal();
-    await refreshCurrentView();
+    const status = document.getElementById("modalStatus");
+    const submitButton = document.getElementById("modalSubmitButton");
+    if (status) {
+      status.textContent = "儲存中...";
+      status.classList.remove("is-error");
+    }
+    if (submitButton) submitButton.disabled = true;
+    try {
+      await state.modal.onSubmit(formObject(event.currentTarget));
+      clearCache();
+      if (status) status.textContent = "已儲存";
+      closeModal();
+      await refreshCurrentView();
+    } catch (error) {
+      if (status) {
+        status.textContent = error.message || "儲存失敗，請稍後再試。";
+        status.classList.add("is-error");
+      } else {
+        alert(error.message || "儲存失敗，請稍後再試。");
+      }
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
   }
 
   function generateCaseNo() {
