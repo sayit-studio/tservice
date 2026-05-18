@@ -48,12 +48,18 @@ LINE OA 設定資料庫：
 - `admin-line-accounts.json` 使用 `Prepare LINE OA Save` Code node 內的 `LINE_CONFIG_ENCRYPTION_KEY` 常數，將 Token/Secret 加密後寫入 Notion。
 - `public-line-oa-members.json` 讀取 `public-service` 設定，並用 `Prepare LINE Member Upsert` Code node 內同一把 `LINE_CONFIG_ENCRYPTION_KEY` 解密 Token，再呼叫 LINE profile API。
 - 儲存後後台 list API 只回傳 `hasAccessToken` / `hasChannelSecret`，不回傳明碼或加密值。
-- n8n Code node 使用 Web Crypto API 加密/解密，不需要 `require('crypto')` 或允許 Node.js `crypto` builtin。
+- n8n Code node 會優先使用 Web Crypto API；若環境沒有 Web Crypto，需允許 Node.js `crypto` builtin。
 
 匯入 n8n 後，請在兩個 Code node 內填入同一組隨機字串：
 
 ```text
 LINE_CONFIG_ENCRYPTION_KEY=<至少32字元的隨機字串>
+```
+
+若 n8n 顯示不支援 Web Crypto API，請在 n8n 服務環境變數加入並重啟：
+
+```text
+NODE_FUNCTION_ALLOW_BUILTIN=crypto
 ```
 
 不要把填入真實 key 後的 workflow JSON 匯出並提交到 GitHub。

@@ -245,16 +245,24 @@ function prop(json, name) {
   return '';
 }
 const LINE_CONFIG_ENCRYPTION_KEY = 'PASTE_RANDOM_ENCRYPTION_KEY_HERE';
-function cryptoApi() {
-  const api = globalThis.crypto;
-  if (!api?.subtle || !api.getRandomValues) throw new Error('此 n8n 環境不支援 Web Crypto API，請改用環境變數或允許 crypto builtin。');
-  return api;
+function hasWebCrypto() {
+  return Boolean(globalThis.crypto?.subtle && globalThis.crypto?.getRandomValues);
 }
-async function encryptionKey(usages) {
+function nodeCrypto() {
+  try {
+    return require('crypto');
+  } catch (_) {
+    return null;
+  }
+}
+function secretText() {
   const secret = String(LINE_CONFIG_ENCRYPTION_KEY || '').trim();
   if (!secret || secret.includes('PASTE_')) throw new Error('請先在 Prepare LINE OA Save 節點填入 LINE_CONFIG_ENCRYPTION_KEY。');
-  const hash = await cryptoApi().subtle.digest('SHA-256', new TextEncoder().encode(secret));
-  return cryptoApi().subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, usages);
+  return secret;
+}
+async function encryptionKey(usages) {
+  const hash = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(secretText()));
+  return globalThis.crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, usages);
 }
 function base64(bytes) {
   return Buffer.from(bytes).toString('base64');
@@ -262,10 +270,19 @@ function base64(bytes) {
 async function encryptSecret(value) {
   const plain = String(value || '').trim();
   if (!plain) return '';
-  const iv = new Uint8Array(12);
-  cryptoApi().getRandomValues(iv);
-  const encrypted = await cryptoApi().subtle.encrypt({ name: 'AES-GCM', iv }, await encryptionKey(['encrypt']), new TextEncoder().encode(plain));
-  return ['v2', base64(iv), base64(new Uint8Array(encrypted))].join(':');
+  if (hasWebCrypto()) {
+    const iv = new Uint8Array(12);
+    globalThis.crypto.getRandomValues(iv);
+    const encrypted = await globalThis.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await encryptionKey(['encrypt']), new TextEncoder().encode(plain));
+    return ['v2', base64(iv), base64(new Uint8Array(encrypted))].join(':');
+  }
+  const crypto = nodeCrypto();
+  if (!crypto) throw new Error('此 n8n 環境不支援 Web Crypto API；請在 n8n 環境變數加入 NODE_FUNCTION_ALLOW_BUILTIN=crypto 後重啟。');
+  const key = crypto.createHash('sha256').update(secretText()).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final(), cipher.getAuthTag()]);
+  return ['v2', iv.toString('base64'), encrypted.toString('base64')].join(':');
 }
 const existing = $('Query LINE OA Settings For Update').all().find((item) => prop(item.json, '設定代碼') === base.key);
 const existingAccessToken = existing ? prop(existing.json, ['Access Token環境變數', 'Access Token 環境變數']) : '';
@@ -335,26 +352,55 @@ function prop(json, name) {
   return '';
 }
 const LINE_CONFIG_ENCRYPTION_KEY = 'PASTE_RANDOM_ENCRYPTION_KEY_HERE';
-function cryptoApi() {
-  const api = globalThis.crypto;
-  if (!api?.subtle) return null;
-  return api;
+function hasWebCrypto() {
+  return Boolean(globalThis.crypto?.subtle);
+}
+function nodeCrypto() {
+  try {
+    return require('crypto');
+  } catch (_) {
+    return null;
+  }
+}
+function secretText() {
+  const secret = String(LINE_CONFIG_ENCRYPTION_KEY || '').trim();
+  if (!secret || secret.includes('PASTE_')) return '';
+  return secret;
 }
 async function encryptionKey() {
-  const secret = String(LINE_CONFIG_ENCRYPTION_KEY || '').trim();
-  if (!secret || secret.includes('PASTE_') || !cryptoApi()) return null;
-  const hash = await cryptoApi().subtle.digest('SHA-256', new TextEncoder().encode(secret));
-  return cryptoApi().subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['decrypt']);
+  const secret = secretText();
+  if (!secret || !hasWebCrypto()) return null;
+  const hash = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  return globalThis.crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['decrypt']);
 }
 async function decryptSecret(value) {
   const encrypted = String(value || '').trim();
   if (!encrypted) return '';
   const parts = encrypted.split(':');
   if (parts.length === 3 && parts[0] === 'v2') {
-    const key = await encryptionKey();
-    if (!key) return '';
-    const decrypted = await cryptoApi().subtle.decrypt({ name: 'AES-GCM', iv: Buffer.from(parts[1], 'base64') }, key, Buffer.from(parts[2], 'base64'));
-    return new TextDecoder().decode(decrypted);
+    if (hasWebCrypto()) {
+      const key = await encryptionKey();
+      if (!key) return '';
+      const decrypted = await globalThis.crypto.subtle.decrypt({ name: 'AES-GCM', iv: Buffer.from(parts[1], 'base64') }, key, Buffer.from(parts[2], 'base64'));
+      return new TextDecoder().decode(decrypted);
+    }
+    const crypto = nodeCrypto();
+    const secret = secretText();
+    if (!crypto || !secret) return '';
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const payload = Buffer.from(parts[2], 'base64');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(parts[1], 'base64'));
+    decipher.setAuthTag(payload.subarray(payload.length - 16));
+    return Buffer.concat([decipher.update(payload.subarray(0, payload.length - 16)), decipher.final()]).toString('utf8');
+  }
+  if (parts.length === 4 && parts[0] === 'v1') {
+    const crypto = nodeCrypto();
+    const secret = secretText();
+    if (!crypto || !secret) return '';
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(parts[1], 'base64'));
+    decipher.setAuthTag(Buffer.from(parts[2], 'base64'));
+    return Buffer.concat([decipher.update(Buffer.from(parts[3], 'base64')), decipher.final()]).toString('utf8');
   }
   return '';
 }
