@@ -245,21 +245,27 @@ function prop(json, name) {
   return '';
 }
 const LINE_CONFIG_ENCRYPTION_KEY = 'PASTE_RANDOM_ENCRYPTION_KEY_HERE';
-function encryptionKey() {
+function cryptoApi() {
+  const api = globalThis.crypto;
+  if (!api?.subtle || !api.getRandomValues) throw new Error('此 n8n 環境不支援 Web Crypto API，請改用環境變數或允許 crypto builtin。');
+  return api;
+}
+async function encryptionKey(usages) {
   const secret = String(LINE_CONFIG_ENCRYPTION_KEY || '').trim();
   if (!secret || secret.includes('PASTE_')) throw new Error('請先在 Prepare LINE OA Save 節點填入 LINE_CONFIG_ENCRYPTION_KEY。');
-  const crypto = require('crypto');
-  return crypto.createHash('sha256').update(secret).digest();
+  const hash = await cryptoApi().subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  return cryptoApi().subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, usages);
 }
-function encryptSecret(value) {
+function base64(bytes) {
+  return Buffer.from(bytes).toString('base64');
+}
+async function encryptSecret(value) {
   const plain = String(value || '').trim();
   if (!plain) return '';
-  const crypto = require('crypto');
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey(), iv);
-  const encrypted = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return ['v1', iv.toString('base64'), tag.toString('base64'), encrypted.toString('base64')].join(':');
+  const iv = new Uint8Array(12);
+  cryptoApi().getRandomValues(iv);
+  const encrypted = await cryptoApi().subtle.encrypt({ name: 'AES-GCM', iv }, await encryptionKey(['encrypt']), new TextEncoder().encode(plain));
+  return ['v2', base64(iv), base64(new Uint8Array(encrypted))].join(':');
 }
 const existing = $('Query LINE OA Settings For Update').all().find((item) => prop(item.json, '設定代碼') === base.key);
 const existingAccessToken = existing ? prop(existing.json, ['Access Token環境變數', 'Access Token 環境變數']) : '';
@@ -269,8 +275,8 @@ const incomingChannelSecret = String(data.channelSecret || '').trim();
 let encryptedAccessToken = existingAccessToken;
 let encryptedChannelSecret = existingChannelSecret;
 try {
-  if (incomingAccessToken) encryptedAccessToken = encryptSecret(incomingAccessToken);
-  if (incomingChannelSecret) encryptedChannelSecret = encryptSecret(incomingChannelSecret);
+  if (incomingAccessToken) encryptedAccessToken = await encryptSecret(incomingAccessToken);
+  if (incomingChannelSecret) encryptedChannelSecret = await encryptSecret(incomingChannelSecret);
 } catch (error) {
   return [{ json: { ok: false, statusCode: 500, message: error.message, shouldUpdate: false } }];
 }
@@ -329,18 +335,28 @@ function prop(json, name) {
   return '';
 }
 const LINE_CONFIG_ENCRYPTION_KEY = 'PASTE_RANDOM_ENCRYPTION_KEY_HERE';
-function decryptSecret(value) {
+function cryptoApi() {
+  const api = globalThis.crypto;
+  if (!api?.subtle) return null;
+  return api;
+}
+async function encryptionKey() {
+  const secret = String(LINE_CONFIG_ENCRYPTION_KEY || '').trim();
+  if (!secret || secret.includes('PASTE_') || !cryptoApi()) return null;
+  const hash = await cryptoApi().subtle.digest('SHA-256', new TextEncoder().encode(secret));
+  return cryptoApi().subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['decrypt']);
+}
+async function decryptSecret(value) {
   const encrypted = String(value || '').trim();
   if (!encrypted) return '';
   const parts = encrypted.split(':');
-  if (parts.length !== 4 || parts[0] !== 'v1') return '';
-  const secret = String(LINE_CONFIG_ENCRYPTION_KEY || '').trim();
-  if (!secret) return '';
-  const crypto = require('crypto');
-  const key = crypto.createHash('sha256').update(secret).digest();
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(parts[1], 'base64'));
-  decipher.setAuthTag(Buffer.from(parts[2], 'base64'));
-  return Buffer.concat([decipher.update(Buffer.from(parts[3], 'base64')), decipher.final()]).toString('utf8');
+  if (parts.length === 3 && parts[0] === 'v2') {
+    const key = await encryptionKey();
+    if (!key) return '';
+    const decrypted = await cryptoApi().subtle.decrypt({ name: 'AES-GCM', iv: Buffer.from(parts[1], 'base64') }, key, Buffer.from(parts[2], 'base64'));
+    return new TextDecoder().decode(decrypted);
+  }
+  return '';
 }
 function splitTags(value) {
   if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
@@ -383,7 +399,7 @@ function memberAttribute(existing) {
 }
 const lineSettings = $('Query LINE OA Settings For Token').all();
 const publicSetting = lineSettings.find((item) => prop(item.json, '設定代碼') === 'public-service');
-const token = publicSetting ? decryptSecret(prop(publicSetting.json, ['Access Token環境變數', 'Access Token 環境變數'])) : '';
+const token = publicSetting ? await decryptSecret(prop(publicSetting.json, ['Access Token環境變數', 'Access Token 環境變數'])) : '';
 async function profile(userId) {
   if (!token) return { userId };
   try {

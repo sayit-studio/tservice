@@ -26,7 +26,7 @@ This folder contains import targets for the management backend and public legal-
   - Members data source used by n8n Notion nodes: `292b3ad1d1cd8066b50c000b82565915`
   - LINE OA settings: `35db3ad1d1cd80c28616dc1e2bc8917c`
   - Legal consultation: `2ccb3ad1d1cd8175aba6e21110f71145`
-- `LINE_CONFIG_ENCRYPTION_KEY` constant in the LINE OA Code nodes for encrypting/decrypting LINE Token and Secret entered in the admin backend.
+- `LINE_CONFIG_ENCRYPTION_KEY` constant in the LINE OA Code nodes for encrypting/decrypting LINE Token and Secret entered in the admin backend. The Code nodes use Web Crypto API and do not require Node.js `crypto` builtin access.
 - `admin-line-accounts.json` and `public-line-oa-members.json` use n8n Notion nodes for Notion access. Confirm each Notion node uses the `Notion-n8n` credential after import.
 - `admin-line-accounts.json` encrypts LINE Token/Secret before saving them to the LINE OA settings database.
 - `public-line-oa-members.json` decrypts the saved public-service token at runtime before calling LINE APIs.
