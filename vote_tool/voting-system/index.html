@@ -552,7 +552,11 @@
       fillSelect($("chairmanSelect"), state.candidates.chairman, voter.chairman);
       fillSelect($("repSelect"), state.candidates.rep, voter.rep);
       fillSelect($("citySelect"), state.candidates.city, voter.city);
+      $("chairmanSelect").disabled = voter.voted || $("chairmanSelect").disabled;
+      $("repSelect").disabled = voter.voted || $("repSelect").disabled;
+      $("citySelect").disabled = voter.voted || $("citySelect").disabled;
       submitBtn.disabled = voter.voted;
+      submitBtn.textContent = voter.voted ? "已完成投票" : "確認投票";
       lookupSection.style.display = "none";
       voterCard.classList.add("show");
       pageSubtitle.textContent = "請確認投票對象後送出";
@@ -610,7 +614,13 @@
     backBtn.addEventListener("click", showLookup);
 
     submitBtn.addEventListener("click", async () => {
-      if (!state.voter || state.voter.voted) return;
+      if (!state.voter) return;
+      if (state.voter.voted) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "已完成投票";
+        setMessage("此黨員已完成投票，不能重複送出。", "warn");
+        return;
+      }
       const payload = {
         pageId: state.voter.pageId,
         name: state.voter.name,
