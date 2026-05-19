@@ -19,30 +19,15 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true
-          },
-          "conditions": [
-            {
-              "id": "has-voter-page",
-              "leftValue": "={{ $json.body.pageId || \"\" }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty"
-              }
-            }
-          ]
-        }
+        "jsCode": "const item = $input.first();\nconst body = item.json.body || {};\nconst pageId = String(body.pageId || '').trim();\nif (!pageId) return [];\nreturn [{ json: item.json }];"
       },
-      "id": "if-has-voter-page",
-      "name": "Has Voter Page",
-      "type": "n8n-nodes-base.if",
+      "id": "code-prepare-voter-update",
+      "name": "Prepare Voter Update",
+      "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         460,
-        300
+        180
       ]
     },
     {
@@ -81,7 +66,7 @@
       "typeVersion": 2,
       "position": [
         700,
-        220
+        180
       ]
     },
     {
@@ -140,8 +125,8 @@
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2,
       "position": [
-        940,
-        300
+        700,
+        420
       ]
     },
     {
@@ -154,8 +139,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        1340,
-        300
+        940,
+        420
       ]
     }
   ],
@@ -164,36 +149,23 @@
       "main": [
         [
           {
-            "node": "Has Voter Page",
+            "node": "Prepare Voter Update",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "建立投票紀錄",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Has Voter Page": {
+    "Prepare Voter Update": {
       "main": [
         [
           {
             "node": "更新投票人已投票",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "建立投票紀錄",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "更新投票人已投票": {
-      "main": [
-        [
-          {
-            "node": "建立投票紀錄",
             "type": "main",
             "index": 0
           }
