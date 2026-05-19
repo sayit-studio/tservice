@@ -64,6 +64,18 @@
       line-height: 1.45;
     }
 
+    .head-actions {
+      display: grid;
+      gap: 8px;
+      justify-items: end;
+    }
+
+    .last-updated {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
     .panel {
       display: grid;
       gap: 18px;
@@ -368,6 +380,7 @@
     @media (max-width: 760px) {
       main { padding: 20px 14px 34px; }
       .page-head { display: grid; }
+      .head-actions { justify-items: stretch; }
       .toolbar { grid-template-columns: 1fr; }
       .count-summary { text-align: left; }
       .pagination { justify-content: space-between; }
@@ -396,7 +409,10 @@
           <h1>投票人清單</h1>
           <div class="hint">每頁顯示 30 筆。選擇投票對象後點選「確認」以儲存。</div>
         </div>
-        <button type="button" class="ghost" id="reloadBtn">重新載入</button>
+        <div class="head-actions">
+          <button type="button" class="ghost" id="reloadBtn">重新載入</button>
+          <div class="last-updated" id="lastUpdated">尚未更新</div>
+        </div>
       </div>
 
       <section class="panel">
@@ -508,16 +524,20 @@
     function setLoading(isLoading) {
       state.loading = isLoading;
       $("reloadBtn").disabled = isLoading;
+      $("reloadBtn").textContent = isLoading ? "載入中" : "重新載入";
       $("saveTargetBtn").disabled = isLoading;
       $("createVoterBtn").disabled = isLoading;
       $("addVoterBtn").disabled = isLoading;
     }
 
     async function api(path, options = {}) {
-      const response = await fetch(`${API_BASE}${path}`, {
+      const separator = path.includes("?") ? "&" : "?";
+      const response = await fetch(`${API_BASE}${path}${separator}_=${Date.now()}`, {
         ...options,
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
           ...(options.headers || {})
         }
       });
@@ -542,13 +562,31 @@
       return names;
     }
 
+    function categoryByName(name) {
+      const map = {
+        "許木桂": "主委",
+        "陳怡潔": "全代",
+        "邱柏瑞": "全代",
+        "黃美惠": "市代",
+        "賴秀如": "市代",
+        "林志鴻": "市代",
+        "王俊傑": "市代",
+        "陳佩君": "市代"
+      };
+      return map[String(name || "").trim()] || "";
+    }
+
     function normalizeResults(data) {
       // Real API format: { candidates: [{ name, category, votes }] }
       if (Array.isArray(data.candidates)) {
+        const candidates = data.candidates.map(c => ({
+          name: c.name,
+          category: c.category || categoryByName(c.name)
+        }));
         return {
-          chairman: data.candidates.filter(c => c.category === "主委").map(c => c.name),
-          rep: data.candidates.filter(c => c.category === "全代").map(c => c.name),
-          city: data.candidates.filter(c => c.category === "市代").map(c => c.name)
+          chairman: candidates.filter(c => c.category === "主委").map(c => c.name),
+          rep: candidates.filter(c => c.category === "全代").map(c => c.name),
+          city: candidates.filter(c => c.category === "市代").map(c => c.name)
         };
       }
       // Fallback for older formats
@@ -790,6 +828,7 @@
       await Promise.all([loadTargetSettings(), loadVoters()]);
       renderTargetForm();
       renderVoterTable();
+      $("lastUpdated").textContent = `最後更新：${new Date().toLocaleTimeString("zh-TW", { hour12: false })}`;
     }
 
     $("loginBtn").addEventListener("click", async () => {
