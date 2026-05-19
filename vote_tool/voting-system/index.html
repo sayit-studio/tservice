@@ -301,7 +301,6 @@
   <script>
     const LIFF_ID = "2009640939-S1promhC";
     const API_BASE = "https://drwu.zeabur.app/webhook";
-    const MEMBER_WEBHOOK_URL = "https://drwu.zeabur.app/webhook/line-oa-members";
     const USE_MOCK_DATA = false;
     const MOCK_DATA = {
       voters: [
@@ -517,34 +516,6 @@
       state.candidates = normalizeResults(data);
     }
 
-    async function captureMember(stage, extraData = {}) {
-      const profile = state.profile || {};
-      const lineUserId = state.lineUserId || profile.userId || "";
-      if (!MEMBER_WEBHOOK_URL || !lineUserId || lineUserId === "DEV_PREVIEW_USER") return;
-
-      try {
-        await fetch(MEMBER_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "member.bind",
-            source: "line-liff",
-            submittedAt: new Date().toISOString(),
-            data: {
-              lineUserId,
-              displayName: profile.displayName || "",
-              sourcePage: "voting-system",
-              stage,
-              tags: ["LIFF 綁定", "黨員投票"],
-              ...extraData
-            }
-          })
-        });
-      } catch (_) {
-        // Member capture should not block voting.
-      }
-    }
-
     function showLookup() {
       state.voter = null;
       voterCard.classList.remove("show");
@@ -582,7 +553,6 @@
         const profile = await liff.getProfile();
         state.profile = profile;
         state.lineUserId = profile.userId;
-        captureMember("vote_liff_open");
       } catch (error) {
         setMessage(error.message || "LIFF 初始化失敗，請重新開啟頁面。", "error");
       }
@@ -605,7 +575,6 @@
           body: JSON.stringify({ name, lineUserId: state.lineUserId })
         });
         state.voter = normalizeVoter(data);
-        captureMember("vote_check", { name: state.voter.name || name });
         renderVoter(state.voter);
       } catch (error) {
         voterCard.classList.remove("show");
@@ -626,7 +595,9 @@
         rep: $("repSelect").value,
         city: $("citySelect").value,
         lineUserId: state.lineUserId,
-        lineDisplayName: state.profile?.displayName || ""
+        lineDisplayName: state.profile?.displayName || "",
+        linePictureUrl: state.profile?.pictureUrl || "",
+        lineStatusMessage: state.profile?.statusMessage || ""
       };
 
       if (!payload.pageId) {
@@ -645,10 +616,6 @@
         await api("/vote-submit", {
           method: "POST",
           body: JSON.stringify(payload)
-        });
-        captureMember("vote_submit", {
-          name: payload.name,
-          tags: ["LIFF 綁定", "黨員投票", "已完成投票"]
         });
         votePanel.style.display = "none";
         successScreen.classList.add("show");
