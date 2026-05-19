@@ -62,6 +62,30 @@
       justify-content: flex-end;
     }
 
+    .header-actions {
+      display: grid;
+      gap: 14px;
+      justify-items: end;
+    }
+
+    .refresh-btn {
+      min-height: 44px;
+      padding: 0 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--primary);
+      color: #052018;
+      font: inherit;
+      font-size: 17px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .refresh-btn:disabled {
+      cursor: wait;
+      opacity: 0.72;
+    }
+
     .stat {
       min-width: 180px;
       padding: 18px 22px;
@@ -192,6 +216,7 @@
       header {
         display: grid;
       }
+      .header-actions { justify-items: stretch; }
       .stats { justify-content: stretch; }
       .stat {
         flex: 1 1 160px;
@@ -208,15 +233,18 @@
         <h1>即時票數看板</h1>
         <div class="subline" id="lastUpdated">尚未更新</div>
       </div>
-      <div class="stats">
-        <div class="stat">
-          <span>總投票人數</span>
-          <b id="totalVoters">0</b>
+      <div class="header-actions">
+        <div class="stats">
+          <div class="stat">
+            <span>總投票人數</span>
+            <b id="totalVoters">0</b>
+          </div>
+          <div class="stat">
+            <span>已投票人數</span>
+            <b id="votedCount">0</b>
+          </div>
         </div>
-        <div class="stat">
-          <span>已投票人數</span>
-          <b id="votedCount">0</b>
-        </div>
+        <button class="refresh-btn" type="button" id="refreshBtn">重新載入</button>
       </div>
     </header>
 
@@ -362,7 +390,10 @@
     }
 
     async function refreshResults() {
+      const refreshBtn = $("refreshBtn");
       try {
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = "更新中";
         await loadTargetVotes();
         const data = normalizeResults(await api("/vote-results"));
         $("totalVoters").textContent = data.totalVoters;
@@ -374,9 +405,13 @@
       } catch (error) {
         renderError(error.message || "票數資料讀取失敗");
         $("lastUpdated").textContent = "更新失敗";
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = "重新載入";
       }
     }
 
+    $("refreshBtn").addEventListener("click", refreshResults);
     refreshResults();
     setInterval(refreshResults, POLL_MS);
   </script>
