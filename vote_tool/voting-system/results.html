@@ -306,6 +306,15 @@
 
     function normalizeResults(data) {
       const source = data.data || data.results || data;
+      if (Array.isArray(source.candidates)) {
+        return {
+          totalVoters: Number(source.totalVoters ?? source.total ?? source.voterTotal ?? 0),
+          votedCount: Number(source.votedCount ?? source.voted ?? source.completed ?? 0),
+          chairman: source.candidates.filter((item) => item.category === "主委").map(normalizeCandidate),
+          rep: source.candidates.filter((item) => item.category === "全代").map(normalizeCandidate),
+          city: source.candidates.filter((item) => item.category === "市代").map(normalizeCandidate)
+        };
+      }
       return {
         totalVoters: Number(source.totalVoters ?? source.total ?? source.voterTotal ?? 0),
         votedCount: Number(source.votedCount ?? source.voted ?? source.completed ?? 0),

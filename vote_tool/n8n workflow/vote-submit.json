@@ -1,0 +1,482 @@
+{
+  "name": "vote-submit",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vote-submit",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-submit",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.body.pageId }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "已投票|checkbox",
+              "checkboxValue": true
+            },
+            {
+              "key": "投票時間|date",
+              "date": "={{ new Date().toISOString() }}"
+            },
+            {
+              "key": "LINE USER ID|rich_text",
+              "textContent": "={{ $json.body.lineUserId || \"\" }}"
+            },
+            {
+              "key": "LINE名稱|rich_text",
+              "textContent": "={{ $json.body.lineDisplayName || \"\" }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-update-voter",
+      "name": "更新投票人已投票",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80f49905c8350dd47483",
+          "mode": "id"
+        },
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "姓名|title",
+              "condition": "equals",
+              "value": "={{ $('Webhook').item.json.body.chairman }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notion-get-chairman",
+      "name": "查詢主委候選人",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        680,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "票數|number",
+              "numberValue": "={{ Number(Object.values($json.properties || {}).find((value) => value?.type === 'number')?.number ?? Object.values($json).find((value) => typeof value === 'number') ?? 0) + 1 }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-update-chairman",
+      "name": "主委票數+1",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        900,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80f49905c8350dd47483",
+          "mode": "id"
+        },
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "姓名|title",
+              "condition": "equals",
+              "value": "={{ $('Webhook').item.json.body.rep }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notion-get-rep",
+      "name": "查詢全代候選人",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "票數|number",
+              "numberValue": "={{ Number(Object.values($json.properties || {}).find((value) => value?.type === 'number')?.number ?? Object.values($json).find((value) => typeof value === 'number') ?? 0) + 1 }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-update-rep",
+      "name": "全代票數+1",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80f49905c8350dd47483",
+          "mode": "id"
+        },
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "姓名|title",
+              "condition": "equals",
+              "value": "={{ $('Webhook').item.json.body.city }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notion-get-city",
+      "name": "查詢市代候選人",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        680,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "票數|number",
+              "numberValue": "={{ Number(Object.values($json.properties || {}).find((value) => value?.type === 'number')?.number ?? Object.values($json).find((value) => typeof value === 'number') ?? 0) + 1 }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-update-city",
+      "name": "市代票數+1",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        900,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80b3bf5cf9b9f4f3970b",
+          "mode": "id"
+        },
+        "title": "={{ $('Webhook').item.json.body.name + '_' + Date.now() }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "投票人|rich_text",
+              "textContent": "={{ $('Webhook').first().json.body.name || '' }}"
+            },
+            {
+              "key": "投給主委|rich_text",
+              "textContent": "={{ $('Webhook').first().json.body.chairman || '' }}"
+            },
+            {
+              "key": "投給全代|rich_text",
+              "textContent": "={{ $('Webhook').first().json.body.rep || '' }}"
+            },
+            {
+              "key": "投給市代|rich_text",
+              "textContent": "={{ $('Webhook').first().json.body.city || '' }}"
+            },
+            {
+              "key": "投票時間|date",
+              "date": "={{ new Date().toISOString() }}"
+            },
+            {
+              "key": "操作類型|select",
+              "selectValue": "初次投票"
+            },
+            {
+              "key": "操作人|rich_text",
+              "textContent": "={{ $('Webhook').first().json.body.name || '' }}"
+            },
+            {
+              "key": "LINE USER ID|rich_text",
+              "textContent": "={{ $('Webhook').first().json.body.lineUserId || '' }}"
+            },
+            {
+              "key": "LINE名稱|rich_text",
+              "textContent": "={{ $('Webhook').first().json.body.lineDisplayName || '' }}"
+            }
+          ]
+        }
+      },
+      "id": "notion-create-record",
+      "name": "建立投票紀錄",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: '投票成功' }) }}"
+      },
+      "id": "respond-success",
+      "name": "回傳成功",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const selected = String($('Webhook').first().json.body.chairman || '').replace(/\\s+/g, '').trim();\nfunction text(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(text).filter(Boolean).join('');\n  if (value.plain_text) return String(value.plain_text);\n  if (value.name) return String(value.name);\n  if (value.title) return text(value.title);\n  if (value.rich_text) return text(value.rich_text);\n  if (value.select) return text(value.select);\n  return '';\n}\nfunction candidateName(json) {\n  if (json.name) return text(json.name);\n  const props = json.properties || {};\n  const titleProp = Object.values(props).find((value) => value?.type === 'title');\n  return text(titleProp);\n}\nconst found = $input.all().find((item) => candidateName(item.json).replace(/\\s+/g, '').trim() === selected);\nif (!found) throw new Error('Candidate not found for chairman: ' + selected);\nreturn [found];"
+      },
+      "id": "code-filter-chairman-candidate",
+      "name": "Filter Chairman Candidate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        790,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const selected = String($('Webhook').first().json.body.rep || '').replace(/\\s+/g, '').trim();\nfunction text(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(text).filter(Boolean).join('');\n  if (value.plain_text) return String(value.plain_text);\n  if (value.name) return String(value.name);\n  if (value.title) return text(value.title);\n  if (value.rich_text) return text(value.rich_text);\n  if (value.select) return text(value.select);\n  return '';\n}\nfunction candidateName(json) {\n  if (json.name) return text(json.name);\n  const props = json.properties || {};\n  const titleProp = Object.values(props).find((value) => value?.type === 'title');\n  return text(titleProp);\n}\nconst found = $input.all().find((item) => candidateName(item.json).replace(/\\s+/g, '').trim() === selected);\nif (!found) throw new Error('Candidate not found for rep: ' + selected);\nreturn [found];"
+      },
+      "id": "code-filter-rep-candidate",
+      "name": "Filter Rep Candidate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        790,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const selected = String($('Webhook').first().json.body.city || '').replace(/\\s+/g, '').trim();\nfunction text(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(text).filter(Boolean).join('');\n  if (value.plain_text) return String(value.plain_text);\n  if (value.name) return String(value.name);\n  if (value.title) return text(value.title);\n  if (value.rich_text) return text(value.rich_text);\n  if (value.select) return text(value.select);\n  return '';\n}\nfunction candidateName(json) {\n  if (json.name) return text(json.name);\n  const props = json.properties || {};\n  const titleProp = Object.values(props).find((value) => value?.type === 'title');\n  return text(titleProp);\n}\nconst found = $input.all().find((item) => candidateName(item.json).replace(/\\s+/g, '').trim() === selected);\nif (!found) throw new Error('Candidate not found for city: ' + selected);\nreturn [found];"
+      },
+      "id": "code-filter-city-candidate",
+      "name": "Filter City Candidate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        790,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "更新投票人已投票",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新投票人已投票": {
+      "main": [
+        [
+          {
+            "node": "查詢主委候選人",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢主委候選人": {
+      "main": [
+        [
+          {
+            "node": "Filter Chairman Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Chairman Candidate": {
+      "main": [
+        [
+          {
+            "node": "主委票數+1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "主委票數+1": {
+      "main": [
+        [
+          {
+            "node": "查詢全代候選人",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢全代候選人": {
+      "main": [
+        [
+          {
+            "node": "Filter Rep Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Rep Candidate": {
+      "main": [
+        [
+          {
+            "node": "全代票數+1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "全代票數+1": {
+      "main": [
+        [
+          {
+            "node": "查詢市代候選人",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢市代候選人": {
+      "main": [
+        [
+          {
+            "node": "Filter City Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter City Candidate": {
+      "main": [
+        [
+          {
+            "node": "市代票數+1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "市代票數+1": {
+      "main": [
+        [
+          {
+            "node": "建立投票紀錄",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "建立投票紀錄": {
+      "main": [
+        [
+          {
+            "node": "回傳成功",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

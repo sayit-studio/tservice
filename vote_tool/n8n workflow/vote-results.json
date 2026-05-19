@@ -1,0 +1,148 @@
+{
+  "name": "vote-results",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "vote-results",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-results",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80f49905c8350dd47483",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "simplify": false,
+        "options": {}
+      },
+      "id": "notion-get-candidates",
+      "name": "Get Vote Candidates",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80169bb9de5426896e49",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "notion-get-voted-count",
+      "name": "Get Voted Voters",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        460,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-results",
+      "name": "Merge Vote Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ (() => {\n  function propByType(json, type) {\n    return Object.values(json.properties || {}).find((value) => value?.type === type);\n  }\n  function title(json) {\n    const prop = propByType(json, 'title');\n    return prop?.title?.[0]?.plain_text || json.name || '';\n  }\n  function select(json) {\n    const prop = propByType(json, 'select');\n    return prop?.select?.name || '';\n  }\n  function number(json) {\n    const prop = propByType(json, 'number');\n    return prop?.number || 0;\n  }\n  function checked(json) {\n    return Object.values(json.properties || {}).some((value) => value?.type === 'checkbox' && value.checkbox === true) || Object.values(json).some((value) => value === true);\n  }\n  const voters = $('Get Voted Voters').all();\n  return JSON.stringify({\n    success: true,\n    candidates: $('Get Vote Candidates').all().map((item) => ({\n      name: title(item.json),\n      category: select(item.json),\n      votes: number(item.json)\n    })),\n    totalVoters: voters.length,\n    votedCount: voters.filter((item) => checked(item.json)).length\n  });\n})() }}"
+      },
+      "id": "respond-results",
+      "name": "Respond Vote Results",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Vote Candidates",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Voted Voters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Vote Candidates": {
+      "main": [
+        [
+          {
+            "node": "Merge Vote Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Voted Voters": {
+      "main": [
+        [
+          {
+            "node": "Merge Vote Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Vote Results": {
+      "main": [
+        [
+          {
+            "node": "Respond Vote Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
