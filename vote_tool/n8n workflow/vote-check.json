@@ -1,0 +1,123 @@
+{
+  "name": "vote-check",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vote-check",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-check",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80169bb9de5426896e49",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "simplify": false,
+        "options": {}
+      },
+      "id": "notion-get-all-voters",
+      "name": "取得所有投票人",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookJson = $('Webhook').first().json;\nconst body = webhookJson.body || {};\nconst inputName = normalizeName(body.name || webhookJson.name || '');\n\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('');\n  if (value.plain_text) return String(value.plain_text);\n  if (value.name) return String(value.name);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.date) return value.date.start || '';\n  return '';\n}\n\nfunction compact(value) {\n  return String(value || '').replace(/\\s+/g, '').trim();\n}\n\nfunction normalizeName(value) {\n  return compact(textFromValue(value));\n}\n\nfunction prop(page, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  const wantedCompact = wanted.map(compact);\n  const json = page.json || page;\n  const props = json.properties || {};\n\n  for (const name of wanted) {\n    if (json[name] != null) return json[name];\n    if (json['property_' + name] != null) return json['property_' + name];\n    if (props[name] != null) return props[name];\n  }\n\n  for (const [key, value] of Object.entries({ ...json, ...props })) {\n    const normalizedKey = compact(key).replace(/^property_/, '');\n    if (wantedCompact.includes(normalizedKey)) return value;\n  }\n\n  return undefined;\n}\n\nfunction propText(page, names) {\n  return textFromValue(prop(page, names)).trim();\n}\n\nfunction propCheckbox(page, names) {\n  const value = prop(page, names);\n  if (value == null) return false;\n  if (typeof value === 'boolean') return value;\n  if (value.checkbox != null) return Boolean(value.checkbox);\n  return ['true', 'yes', '1', '已投票'].includes(textFromValue(value).trim().toLowerCase());\n}\n\nif (!inputName) {\n  return [{ json: { success: false, message: '請輸入投票人姓名' } }];\n}\n\nconst found = $input.all().find((item) => normalizeName(propText(item, ['姓名', '投票人姓名', 'Name', 'name'])) === inputName);\n\nif (!found) {\n  const voter = {\n    pageId: '',\n    name: String(body.name || '').trim(),\n    lineUserId: String(body.lineUserId || '').trim(),\n    voted: false,\n    chairman: '',\n    rep: '',\n    city: '',\n    inList: false,\n    needsAssistance: true\n  };\n  return [{ json: { success: true, inList: false, needsAssistance: true, message: '\\u540d\\u55ae\\u5167\\u672a\\u627e\\u5230\\u6b64\\u59d3\\u540d\\uff0c\\u8acb\\u627e\\u670d\\u52d9\\u4eba\\u54e1\\u78ba\\u8a8d\\uff1b\\u672c\\u6b21\\u4ecd\\u5177\\u6295\\u7968\\u8cc7\\u683c\\u3002', voter } }];\n}\n\nconst voter = {\n  pageId: found.json.id || '',\n  name: propText(found, ['\\u59d3\\u540d', '\\u6295\\u7968\\u4eba\\u59d3\\u540d', 'Name', 'name']) || body.name || '',\n  lineUserId: propText(found, ['LINE USER ID', 'LINE User ID', 'LINE ID']),\n  voted: propCheckbox(found, ['\\u5df2\\u6295\\u7968', '\\u662f\\u5426\\u5df2\\u6295\\u7968', '\\u6295\\u7968\\u72c0\\u614b']),\n  chairman: propText(found, ['\\u9810\\u8a2d\\u4e3b\\u59d4', '\\u4e3b\\u59d4']),\n  rep: propText(found, ['\\u9810\\u8a2d\\u5168\\u4ee3', '\\u5168\\u4ee3']),\n  city: propText(found, ['\\u9810\\u8a2d\\u5e02\\u4ee3', '\\u5e02\\u4ee3']),\n  inList: true,\n  needsAssistance: false\n};\n\nreturn [{ json: { success: true, inList: true, needsAssistance: false, voted: voter.voted, pageId: voter.pageId, voter } }];"
+      },
+      "id": "code-prepare-vote-check-response",
+      "name": "整理投票人查詢結果",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-vote-check",
+      "name": "回傳投票人查詢結果",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "取得所有投票人",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "取得所有投票人": {
+      "main": [
+        [
+          {
+            "node": "整理投票人查詢結果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "整理投票人查詢結果": {
+      "main": [
+        [
+          {
+            "node": "回傳投票人查詢結果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

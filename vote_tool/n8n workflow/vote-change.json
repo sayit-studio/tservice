@@ -1,0 +1,86 @@
+{
+  "name": "vote-change",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vote-change",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-change",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": "={{ $json.body.pageId }}",
+        "properties": {
+          "預設主委": {
+            "select": {
+              "name": "={{ $json.body.newChairman || '' }}"
+            }
+          },
+          "預設全代": {
+            "select": {
+              "name": "={{ $json.body.newRep || '' }}"
+            }
+          },
+          "預設市代": {
+            "select": {
+              "name": "={{ $json.body.newCity || '' }}"
+            }
+          }
+        }
+      },
+      "id": "notion-update-voter-defaults",
+      "name": "更新預設投票對象",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, pageId: $('Webhook').item.json.body.pageId, chairman: $('Webhook').item.json.body.newChairman || '', rep: $('Webhook').item.json.body.newRep || '', city: $('Webhook').item.json.body.newCity || '' }) }}"
+      },
+      "id": "respond-updated",
+      "name": "回傳更新成功",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "更新預設投票對象",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新預設投票對象": {
+      "main": [
+        [
+          {
+            "node": "回傳更新成功",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

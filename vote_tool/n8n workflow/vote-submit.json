@@ -19,6 +19,34 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "has-voter-page",
+              "leftValue": "={{ $json.body.pageId || \"\" }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-has-voter-page",
+      "name": "Has Voter Page",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "resource": "databasePage",
         "operation": "update",
         "pageId": {
@@ -52,8 +80,8 @@
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2,
       "position": [
-        460,
-        300
+        700,
+        220
       ]
     },
     {
@@ -112,7 +140,7 @@
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2,
       "position": [
-        1120,
+        940,
         300
       ]
     },
@@ -136,7 +164,25 @@
       "main": [
         [
           {
+            "node": "Has Voter Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Voter Page": {
+      "main": [
+        [
+          {
             "node": "更新投票人已投票",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "建立投票紀錄",
             "type": "main",
             "index": 0
           }

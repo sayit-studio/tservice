@@ -1,0 +1,76 @@
+{
+  "name": "vote-voters",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "vote-voters",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-voters",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80169bb9de5426896e49",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "simplify": false,
+        "options": {}
+      },
+      "id": "notion-get-voters",
+      "name": "取得投票人清單",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, voters: $('取得投票人清單').all().map(item => ({ pageId: item.json.id, name: item.json.properties['姓名']?.title?.[0]?.plain_text || '', lineUserId: item.json.properties['LINE USER ID']?.rich_text?.[0]?.plain_text || '', voted: item.json.properties['已投票']?.checkbox || false, chairman: item.json.properties['預設主委']?.select?.name || '', rep: item.json.properties['預設全代']?.select?.name || '', city: item.json.properties['預設市代']?.select?.name || '' })) }) }}"
+      },
+      "id": "respond-voters",
+      "name": "回傳投票人清單",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "取得投票人清單",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "取得投票人清單": {
+      "main": [
+        [
+          {
+            "node": "回傳投票人清單",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

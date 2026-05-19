@@ -1,0 +1,203 @@
+{
+  "name": "vote-target-setting-save",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vote-target-setting",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-target-save",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80b88051cb7290f5108d",
+          "mode": "id"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "鍵|title",
+              "condition": "equals",
+              "value": "={{ $json.body.key }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notion-find-setting",
+      "name": "查詢設定",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "alwaysOutputData": true,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "not-found",
+              "leftValue": "={{ $json.id || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-not-found",
+      "name": "是否不存在",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80b88051cb7290f5108d",
+          "mode": "id"
+        },
+        "title": "={{ $('Webhook').item.json.body.key }}",
+        "properties": {
+          "數值": {
+            "number": "={{ Number($('Webhook').item.json.body.value) || 0 }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "notion-create-setting",
+      "name": "新增設定",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [900, 180]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": "={{ $json.id }}",
+        "properties": {
+          "數值": {
+            "number": "={{ Number($('Webhook').item.json.body.value) || 0 }}"
+          }
+        }
+      },
+      "id": "notion-update-setting",
+      "name": "更新設定",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [900, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, key: $('Webhook').item.json.body.key, value: Number($('Webhook').item.json.body.value) || 0 }) }}"
+      },
+      "id": "respond-created",
+      "name": "回傳新增成功",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 180]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, key: $('Webhook').item.json.body.key, value: Number($('Webhook').item.json.body.value) || 0 }) }}"
+      },
+      "id": "respond-updated",
+      "name": "回傳更新成功",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 420]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "查詢設定",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查詢設定": {
+      "main": [
+        [
+          {
+            "node": "是否不存在",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "是否不存在": {
+      "main": [
+        [
+          {
+            "node": "新增設定",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "更新設定",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新增設定": {
+      "main": [
+        [
+          {
+            "node": "回傳新增成功",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "更新設定": {
+      "main": [
+        [
+          {
+            "node": "回傳更新成功",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

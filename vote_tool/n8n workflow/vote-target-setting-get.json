@@ -1,0 +1,77 @@
+{
+  "name": "vote-target-setting-get",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "vote-target-setting",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-target-get",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80b88051cb7290f5108d",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "simplify": false,
+        "options": {}
+      },
+      "id": "notion-get-all-settings",
+      "name": "取得所有設定",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "alwaysOutputData": true,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, settings: $('取得所有設定').all().map(item => ({ key: item.json.properties['鍵']?.title?.[0]?.plain_text || '', value: item.json.properties['數值']?.number || 0 })) }) }}"
+      },
+      "id": "respond-all-settings",
+      "name": "回傳所有設定",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "取得所有設定",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "取得所有設定": {
+      "main": [
+        [
+          {
+            "node": "回傳所有設定",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

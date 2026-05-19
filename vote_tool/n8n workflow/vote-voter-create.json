@@ -1,0 +1,199 @@
+{
+  "name": "vote-voter-create",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vote-voter-create",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-voter-create",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80169bb9de5426896e49",
+          "mode": "id"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "姓名|title",
+              "condition": "equals",
+              "value": "={{ $json.body.name }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notion-find-existing-voter",
+      "name": "檢查投票人是否存在",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "alwaysOutputData": true,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "exists",
+              "leftValue": "={{ $json.id || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-voter-exists",
+      "name": "是否已存在",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: false, message: '此投票人已存在' }) }}"
+      },
+      "id": "respond-duplicate",
+      "name": "回傳已存在",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "create",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80169bb9de5426896e49",
+          "mode": "id"
+        },
+        "title": "={{ $('Webhook').item.json.body.name }}",
+        "properties": {
+          "預設主委": {
+            "select": {
+              "name": "={{ $('Webhook').item.json.body.chairman || '' }}"
+            }
+          },
+          "預設全代": {
+            "select": {
+              "name": "={{ $('Webhook').item.json.body.rep || '' }}"
+            }
+          },
+          "預設市代": {
+            "select": {
+              "name": "={{ $('Webhook').item.json.body.city || '' }}"
+            }
+          },
+          "已投票": {
+            "checkbox": false
+          },
+          "LINE USER ID": {
+            "rich_text": [
+              {
+                "text": {
+                  "content": ""
+                }
+              }
+            ]
+          }
+        },
+        "options": {}
+      },
+      "id": "notion-create-voter",
+      "name": "新增投票人",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [900, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, voter: { pageId: $json.id, name: $('Webhook').item.json.body.name, voted: false, chairman: $('Webhook').item.json.body.chairman || '', rep: $('Webhook').item.json.body.rep || '', city: $('Webhook').item.json.body.city || '', lineUserId: '' } }) }}"
+      },
+      "id": "respond-created",
+      "name": "回傳新增成功",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 420]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "檢查投票人是否存在",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "檢查投票人是否存在": {
+      "main": [
+        [
+          {
+            "node": "是否已存在",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "是否已存在": {
+      "main": [
+        [
+          {
+            "node": "回傳已存在",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "新增投票人",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新增投票人": {
+      "main": [
+        [
+          {
+            "node": "回傳新增成功",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -259,7 +259,7 @@
     <div class="topbar">
       <div class="brand">
         <strong>黨員投票</strong>
-        <span id="pageSubtitle">請先輸入黨員姓名查詢投票資格</span>
+        <span id="pageSubtitle">請先輸入黨員姓名開始投票</span>
       </div>
     </div>
 
@@ -272,7 +272,7 @@
           <input id="nameInput" autocomplete="name" inputmode="text" placeholder="請輸入姓名">
         </label>
 
-        <button type="button" id="checkBtn">查詢投票資格</button>
+        <button type="button" id="checkBtn">開始投票</button>
       </div>
 
       <div class="voter-card" id="voterCard">
@@ -420,7 +420,7 @@
       checkBtn.disabled = isLoading;
       submitBtn.disabled = isLoading || !state.voter || state.voter.voted;
       if (label) checkBtn.textContent = label;
-      if (!isLoading) checkBtn.textContent = "查詢投票資格";
+      if (!isLoading) checkBtn.textContent = "開始投票";
     }
 
     async function api(path, options = {}) {
@@ -505,13 +505,16 @@
 
     function normalizeVoter(data) {
       const voter = data.voter || data.data || data;
+      const inList = voter.inList !== false && data.inList !== false && Boolean(voter.pageId || voter.id || voter.notionPageId);
       return {
         pageId: voter.pageId || voter.id || voter.notionPageId || "",
         name: voter.name || voter.voterName || nameInput.value.trim(),
         voted: Boolean(voter.voted || voter.hasVoted || voter.isVoted),
         chairman: voter.chairman || voter.defaultChairman || voter.currentChairman || "",
         rep: voter.rep || voter.defaultRep || voter.currentRep || "",
-        city: voter.city || voter.defaultCity || voter.currentCity || ""
+        city: voter.city || voter.defaultCity || voter.currentCity || "",
+        inList,
+        needsAssistance: voter.needsAssistance || data.needsAssistance || !inList
       };
     }
 
@@ -540,7 +543,7 @@
       state.voter = null;
       voterCard.classList.remove("show");
       lookupSection.style.display = "";
-      pageSubtitle.textContent = "請先輸入黨員姓名查詢投票資格";
+      pageSubtitle.textContent = "請先輸入黨員姓名開始投票";
       submitBtn.disabled = true;
       setMessage("");
       nameInput.focus();
@@ -548,7 +551,11 @@
 
     function renderVoter(voter) {
       $("voterName").textContent = voter.name;
-      $("voterHint").textContent = voter.voted ? "此黨員已完成投票，不能重複送出" : "確認下方投票對象後送出";
+      $("voterHint").textContent = voter.voted
+        ? "此姓名已完成投票，不能重複送出"
+        : voter.needsAssistance
+          ? "您好，請找服務人員"
+          : "確認下方投票對象後送出";
       fillSelect($("chairmanSelect"), state.candidates.chairman, voter.chairman);
       fillSelect($("repSelect"), state.candidates.rep, voter.rep);
       fillSelect($("citySelect"), state.candidates.city, voter.city);
@@ -560,7 +567,14 @@
       lookupSection.style.display = "none";
       voterCard.classList.add("show");
       pageSubtitle.textContent = "請確認投票對象後送出";
-      setMessage(voter.voted ? "已完成投票，系統已禁止重複操作。" : "已查到投票資料，請確認投票對象。", voter.voted ? "warn" : "success");
+      setMessage(
+        voter.voted
+          ? "此姓名已完成投票，系統已禁止重複操作。"
+          : voter.needsAssistance
+            ? "您好，請找服務人員"
+            : "請確認投票對象後送出。",
+        voter.voted || voter.needsAssistance ? "warn" : "success"
+      );
     }
 
     async function initLiff() {
@@ -624,6 +638,7 @@
       const payload = {
         pageId: state.voter.pageId,
         name: state.voter.name,
+        listed: state.voter.inList,
         chairman: $("chairmanSelect").value,
         rep: $("repSelect").value,
         city: $("citySelect").value,
@@ -631,7 +646,7 @@
         lineDisplayName: state.profile?.displayName || ""
       };
 
-      if (!payload.pageId) {
+      if (state.voter.inList && !payload.pageId) {
         setMessage("投票資料缺少 pageId，請聯絡工作人員。", "error");
         return;
       }
