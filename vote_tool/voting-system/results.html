@@ -301,7 +301,13 @@
         throw new Error("Mock API 尚未支援此路徑");
       }
 
-      const response = await fetch(`${API_BASE}${path}`);
+      const separator = path.includes("?") ? "&" : "?";
+      const response = await fetch(`${API_BASE}${path}${separator}_=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache"
+        }
+      });
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
       if (!response.ok || data.ok === false || data.success === false) {
@@ -328,19 +334,35 @@
       if (typeof item === "string") return { name: item, votes: 0 };
       return {
         name: item?.name || item?.candidate || item?.title || "未命名",
+        category: item?.category || categoryByName(item?.name || item?.candidate || item?.title || ""),
         votes: Number(item?.votes ?? item?.count ?? item?.total ?? 0)
       };
+    }
+
+    function categoryByName(name) {
+      const map = {
+        "許木桂": "主委",
+        "陳怡潔": "全代",
+        "邱柏瑞": "全代",
+        "黃美惠": "市代",
+        "賴秀如": "市代",
+        "林志鴻": "市代",
+        "王俊傑": "市代",
+        "陳佩君": "市代"
+      };
+      return map[String(name || "").trim()] || "";
     }
 
     function normalizeResults(data) {
       const source = data.data || data.results || data;
       if (Array.isArray(source.candidates)) {
+        const candidates = source.candidates.map(normalizeCandidate);
         return {
           totalVoters: Number(source.totalVoters ?? source.total ?? source.voterTotal ?? 0),
           votedCount: Number(source.votedCount ?? source.voted ?? source.completed ?? 0),
-          chairman: source.candidates.filter((item) => item.category === "主委").map(normalizeCandidate),
-          rep: source.candidates.filter((item) => item.category === "全代").map(normalizeCandidate),
-          city: source.candidates.filter((item) => item.category === "市代").map(normalizeCandidate)
+          chairman: candidates.filter((item) => item.category === "主委"),
+          rep: candidates.filter((item) => item.category === "全代"),
+          city: candidates.filter((item) => item.category === "市代")
         };
       }
       return {
