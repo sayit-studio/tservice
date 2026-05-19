@@ -36,7 +36,29 @@
       "typeVersion": 2,
       "position": [
         460,
-        300
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80b3bf5cf9b9f4f3970b",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "simplify": false,
+        "options": {}
+      },
+      "id": "notion-get-records",
+      "name": "Get Vote Records",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        460,
+        340
       ]
     },
     {
@@ -49,10 +71,11 @@
           "mode": "id"
         },
         "returnAll": true,
+        "simplify": false,
         "options": {}
       },
-      "id": "notion-get-voted-count",
-      "name": "Get Voted Voters",
+      "id": "notion-get-voters",
+      "name": "Get Vote Voters",
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2,
       "position": [
@@ -62,31 +85,59 @@
     },
     {
       "parameters": {
-        "mode": "combine",
-        "combinationMode": "mergeByPosition",
-        "options": {}
+        "jsCode": "function text(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(text).filter(Boolean).join('');\n  if (value.plain_text) return String(value.plain_text);\n  if (value.name) return String(value.name);\n  if (value.title) return text(value.title);\n  if (value.rich_text) return text(value.rich_text);\n  if (value.select) return text(value.select);\n  if (value.checkbox != null) return String(value.checkbox);\n  return '';\n}\nfunction prop(json, names, type) {\n  const wanted = Array.isArray(names) ? names : [names];\n  const compact = (value) => String(value || '').replace(/s+/g, '');\n  const props = json.properties || {};\n  for (const name of wanted) {\n    if (json[name] != null) return json[name];\n    if (json['property_' + name] != null) return json['property_' + name];\n    if (props[name] != null) return props[name];\n  }\n  for (const [key, value] of Object.entries({ ...json, ...props })) {\n    const normalized = compact(key).replace(/^property_/, '');\n    if (wanted.some((name) => compact(name) === normalized)) return value;\n  }\n  if (type) return Object.values(props).find((value) => value?.type === type);\n  return undefined;\n}\nfunction propText(json, names, type) {\n  return text(prop(json, names, type)).trim();\n}\nfunction isChecked(json, names) {\n  const value = prop(json, names, 'checkbox');\n  if (typeof value === 'boolean') return value;\n  if (value?.checkbox != null) return Boolean(value.checkbox);\n  return text(value).toLowerCase() === 'true';\n}\nconst candidates = $('Get Vote Candidates').all().map((item) => ({\n  name: propText(item.json, ['??', 'name', 'Name'], 'title'),\n  category: propText(item.json, ['??', 'category'], 'select'),\n  votes: 0\n})).filter((item) => item.name);\nconst byName = new Map(candidates.map((item) => [item.name, item]));\nconst records = $('Get Vote Records').all();\nfor (const item of records) {\n  for (const field of ['????', '????', '????']) {\n    const name = propText(item.json, [field]);\n    if (name && byName.has(name)) byName.get(name).votes += 1;\n  }\n}\nconst voters = $('Get Vote Voters').all();\nreturn [{ json: {\n  success: true,\n  candidates,\n  totalVoters: voters.length,\n  votedCount: voters.filter((item) => isChecked(item.json, ['???'])).length,\n  recordCount: records.length\n} }];"
       },
-      "id": "merge-results",
-      "name": "Merge Vote Results",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2.1,
+      "id": "code-build-results",
+      "name": "Build Vote Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        680,
-        400
+        1120,
+        380
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ (() => {\n  function propByType(json, type) {\n    return Object.values(json.properties || {}).find((value) => value?.type === type);\n  }\n  function title(json) {\n    const prop = propByType(json, 'title');\n    return prop?.title?.[0]?.plain_text || json.name || '';\n  }\n  function select(json) {\n    const prop = propByType(json, 'select');\n    return prop?.select?.name || '';\n  }\n  function number(json) {\n    const prop = propByType(json, 'number');\n    return prop?.number || 0;\n  }\n  function checked(json) {\n    return Object.values(json.properties || {}).some((value) => value?.type === 'checkbox' && value.checkbox === true) || Object.values(json).some((value) => value === true);\n  }\n  const voters = $('Get Voted Voters').all();\n  return JSON.stringify({\n    success: true,\n    candidates: $('Get Vote Candidates').all().map((item) => ({\n      name: title(item.json),\n      category: select(item.json),\n      votes: number(item.json)\n    })),\n    totalVoters: voters.length,\n    votedCount: voters.filter((item) => checked(item.json)).length\n  });\n})() }}"
+        "responseBody": "={{ JSON.stringify($json) }}"
       },
       "id": "respond-results",
       "name": "Respond Vote Results",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
+        1340,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-candidates-records",
+      "name": "Merge Candidates Records",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        680,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-all-results",
+      "name": "Merge All Vote Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
         900,
-        300
+        380
       ]
     }
   ],
@@ -100,7 +151,12 @@
             "index": 0
           },
           {
-            "node": "Get Voted Voters",
+            "node": "Get Vote Records",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Vote Voters",
             "type": "main",
             "index": 0
           }
@@ -111,25 +167,58 @@
       "main": [
         [
           {
-            "node": "Merge Vote Results",
+            "node": "Merge Candidates Records",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Voted Voters": {
+    "Get Vote Records": {
       "main": [
         [
           {
-            "node": "Merge Vote Results",
+            "node": "Merge Candidates Records",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Merge Vote Results": {
+    "Merge Candidates Records": {
+      "main": [
+        [
+          {
+            "node": "Merge All Vote Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Vote Voters": {
+      "main": [
+        [
+          {
+            "node": "Merge All Vote Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Vote Data": {
+      "main": [
+        [
+          {
+            "node": "Build Vote Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Vote Results": {
       "main": [
         [
           {
