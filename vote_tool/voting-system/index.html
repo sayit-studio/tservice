@@ -551,7 +551,10 @@
           return;
         }
         const profile = await liff.getProfile();
-        state.profile = profile;
+        state.profile = {
+          userId: profile.userId,
+          displayName: profile.displayName || ""
+        };
         state.lineUserId = profile.userId;
       } catch (error) {
         setMessage(error.message || "LIFF 初始化失敗，請重新開啟頁面。", "error");
@@ -595,9 +598,7 @@
         rep: $("repSelect").value,
         city: $("citySelect").value,
         lineUserId: state.lineUserId,
-        lineDisplayName: state.profile?.displayName || "",
-        linePictureUrl: state.profile?.pictureUrl || "",
-        lineStatusMessage: state.profile?.statusMessage || ""
+        lineDisplayName: state.profile?.displayName || ""
       };
 
       if (!payload.pageId) {
