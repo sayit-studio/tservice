@@ -1,0 +1,67 @@
+{
+  "voters": [
+    {
+      "pageId": "mock-voter-001",
+      "name": "林佳蓉",
+      "lineUserId": "Umock8f2a7c1d001",
+      "voted": false,
+      "chairman": "許木桂",
+      "rep": "邱柏瑞",
+      "city": "賴秀如"
+    },
+    {
+      "pageId": "mock-voter-002",
+      "name": "張宏宇",
+      "lineUserId": "Umock3b9e5d4a002",
+      "voted": true,
+      "chairman": "許木桂",
+      "rep": "陳怡潔",
+      "city": "林志鴻"
+    },
+    {
+      "pageId": "mock-voter-003",
+      "name": "測試投票人01",
+      "lineUserId": "Utest-vote-001",
+      "voted": false,
+      "chairman": "許木桂",
+      "rep": "邱柏瑞",
+      "city": "賴秀如"
+    },
+    {
+      "pageId": "mock-voter-004",
+      "name": "測試投票人02",
+      "lineUserId": "Utest-vote-002",
+      "voted": false,
+      "chairman": "許木桂",
+      "rep": "陳怡潔",
+      "city": "林志鴻"
+    },
+    {
+      "pageId": "mock-voter-005",
+      "name": "測試投票人03",
+      "lineUserId": "Utest-vote-003",
+      "voted": false,
+      "chairman": "許木桂",
+      "rep": "邱柏瑞",
+      "city": "黃美惠"
+    }
+  ],
+  "results": {
+    "totalVoters": 5,
+    "votedCount": 1,
+    "chairman": [
+      { "name": "許木桂", "votes": 1 }
+    ],
+    "rep": [
+      { "name": "邱柏瑞", "votes": 0 },
+      { "name": "陳怡潔", "votes": 1 }
+    ],
+    "city": [
+      { "name": "賴秀如", "votes": 0 },
+      { "name": "林志鴻", "votes": 1 },
+      { "name": "黃美惠", "votes": 0 },
+      { "name": "王俊傑", "votes": 0 },
+      { "name": "陳佩君", "votes": 0 }
+    ]
+  }
+}

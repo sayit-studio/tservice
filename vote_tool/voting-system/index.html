@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>黨員投票</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #647084;
+      --line: #d8deea;
+      --primary: #0f8f6f;
+      --primary-dark: #087052;
+      --danger: #b42318;
+      --warn: #a45c00;
+      --shadow: 0 16px 40px rgba(23, 32, 51, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    main {
+      width: min(100%, 560px);
+      margin: 0 auto;
+      padding: 20px 16px 36px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 2px 18px;
+    }
+
+    .brand {
+      display: grid;
+      gap: 3px;
+    }
+
+    .brand strong {
+      font-size: 26px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .status-pill {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 11px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 13px;
+      max-width: 45%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(216, 222, 234, 0.9);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .stack { display: grid; gap: 18px; }
+
+    label {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      min-height: 54px;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 18px;
+    }
+
+    input,
+    select {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      padding: 0 14px;
+    }
+
+    select:disabled,
+    input:disabled,
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
+    button {
+      border: 0;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.16s ease, transform 0.16s ease;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    button.secondary {
+      background: #e8f5f0;
+      color: var(--primary-dark);
+      border: 1px solid #b7dfd0;
+    }
+
+    .notice {
+      display: none;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 16px;
+      line-height: 1.5;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: var(--muted);
+    }
+
+    .notice.show { display: block; }
+    .notice.error {
+      border-color: #f2b8b5;
+      background: #fff3f2;
+      color: var(--danger);
+    }
+    .notice.warn {
+      border-color: #ffd79b;
+      background: #fff8eb;
+      color: var(--warn);
+    }
+    .notice.success {
+      border-color: #a8dbc9;
+      background: #eefaf6;
+      color: var(--primary-dark);
+    }
+
+    .voter-card {
+      display: none;
+      gap: 16px;
+      margin-top: 4px;
+    }
+
+    .voter-card.show { display: grid; }
+
+    .summary {
+      display: grid;
+      gap: 5px;
+      padding: 14px;
+      border-radius: 8px;
+      background: #f3f6fb;
+      border: 1px solid var(--line);
+    }
+
+    .summary b {
+      font-size: 20px;
+    }
+
+    .summary span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .selection-warning {
+      border: 1px solid #ffd79b;
+      border-radius: 8px;
+      background: #fff8eb;
+      color: #8a4d00;
+      padding: 13px 14px;
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .success-screen {
+      display: none;
+      min-height: 70vh;
+      place-items: center;
+      text-align: center;
+      padding: 30px 10px;
+    }
+
+    .success-screen.show { display: grid; }
+
+    .success-mark {
+      width: 84px;
+      height: 84px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 44px;
+      font-weight: 900;
+    }
+
+    .success-screen h1 {
+      margin: 0 0 10px;
+      font-size: 32px;
+    }
+
+    .success-screen p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <main id="app">
+    <div class="topbar">
+      <div class="brand">
+        <strong>黨員投票</strong>
+        <span id="pageSubtitle">請先輸入黨員姓名查詢投票資格</span>
+      </div>
+    </div>
+
+    <section class="panel stack" id="votePanel">
+      <div class="notice" id="message"></div>
+
+      <div class="stack" id="lookupSection">
+        <label>
+          黨員姓名
+          <input id="nameInput" autocomplete="name" inputmode="text" placeholder="請輸入姓名">
+        </label>
+
+        <button type="button" id="checkBtn">查詢投票資格</button>
+      </div>
+
+      <div class="voter-card" id="voterCard">
+        <button type="button" class="secondary" id="backBtn">回上一頁</button>
+
+        <div class="summary">
+          <b id="voterName">尚未查詢</b>
+          <span id="voterHint">確認下方投票對象後送出</span>
+        </div>
+
+        <div class="selection-warning">
+          請小心確認：主委、全代、市代每一項都只能選擇一人。送出後請勿重複操作。
+        </div>
+
+        <label>
+          主委
+          <select id="chairmanSelect"></select>
+        </label>
+
+        <label>
+          全代
+          <select id="repSelect"></select>
+        </label>
+
+        <label>
+          市代
+          <select id="citySelect"></select>
+        </label>
+
+        <button type="button" id="submitBtn">確認投票</button>
+      </div>
+    </section>
+
+    <section class="success-screen" id="successScreen">
+      <div>
+        <div class="success-mark">✓</div>
+        <h1>投票成功</h1>
+        <p>您的投票已送出。<br>請勿重複操作本頁面。</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const LIFF_ID = "2009640939-S1promhC";
+    const API_BASE = "https://drwu.zeabur.app/webhook";
+    const USE_MOCK_DATA = false;
+    const MOCK_DATA = {
+      voters: [
+        {
+          pageId: "mock-voter-001",
+          name: "林佳蓉",
+          lineUserId: "Umock8f2a7c1d001",
+          voted: false,
+          chairman: "許木桂",
+          rep: "邱柏瑞",
+          city: "賴秀如"
+        },
+        {
+          pageId: "mock-voter-002",
+          name: "張宏宇",
+          lineUserId: "Umock3b9e5d4a002",
+          voted: true,
+          chairman: "許木桂",
+          rep: "陳怡潔",
+          city: "林志鴻"
+        },
+        {
+          pageId: "mock-voter-003",
+          name: "測試投票人01",
+          lineUserId: "Utest-vote-001",
+          voted: false,
+          chairman: "許木桂",
+          rep: "邱柏瑞",
+          city: "賴秀如"
+        },
+        {
+          pageId: "mock-voter-004",
+          name: "測試投票人02",
+          lineUserId: "Utest-vote-002",
+          voted: false,
+          chairman: "許木桂",
+          rep: "陳怡潔",
+          city: "林志鴻"
+        },
+        {
+          pageId: "mock-voter-005",
+          name: "測試投票人03",
+          lineUserId: "Utest-vote-003",
+          voted: false,
+          chairman: "許木桂",
+          rep: "邱柏瑞",
+          city: "黃美惠"
+        }
+      ],
+      results: {
+        totalVoters: 5,
+        votedCount: 1,
+        chairman: [
+          { name: "許木桂", votes: 1 }
+        ],
+        rep: [
+          { name: "邱柏瑞", votes: 0 },
+          { name: "陳怡潔", votes: 1 }
+        ],
+        city: [
+          { name: "賴秀如", votes: 0 },
+          { name: "林志鴻", votes: 1 },
+          { name: "黃美惠", votes: 0 },
+          { name: "王俊傑", votes: 0 },
+          { name: "陳佩君", votes: 0 }
+        ]
+      }
+    };
+
+    const state = {
+      lineUserId: "",
+      voter: null,
+      candidates: { chairman: [], rep: [], city: [] },
+      loading: false
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const messageEl = $("message");
+    const checkBtn = $("checkBtn");
+    const submitBtn = $("submitBtn");
+    const nameInput = $("nameInput");
+    const backBtn = $("backBtn");
+    const lookupSection = $("lookupSection");
+    const voterCard = $("voterCard");
+    const votePanel = $("votePanel");
+    const successScreen = $("successScreen");
+    const pageSubtitle = $("pageSubtitle");
+
+    function setMessage(text, type = "") {
+      messageEl.textContent = text || "";
+      messageEl.className = text ? `notice show ${type}` : "notice";
+    }
+
+    function setLoading(isLoading, label) {
+      state.loading = isLoading;
+      checkBtn.disabled = isLoading;
+      submitBtn.disabled = isLoading || !state.voter || state.voter.voted;
+      if (label) checkBtn.textContent = label;
+      if (!isLoading) checkBtn.textContent = "查詢投票資格";
+    }
+
+    async function api(path, options = {}) {
+      if (USE_MOCK_DATA) return mockApi(path, options);
+
+      const response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        }
+      });
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!response.ok || data.ok === false || data.success === false) {
+        throw new Error(data.message || data.error || "API 呼叫失敗");
+      }
+      return data;
+    }
+
+    async function mockApi(path, options = {}) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const body = options.body ? JSON.parse(options.body) : {};
+
+      if (path === "/vote-results") {
+        return { success: true, data: MOCK_DATA.results };
+      }
+
+      if (path === "/vote-check") {
+        const voter = MOCK_DATA.voters.find((item) => item.name === body.name);
+        if (!voter) throw new Error("無此投票人");
+        return { success: true, voter };
+      }
+
+      if (path === "/vote-submit") {
+        const voter = MOCK_DATA.voters.find((item) => item.pageId === body.pageId);
+        if (!voter) throw new Error("無此投票人");
+        if (voter.voted) throw new Error("已完成投票，不能重複送出");
+        voter.voted = true;
+        voter.chairman = body.chairman;
+        voter.rep = body.rep;
+        voter.city = body.city;
+        MOCK_DATA.results.votedCount += 1;
+        ["chairman", "rep", "city"].forEach((key) => {
+          const candidate = MOCK_DATA.results[key].find((item) => item.name === body[key]);
+          if (candidate) candidate.votes += 1;
+        });
+        return { success: true };
+      }
+
+      throw new Error("Mock API 尚未支援此路徑");
+    }
+
+    function asArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function uniqueNames(items) {
+      const names = [];
+      asArray(items).forEach((item) => {
+        const name = typeof item === "string" ? item : item?.name || item?.candidate || item?.title;
+        if (name && !names.includes(name)) names.push(name);
+      });
+      return names;
+    }
+
+    function normalizeResults(data) {
+      if (Array.isArray(data.candidates)) {
+        return {
+          chairman: data.candidates.filter(c => c.category === "主委").map(c => c.name),
+          rep: data.candidates.filter(c => c.category === "全代").map(c => c.name),
+          city: data.candidates.filter(c => c.category === "市代").map(c => c.name)
+        };
+      }
+      const source = data.data || data.results || data;
+      return {
+        chairman: uniqueNames(source.chairman || source.chairmen || source.chairmanCandidates || source.chairmanVotes),
+        rep: uniqueNames(source.rep || source.reps || source.representative || source.repCandidates || source.repVotes),
+        city: uniqueNames(source.city || source.cityCouncil || source.cityCandidates || source.cityVotes)
+      };
+    }
+
+    function normalizeVoter(data) {
+      const voter = data.voter || data.data || data;
+      return {
+        pageId: voter.pageId || voter.id || voter.notionPageId || "",
+        name: voter.name || voter.voterName || nameInput.value.trim(),
+        voted: Boolean(voter.voted || voter.hasVoted || voter.isVoted),
+        chairman: voter.chairman || voter.defaultChairman || voter.currentChairman || "",
+        rep: voter.rep || voter.defaultRep || voter.currentRep || "",
+        city: voter.city || voter.defaultCity || voter.currentCity || ""
+      };
+    }
+
+    function fillSelect(selectEl, names, selectedName) {
+      selectEl.innerHTML = "";
+      const merged = [...names];
+      if (selectedName && !merged.includes(selectedName)) merged.unshift(selectedName);
+
+      if (!merged.length) {
+        selectEl.disabled = true;
+        selectEl.append(new Option("尚未取得候選人清單", ""));
+        return;
+      }
+
+      selectEl.disabled = false;
+      merged.forEach((name) => selectEl.append(new Option(name, name)));
+      selectEl.value = selectedName && merged.includes(selectedName) ? selectedName : merged[0];
+    }
+
+    async function loadCandidates() {
+      const data = await api("/vote-results", { method: "GET" });
+      state.candidates = normalizeResults(data);
+    }
+
+    function showLookup() {
+      state.voter = null;
+      voterCard.classList.remove("show");
+      lookupSection.style.display = "";
+      pageSubtitle.textContent = "請先輸入黨員姓名查詢投票資格";
+      submitBtn.disabled = true;
+      setMessage("");
+      nameInput.focus();
+    }
+
+    function renderVoter(voter) {
+      $("voterName").textContent = voter.name;
+      $("voterHint").textContent = voter.voted ? "此黨員已完成投票，不能重複送出" : "確認下方投票對象後送出";
+      fillSelect($("chairmanSelect"), state.candidates.chairman, voter.chairman);
+      fillSelect($("repSelect"), state.candidates.rep, voter.rep);
+      fillSelect($("citySelect"), state.candidates.city, voter.city);
+      submitBtn.disabled = voter.voted;
+      lookupSection.style.display = "none";
+      voterCard.classList.add("show");
+      pageSubtitle.textContent = "請確認投票對象後送出";
+      setMessage(voter.voted ? "已完成投票，系統已禁止重複操作。" : "已查到投票資料，請確認投票對象。", voter.voted ? "warn" : "success");
+    }
+
+    async function initLiff() {
+      try {
+        if (LIFF_ID === "LIFF_ID_HERE") {
+          state.lineUserId = "DEV_PREVIEW_USER";
+          return;
+        }
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        const profile = await liff.getProfile();
+        state.lineUserId = profile.userId;
+      } catch (error) {
+        setMessage(error.message || "LIFF 初始化失敗，請重新開啟頁面。", "error");
+      }
+    }
+
+    checkBtn.addEventListener("click", async () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        setMessage("請先輸入姓名。", "error");
+        nameInput.focus();
+        return;
+      }
+
+      try {
+        setLoading(true, "查詢中");
+        setMessage("");
+        await loadCandidates();
+        const data = await api("/vote-check", {
+          method: "POST",
+          body: JSON.stringify({ name, lineUserId: state.lineUserId })
+        });
+        state.voter = normalizeVoter(data);
+        renderVoter(state.voter);
+      } catch (error) {
+        voterCard.classList.remove("show");
+        setMessage(error.message || "查詢失敗，請稍後再試。", "error");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    backBtn.addEventListener("click", showLookup);
+
+    submitBtn.addEventListener("click", async () => {
+      if (!state.voter || state.voter.voted) return;
+      const payload = {
+        pageId: state.voter.pageId,
+        name: state.voter.name,
+        chairman: $("chairmanSelect").value,
+        rep: $("repSelect").value,
+        city: $("citySelect").value,
+        lineUserId: state.lineUserId
+      };
+
+      if (!payload.pageId) {
+        setMessage("投票資料缺少 pageId，請聯絡工作人員。", "error");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `請再次確認投票內容：\n\n主委：${payload.chairman}\n全代：${payload.rep}\n市代：${payload.city}\n\n每一項都只能選擇一人，確定要送出嗎？`
+      );
+      if (!confirmed) return;
+
+      try {
+        setLoading(true);
+        submitBtn.textContent = "送出中";
+        await api("/vote-submit", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        votePanel.style.display = "none";
+        successScreen.classList.add("show");
+      } catch (error) {
+        setMessage(error.message || "送出失敗，請稍後再試。", "error");
+      } finally {
+        setLoading(false);
+        submitBtn.textContent = "確認投票";
+      }
+    });
+
+    initLiff();
+  </script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>即時票數看板</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101820;
+      --panel: #172331;
+      --panel-2: #1e2d3d;
+      --text: #f3f7fb;
+      --muted: #aab8c7;
+      --line: rgba(255,255,255,0.12);
+      --primary: #29b890;
+      --accent: #f2c14e;
+      --danger: #ff5d5d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    main {
+      width: min(100%, 1680px);
+      margin: 0 auto;
+      padding: 30px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 28px;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(38px, 4vw, 72px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .subline {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 22px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .stat {
+      min-width: 180px;
+      padding: 18px 22px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      text-align: right;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .stat b {
+      display: block;
+      margin-top: 6px;
+      font-size: 38px;
+      line-height: 1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 22px;
+    }
+
+    section {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 22px;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: clamp(30px, 3vw, 48px);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .candidate-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .candidate {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 8px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+    }
+
+    .candidate-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .name {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: clamp(25px, 2.1vw, 42px);
+      font-weight: 900;
+      line-height: 1.1;
+    }
+
+    .votes {
+      flex: 0 0 auto;
+      color: var(--accent);
+      font-size: clamp(28px, 2.4vw, 48px);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .bar {
+      position: relative;
+      height: 26px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    .fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #29b890, #55d5ad);
+      transition: width 0.4s ease;
+    }
+
+    .target-line {
+      position: absolute;
+      top: -4px;
+      bottom: -4px;
+      left: 100%;
+      width: 3px;
+      background: var(--danger);
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+    }
+
+    .target-note {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .empty,
+    .error {
+      padding: 22px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
+      color: var(--muted);
+      font-size: 22px;
+      line-height: 1.5;
+    }
+
+    .error {
+      color: #ffc9c9;
+      border: 1px solid rgba(255, 93, 93, 0.35);
+    }
+
+    @media (max-width: 980px) {
+      main { padding: 18px; }
+      header {
+        display: grid;
+      }
+      .stats { justify-content: stretch; }
+      .stat {
+        flex: 1 1 160px;
+        text-align: left;
+      }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>即時票數看板</h1>
+        <div class="subline" id="lastUpdated">尚未更新</div>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <span>總投票人數</span>
+          <b id="totalVoters">0</b>
+        </div>
+        <div class="stat">
+          <span>已投票人數</span>
+          <b id="votedCount">0</b>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section>
+        <h2>主委</h2>
+        <div class="candidate-list" id="chairmanList"></div>
+      </section>
+      <section>
+        <h2>全代</h2>
+        <div class="candidate-list" id="repList"></div>
+      </section>
+      <section>
+        <h2>市代</h2>
+        <div class="candidate-list" id="cityList"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = "https://drwu.zeabur.app/webhook";
+    const USE_MOCK_DATA = true;
+    const TARGET_STORAGE_KEY = "voteTargetVotes";
+    const DEFAULT_TARGET_VOTES = 300;
+    let targetVotes = Number(localStorage.getItem(TARGET_STORAGE_KEY)) || DEFAULT_TARGET_VOTES;
+    const POLL_MS = 30000;
+    const MOCK_RESULTS = {
+      totalVoters: 5,
+      votedCount: 1,
+      targetVotes: 300,
+      chairman: [
+        { name: "許木桂", votes: 1 }
+      ],
+      rep: [
+        { name: "邱柏瑞", votes: 0 },
+        { name: "陳怡潔", votes: 1 }
+      ],
+      city: [
+        { name: "賴秀如", votes: 0 },
+        { name: "林志鴻", votes: 1 },
+        { name: "黃美惠", votes: 0 },
+        { name: "王俊傑", votes: 0 },
+        { name: "陳佩君", votes: 0 }
+      ]
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    async function api(path) {
+      if (USE_MOCK_DATA) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        if (path === "/vote-results") return { success: true, data: MOCK_RESULTS };
+        if (path === "/vote-target-setting") return { success: true, targetVotes };
+        throw new Error("Mock API 尚未支援此路徑");
+      }
+
+      const response = await fetch(`${API_BASE}${path}`);
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!response.ok || data.ok === false || data.success === false) {
+        throw new Error(data.message || data.error || "票數資料讀取失敗");
+      }
+      return data;
+    }
+
+    async function loadTargetVotes() {
+      if (USE_MOCK_DATA) {
+        targetVotes = Number(localStorage.getItem(TARGET_STORAGE_KEY)) || DEFAULT_TARGET_VOTES;
+        return;
+      }
+
+      const data = await api("/vote-target-setting");
+      targetVotes = Number(data.targetVotes) || DEFAULT_TARGET_VOTES;
+    }
+
+    function asArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function normalizeCandidate(item) {
+      if (typeof item === "string") return { name: item, votes: 0 };
+      return {
+        name: item?.name || item?.candidate || item?.title || "未命名",
+        votes: Number(item?.votes ?? item?.count ?? item?.total ?? 0)
+      };
+    }
+
+    function normalizeResults(data) {
+      const source = data.data || data.results || data;
+      return {
+        totalVoters: Number(source.totalVoters ?? source.total ?? source.voterTotal ?? 0),
+        votedCount: Number(source.votedCount ?? source.voted ?? source.completed ?? 0),
+        chairman: asArray(source.chairman || source.chairmen || source.chairmanVotes).map(normalizeCandidate),
+        rep: asArray(source.rep || source.reps || source.representative || source.repVotes).map(normalizeCandidate),
+        city: asArray(source.city || source.cityCouncil || source.cityVotes).map(normalizeCandidate)
+      };
+    }
+
+    function renderList(id, candidates) {
+      const el = $(id);
+      el.innerHTML = "";
+      if (!candidates.length) {
+        el.innerHTML = '<div class="empty">尚無候選人資料</div>';
+        return;
+      }
+
+      candidates
+        .slice()
+        .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name, "zh-Hant"))
+        .forEach((candidate) => {
+          const percent = Math.min(100, Math.round((candidate.votes / targetVotes) * 100));
+          const item = document.createElement("article");
+          item.className = "candidate";
+          item.innerHTML = `
+            <div class="candidate-row">
+              <div class="name"></div>
+              <div class="votes">${candidate.votes}</div>
+            </div>
+            <div class="bar" aria-label="${candidate.votes} 票，目標 ${targetVotes} 票">
+              <div class="fill" style="width: ${percent}%"></div>
+              <div class="target-line" title="${targetVotes}票達標線"></div>
+            </div>
+            <div class="target-note">${targetVotes}票達標線</div>
+          `;
+          item.querySelector(".name").textContent = candidate.name;
+          el.append(item);
+        });
+    }
+
+    function renderError(message) {
+      ["chairmanList", "repList", "cityList"].forEach((id) => {
+        $(id).innerHTML = `<div class="error">${message}</div>`;
+      });
+    }
+
+    async function refreshResults() {
+      try {
+        await loadTargetVotes();
+        const data = normalizeResults(await api("/vote-results"));
+        $("totalVoters").textContent = data.totalVoters;
+        $("votedCount").textContent = data.votedCount;
+        renderList("chairmanList", data.chairman);
+        renderList("repList", data.rep);
+        renderList("cityList", data.city);
+        $("lastUpdated").textContent = `最後更新：${new Date().toLocaleTimeString("zh-TW", { hour12: false })}`;
+      } catch (error) {
+        renderError(error.message || "票數資料讀取失敗");
+        $("lastUpdated").textContent = "更新失敗";
+      }
+    }
+
+    refreshResults();
+    setInterval(refreshResults, POLL_MS);
+  </script>
+</body>
+</html>

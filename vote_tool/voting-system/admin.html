@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>管理員投票設定</title>
+  <style>
+    :root {
+      --bg: #f3f5f8;
+      --panel: #ffffff;
+      --text: #182233;
+      --muted: #66758a;
+      --line: #d7deea;
+      --primary: #2457c5;
+      --primary-dark: #183f94;
+      --danger: #b42318;
+      --success: #087052;
+      --warn: #a45c00;
+      --shadow: 0 14px 34px rgba(24, 34, 51, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    main {
+      width: min(100%, 1120px);
+      margin: 0 auto;
+      padding: 28px 18px 44px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .page-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .hint {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .panel {
+      display: grid;
+      gap: 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .hidden { display: none !important; }
+
+    label {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    input,
+    select,
+    button {
+      min-height: 46px;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 16px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      padding: 0 12px;
+    }
+
+    button {
+      border: 0;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+      padding: 0 16px;
+    }
+
+    button:hover:not(:disabled) { background: var(--primary-dark); }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
+    button.secondary {
+      background: #edf2ff;
+      color: var(--primary-dark);
+      border: 1px solid #c8d6ff;
+    }
+
+    button.ghost {
+      background: #f7f9fc;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .notice {
+      display: none;
+      padding: 13px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .notice.show { display: block; }
+    .notice.error {
+      background: #fff3f2;
+      border-color: #f2b8b5;
+      color: var(--danger);
+    }
+    .notice.success {
+      background: #edf9f4;
+      border-color: #a8dbc9;
+      color: var(--success);
+    }
+    .notice.warn {
+      background: #fff8eb;
+      border-color: #ffd79b;
+      color: var(--warn);
+    }
+
+    .login-panel {
+      width: min(100%, 520px);
+      margin: 58px auto 0;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .count-summary {
+      color: var(--muted);
+      font-size: 15px;
+      text-align: right;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: middle;
+      font-size: 15px;
+    }
+
+    th {
+      background: #f7f9fc;
+      color: var(--muted);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    td {
+      color: var(--text);
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .name-cell {
+      font-weight: 900;
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 0 10px;
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .status.done {
+      background: #e8f6ef;
+      color: var(--success);
+    }
+
+    .status.pending {
+      background: #fff4df;
+      color: var(--warn);
+    }
+
+    .row-select {
+      min-height: 36px;
+      font-size: 14px;
+      padding: 0 8px;
+      width: 100%;
+      min-width: 100px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .row-select:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: 1px;
+    }
+
+    .confirm-btn {
+      min-width: 64px;
+      min-height: 36px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .pagination button {
+      width: auto;
+      min-width: 88px;
+    }
+
+    /* Target setting per candidate */
+    .target-grid {
+      display: grid;
+      gap: 6px;
+    }
+
+    .target-category-label {
+      font-weight: 900;
+      color: var(--muted);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 10px 0 4px;
+      border-bottom: 1px solid var(--line);
+      margin-top: 4px;
+    }
+
+    .target-category-label:first-child {
+      margin-top: 0;
+      padding-top: 0;
+    }
+
+    .target-row {
+      display: grid;
+      grid-template-columns: 1fr minmax(130px, 200px);
+      align-items: center;
+      gap: 12px;
+      padding: 5px 0;
+    }
+
+    .target-row span {
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .target-row input {
+      min-height: 40px;
+      font-size: 15px;
+    }
+
+    .target-save-row {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 4px;
+      border-top: 1px solid var(--line);
+      margin-top: 4px;
+    }
+
+    dialog {
+      width: min(92vw, 560px);
+      border: 0;
+      border-radius: 8px;
+      padding: 0;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.28);
+    }
+
+    dialog::backdrop {
+      background: rgba(16, 24, 36, 0.48);
+    }
+
+    .dialog-inner {
+      display: grid;
+      gap: 16px;
+      padding: 22px;
+    }
+
+    .dialog-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .dialog-head button {
+      width: 42px;
+      min-height: 42px;
+      padding: 0;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .dialog-actions button {
+      width: auto;
+      min-width: 112px;
+    }
+
+    @media (max-width: 760px) {
+      main { padding: 20px 14px 34px; }
+      .page-head { display: grid; }
+      .toolbar { grid-template-columns: 1fr; }
+      .count-summary { text-align: left; }
+      .pagination { justify-content: space-between; }
+      .target-row { grid-template-columns: 1fr minmax(100px, 160px); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel login-panel" id="loginPanel">
+      <div>
+        <h1>管理員投票設定</h1>
+        <div class="hint">請輸入管理密碼後進入投票人清單。</div>
+      </div>
+      <div class="notice" id="loginMessage"></div>
+      <label>
+        管理密碼
+        <input id="passwordInput" type="password" autocomplete="current-password" placeholder="請輸入管理密碼">
+      </label>
+      <button type="button" id="loginBtn">進入管理頁</button>
+    </section>
+
+    <section class="hidden" id="adminPanel">
+      <div class="page-head">
+        <div>
+          <h1>投票人清單</h1>
+          <div class="hint">每頁顯示 30 筆。選擇投票對象後點選「確認」以儲存。</div>
+        </div>
+        <button type="button" class="ghost" id="reloadBtn">重新載入</button>
+      </div>
+
+      <section class="panel">
+        <h2>達標線設定</h2>
+        <div id="targetSettingForm">
+          <div class="hint">載入候選人後即可設定各投票對象的達標票數。</div>
+        </div>
+        <div class="target-save-row">
+          <button type="button" id="saveTargetBtn">儲存設定</button>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top: 18px;">
+        <div class="notice" id="adminMessage"></div>
+        <div class="toolbar">
+          <h2>名單</h2>
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
+            <div class="count-summary" id="countSummary">共 0 筆</div>
+            <button type="button" id="addVoterBtn">新增名單</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>狀態</th>
+                <th>主委</th>
+                <th>全代</th>
+                <th>市代</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="voterRows"></tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <button type="button" class="secondary" id="prevPageBtn">上一頁</button>
+          <span id="pageInfo">第 1 / 1 頁</span>
+          <button type="button" class="secondary" id="nextPageBtn">下一頁</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="addDialog">
+    <form method="dialog" class="dialog-inner">
+      <div class="dialog-head">
+        <div>
+          <h2>新增名單</h2>
+          <div class="hint">新增投票人並設定預設投票對象。</div>
+        </div>
+        <button type="button" class="ghost" id="closeAddDialogBtn" aria-label="關閉">×</button>
+      </div>
+
+      <label>
+        投票人姓名
+        <input id="newVoterNameInput" autocomplete="off" placeholder="請輸入投票人姓名">
+      </label>
+
+      <label>
+        主委
+        <select id="newChairmanSelect"></select>
+      </label>
+
+      <label>
+        全代
+        <select id="newRepSelect"></select>
+      </label>
+
+      <label>
+        市代
+        <select id="newCitySelect"></select>
+      </label>
+
+      <div class="dialog-actions">
+        <button type="button" class="ghost" id="cancelAddBtn">取消</button>
+        <button type="button" id="createVoterBtn">新增</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const ADMIN_PASSWORD = "admin2026";
+    const API_BASE = "https://drwu.zeabur.app/webhook";
+    const PAGE_SIZE = 30;
+    const DEFAULT_TARGET_VOTES = 300;
+
+    const state = {
+      voters: [],
+      candidates: { chairman: [], rep: [], city: [] },
+      targets: {},
+      currentPage: 1,
+      loading: false
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const loginMessage = $("loginMessage");
+    const adminMessage = $("adminMessage");
+    const addDialog = $("addDialog");
+
+    function setNotice(el, text, type = "") {
+      el.textContent = text || "";
+      el.className = text ? `notice show ${type}` : "notice";
+    }
+
+    function setLoading(isLoading) {
+      state.loading = isLoading;
+      $("reloadBtn").disabled = isLoading;
+      $("saveTargetBtn").disabled = isLoading;
+      $("createVoterBtn").disabled = isLoading;
+      $("addVoterBtn").disabled = isLoading;
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        }
+      });
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!response.ok || data.ok === false || data.success === false) {
+        throw new Error(data.message || data.error || "API 呼叫失敗");
+      }
+      return data;
+    }
+
+    function asArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function uniqueNames(items) {
+      const names = [];
+      asArray(items).forEach((item) => {
+        const name = typeof item === "string" ? item : item?.name || item?.candidate || item?.title;
+        if (name && !names.includes(name)) names.push(name);
+      });
+      return names;
+    }
+
+    function normalizeResults(data) {
+      // Real API format: { candidates: [{ name, category, votes }] }
+      if (Array.isArray(data.candidates)) {
+        return {
+          chairman: data.candidates.filter(c => c.category === "主委").map(c => c.name),
+          rep: data.candidates.filter(c => c.category === "全代").map(c => c.name),
+          city: data.candidates.filter(c => c.category === "市代").map(c => c.name)
+        };
+      }
+      // Fallback for older formats
+      const source = data.data || data.results || data;
+      return {
+        chairman: uniqueNames(source.chairman || source.chairmen || source.chairmanCandidates || []),
+        rep: uniqueNames(source.rep || source.reps || source.representative || source.repCandidates || []),
+        city: uniqueNames(source.city || source.cityCouncil || source.cityCandidates || [])
+      };
+    }
+
+    function normalizeVoters(data) {
+      return asArray(data.voters || data.data || data.items).map((voter) => ({
+        pageId: voter.pageId || voter.id || voter.notionPageId || "",
+        name: voter.name || voter.voterName || "",
+        lineUserId: voter.lineUserId || "",
+        voted: Boolean(voter.voted || voter.hasVoted || voter.isVoted),
+        chairman: voter.chairman || voter.currentChairman || voter.defaultChairman || "",
+        rep: voter.rep || voter.currentRep || voter.defaultRep || "",
+        city: voter.city || voter.currentCity || voter.defaultCity || ""
+      })).filter((voter) => voter.name);
+    }
+
+    async function loadCandidates() {
+      const data = await api("/vote-results");
+      state.candidates = normalizeResults(data);
+    }
+
+    async function loadTargetSettings() {
+      const data = await api("/vote-target-setting");
+      state.targets = {};
+      asArray(data.settings).forEach(item => {
+        const key = String(item.key || "");
+        if (key.startsWith("target_")) {
+          const name = key.slice(7);
+          state.targets[name] = Number(item.value) || DEFAULT_TARGET_VOTES;
+        }
+      });
+    }
+
+    async function loadVoters() {
+      const data = await api("/vote-voters");
+      state.voters = normalizeVoters(data);
+      state.currentPage = Math.min(state.currentPage, getTotalPages());
+    }
+
+    function renderTargetForm() {
+      const form = $("targetSettingForm");
+      form.innerHTML = "";
+
+      const categories = [
+        { label: "主委", names: state.candidates.chairman },
+        { label: "全代", names: state.candidates.rep },
+        { label: "市代", names: state.candidates.city }
+      ];
+
+      const allEmpty = categories.every(c => !c.names.length);
+      if (allEmpty) {
+        form.innerHTML = '<div class="hint">尚未取得候選人清單。</div>';
+        return;
+      }
+
+      const grid = document.createElement("div");
+      grid.className = "target-grid";
+
+      categories.forEach(({ label, names }) => {
+        if (!names.length) return;
+
+        const catLabel = document.createElement("div");
+        catLabel.className = "target-category-label";
+        catLabel.textContent = label;
+        grid.append(catLabel);
+
+        names.forEach(name => {
+          const row = document.createElement("div");
+          row.className = "target-row";
+
+          const nameSpan = document.createElement("span");
+          nameSpan.textContent = name;
+
+          const input = document.createElement("input");
+          input.type = "number";
+          input.min = "1";
+          input.step = "1";
+          input.dataset.candidate = name;
+          input.value = String(state.targets[name] || DEFAULT_TARGET_VOTES);
+
+          row.append(nameSpan, input);
+          grid.append(row);
+        });
+      });
+
+      form.append(grid);
+    }
+
+    function makeSelectEl(names, current, field, index) {
+      const sel = document.createElement("select");
+      sel.className = "row-select";
+      sel.dataset.field = field;
+      sel.dataset.index = String(index);
+      if (!names.length) {
+        sel.disabled = true;
+        sel.append(new Option("尚未取得", ""));
+        return sel;
+      }
+      names.forEach(name => {
+        const opt = new Option(name, name);
+        if (name === current) opt.selected = true;
+        sel.append(opt);
+      });
+      return sel;
+    }
+
+    function getTotalPages() {
+      return Math.max(1, Math.ceil(state.voters.length / PAGE_SIZE));
+    }
+
+    function renderVoterTable() {
+      const totalPages = getTotalPages();
+      state.currentPage = Math.min(Math.max(1, state.currentPage), totalPages);
+      const start = (state.currentPage - 1) * PAGE_SIZE;
+      const pageItems = state.voters.slice(start, start + PAGE_SIZE);
+      const rows = $("voterRows");
+      rows.innerHTML = "";
+
+      if (!pageItems.length) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = '<td colspan="6">目前沒有投票人資料。</td>';
+        rows.append(tr);
+      } else {
+        pageItems.forEach((voter, index) => {
+          const globalIndex = start + index;
+          const tr = document.createElement("tr");
+
+          const nameTd = document.createElement("td");
+          nameTd.className = "name-cell";
+          nameTd.textContent = voter.name;
+
+          const statusTd = document.createElement("td");
+          const statusSpan = document.createElement("span");
+          statusSpan.className = `status ${voter.voted ? "done" : "pending"}`;
+          statusSpan.textContent = voter.voted ? "已投票" : "未投票";
+          statusTd.append(statusSpan);
+
+          const chairmanTd = document.createElement("td");
+          chairmanTd.append(makeSelectEl(state.candidates.chairman, voter.chairman, "chairman", globalIndex));
+
+          const repTd = document.createElement("td");
+          repTd.append(makeSelectEl(state.candidates.rep, voter.rep, "rep", globalIndex));
+
+          const cityTd = document.createElement("td");
+          cityTd.append(makeSelectEl(state.candidates.city, voter.city, "city", globalIndex));
+
+          const actionTd = document.createElement("td");
+          const confirmBtn = document.createElement("button");
+          confirmBtn.type = "button";
+          confirmBtn.className = "secondary confirm-btn";
+          confirmBtn.dataset.index = String(globalIndex);
+          confirmBtn.textContent = "確認";
+          actionTd.append(confirmBtn);
+
+          tr.append(nameTd, statusTd, chairmanTd, repTd, cityTd, actionTd);
+          rows.append(tr);
+        });
+      }
+
+      $("countSummary").textContent = `共 ${state.voters.length} 筆，每頁 ${PAGE_SIZE} 筆`;
+      $("pageInfo").textContent = `第 ${state.currentPage} / ${totalPages} 頁`;
+      $("prevPageBtn").disabled = state.currentPage <= 1;
+      $("nextPageBtn").disabled = state.currentPage >= totalPages;
+
+      document.querySelectorAll(".confirm-btn").forEach((btn) => {
+        btn.addEventListener("click", () => confirmVoterChange(Number(btn.dataset.index)));
+      });
+    }
+
+    async function confirmVoterChange(index) {
+      const voter = state.voters[index];
+      if (!voter) return;
+
+      const btn = $("voterRows").querySelector(`.confirm-btn[data-index="${index}"]`);
+      const tr = btn?.closest("tr");
+      if (!tr) return;
+
+      const chairman = tr.querySelector('[data-field="chairman"]').value;
+      const rep = tr.querySelector('[data-field="rep"]').value;
+      const city = tr.querySelector('[data-field="city"]').value;
+
+      try {
+        btn.disabled = true;
+        btn.textContent = "儲存中";
+        await api("/vote-change", {
+          method: "POST",
+          body: JSON.stringify({ pageId: voter.pageId, newChairman: chairman, newRep: rep, newCity: city })
+        });
+        voter.chairman = chairman;
+        voter.rep = rep;
+        voter.city = city;
+        setNotice(adminMessage, `${voter.name} 的預設投票對象已更新。`, "success");
+      } catch (error) {
+        setNotice(adminMessage, error.message || "改票失敗，請稍後再試。", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "確認";
+      }
+    }
+
+    function fillSelect(selectEl, names, selectedName) {
+      selectEl.innerHTML = "";
+      const merged = [...names];
+      if (selectedName && !merged.includes(selectedName)) merged.unshift(selectedName);
+
+      if (!merged.length) {
+        selectEl.disabled = true;
+        selectEl.append(new Option("尚未取得候選人清單", ""));
+        return;
+      }
+
+      selectEl.disabled = false;
+      merged.forEach((name) => selectEl.append(new Option(name, name)));
+      selectEl.value = selectedName && merged.includes(selectedName) ? selectedName : merged[0];
+    }
+
+    function openAddDialog() {
+      $("newVoterNameInput").value = "";
+      fillSelect($("newChairmanSelect"), state.candidates.chairman, "");
+      fillSelect($("newRepSelect"), state.candidates.rep, "");
+      fillSelect($("newCitySelect"), state.candidates.city, "");
+      addDialog.showModal();
+      $("newVoterNameInput").focus();
+    }
+
+    function closeAddDialog() {
+      addDialog.close();
+    }
+
+    async function loadAll() {
+      await loadCandidates();
+      await Promise.all([loadTargetSettings(), loadVoters()]);
+      renderTargetForm();
+      renderVoterTable();
+    }
+
+    $("loginBtn").addEventListener("click", async () => {
+      if ($("passwordInput").value !== ADMIN_PASSWORD) {
+        setNotice(loginMessage, "密碼錯誤，請重新輸入。", "error");
+        return;
+      }
+
+      $("loginPanel").classList.add("hidden");
+      $("adminPanel").classList.remove("hidden");
+
+      try {
+        setLoading(true);
+        setNotice(adminMessage, "正在載入資料。");
+        await loadAll();
+        setNotice(adminMessage, "資料已載入。", "success");
+      } catch (error) {
+        setNotice(adminMessage, error.message || "資料載入失敗。", "error");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    $("passwordInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") $("loginBtn").click();
+    });
+
+    $("reloadBtn").addEventListener("click", async () => {
+      try {
+        setLoading(true);
+        setNotice(adminMessage, "正在重新載入清單。");
+        await loadAll();
+        setNotice(adminMessage, "清單已更新。", "success");
+      } catch (error) {
+        setNotice(adminMessage, error.message || "清單載入失敗。", "error");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    $("saveTargetBtn").addEventListener("click", async () => {
+      const inputs = $("targetSettingForm").querySelectorAll("input[data-candidate]");
+      if (!inputs.length) {
+        setNotice(adminMessage, "尚未載入候選人資料，請重新載入後再試。", "error");
+        return;
+      }
+
+      let valid = true;
+      inputs.forEach(input => {
+        if (!Number.isFinite(Number(input.value)) || Number(input.value) <= 0) valid = false;
+      });
+      if (!valid) {
+        setNotice(adminMessage, "達標票數必須大於 0。", "error");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        for (const input of inputs) {
+          const candidate = input.dataset.candidate;
+          const value = Math.floor(Number(input.value));
+          await api("/vote-target-setting", {
+            method: "POST",
+            body: JSON.stringify({ key: `target_${candidate}`, value })
+          });
+          state.targets[candidate] = value;
+        }
+        setNotice(adminMessage, "達標線設定已儲存。", "success");
+      } catch (error) {
+        setNotice(adminMessage, error.message || "達標線儲存失敗。", "error");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    $("prevPageBtn").addEventListener("click", () => {
+      state.currentPage -= 1;
+      renderVoterTable();
+    });
+
+    $("nextPageBtn").addEventListener("click", () => {
+      state.currentPage += 1;
+      renderVoterTable();
+    });
+
+    $("addVoterBtn").addEventListener("click", openAddDialog);
+    $("closeAddDialogBtn").addEventListener("click", closeAddDialog);
+    $("cancelAddBtn").addEventListener("click", closeAddDialog);
+
+    $("createVoterBtn").addEventListener("click", async () => {
+      const name = $("newVoterNameInput").value.trim();
+      if (!name) {
+        setNotice(adminMessage, "請輸入投票人姓名。", "error");
+        $("newVoterNameInput").focus();
+        return;
+      }
+
+      const payload = {
+        name,
+        chairman: $("newChairmanSelect").value,
+        rep: $("newRepSelect").value,
+        city: $("newCitySelect").value
+      };
+
+      try {
+        setLoading(true);
+        $("createVoterBtn").textContent = "新增中";
+        const data = await api("/vote-voter-create", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        const voter = normalizeVoters({ voters: [data.voter || payload] })[0];
+        state.voters.push(voter);
+        state.currentPage = getTotalPages();
+        closeAddDialog();
+        renderVoterTable();
+        setNotice(adminMessage, `${name} 已新增到名單。`, "success");
+      } catch (error) {
+        setNotice(adminMessage, error.message || "新增名單失敗，請稍後再試。", "error");
+      } finally {
+        setLoading(false);
+        $("createVoterBtn").textContent = "新增";
+      }
+    });
+  </script>
+</body>
+</html>
