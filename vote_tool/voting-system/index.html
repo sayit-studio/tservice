@@ -235,6 +235,23 @@
       font-size: 18px;
       line-height: 1.55;
     }
+
+    .success-actions {
+      margin-top: 24px;
+    }
+
+    .success-actions a {
+      display: inline-grid;
+      min-height: 54px;
+      min-width: 220px;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
@@ -294,6 +311,9 @@
         <div class="success-mark">✓</div>
         <h1>投票成功</h1>
         <p>您的投票已送出。<br>請勿重複操作本頁面。</p>
+        <div class="success-actions">
+          <a href="results.html">查看投票結果</a>
+        </div>
       </div>
     </section>
   </main>
