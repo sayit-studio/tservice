@@ -20,25 +20,114 @@
     {
       "parameters": {
         "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "364b3ad1d1cd80f49905c8350dd47483",
+          "mode": "id"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "姓名|title",
+              "condition": "equals",
+              "value": "={{ $json.body.oldName || $json.body.name || '' }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {}
+      },
+      "id": "notion-find-candidate",
+      "name": "Find Vote Candidate",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "alwaysOutputData": true,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst found = $input.first().json || {};\nconst pageId = String(body.pageId || found.id || '').trim();\nif (!pageId) {\n  return [{ json: { success: false, message: '????????????????????????' } }];\n}\nreturn [{ json: { pageId, name: String(body.name || '').trim(), category: String(body.category || '').trim(), targetVotes: Math.floor(Number(body.targetVotes) || 0) } }];"
+      },
+      "id": "code-build-candidate-update",
+      "name": "Build Candidate Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "has-error",
+              "leftValue": "={{ $json.success === false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-candidate-error",
+      "name": "Has Candidate Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "respond-candidate-error",
+      "name": "Respond Candidate Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
         "operation": "update",
-        "pageId": "={{ $json.body.pageId }}",
+        "pageId": "={{ $json.pageId }}",
         "properties": {
           "姓名": {
             "title": [
               {
                 "text": {
-                  "content": "={{ $json.body.name || '' }}"
+                  "content": "={{ $json.name }}"
                 }
               }
             ]
           },
           "類別": {
             "select": {
-              "name": "={{ $json.body.category || '' }}"
+              "name": "={{ $json.category }}"
             }
           },
           "票數": {
-            "number": "={{ Number($json.body.targetVotes) || 0 }}"
+            "number": "={{ Number($json.targetVotes) || 0 }}"
           }
         }
       },
@@ -47,28 +136,68 @@
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2,
       "position": [
-        460,
-        300
+        1120,
+        420
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, pageId: $('Webhook').item.json.body.pageId, name: $('Webhook').item.json.body.name || '', category: $('Webhook').item.json.body.category || '', targetVotes: Number($('Webhook').item.json.body.targetVotes) || 0 }) }}"
+        "responseBody": "={{ JSON.stringify({ success: true, pageId: $('Build Candidate Update').item.json.pageId, name: $('Build Candidate Update').item.json.name, category: $('Build Candidate Update').item.json.category, targetVotes: $('Build Candidate Update').item.json.targetVotes }) }}"
       },
       "id": "respond-candidate-updated",
       "name": "Respond Candidate Updated",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        680,
-        300
+        1340,
+        420
       ]
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
+        [
+          {
+            "node": "Find Vote Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Vote Candidate": {
+      "main": [
+        [
+          {
+            "node": "Build Candidate Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Candidate Update": {
+      "main": [
+        [
+          {
+            "node": "Has Candidate Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Candidate Error": {
+      "main": [
+        [
+          {
+            "node": "Respond Candidate Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Update Vote Candidate",

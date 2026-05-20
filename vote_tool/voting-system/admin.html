@@ -592,6 +592,9 @@
       if (!response.ok || data.ok === false || data.success === false) {
         throw new Error(data.message || data.error || "API 呼叫失敗");
       }
+      if (path.startsWith("/vote-candidate-save") && (!data || typeof data !== "object" || data.success !== true)) {
+        throw new Error("候選人儲存未成功，請檢查 n8n workflow 執行結果。");
+      }
       return data;
     }
 
@@ -1000,7 +1003,7 @@
           if (!item.pageId) continue;
           await api("/vote-candidate-save", {
             method: "POST",
-            body: JSON.stringify({ pageId: item.pageId, name: item.name, category: item.category, targetVotes: item.targetVotes })
+            body: JSON.stringify({ pageId: item.pageId, oldName: item.oldName, name: item.name, category: item.category, targetVotes: item.targetVotes })
           });
         }
 
