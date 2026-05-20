@@ -53,7 +53,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst found = $input.first().json || {};\nconst pageId = String(body.pageId || found.id || '').trim();\nif (!pageId) {\n  return [{ json: { success: false, message: '????????????????????????' } }];\n}\nreturn [{ json: { pageId, name: String(body.name || '').trim(), category: String(body.category || '').trim(), targetVotes: Math.floor(Number(body.targetVotes) || 0) } }];"
+        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst found = $input.first().json || {};\nconst pageId = String(body.pageId || found.id || '').trim();\nif (!pageId) {\n  throw new Error('????????????????????????');\n}\nreturn [{ json: { pageId, name: String(body.name || '').trim(), category: String(body.category || '').trim(), targetVotes: Math.floor(Number(body.targetVotes) || 0) } }];"
       },
       "id": "code-build-candidate-update",
       "name": "Build Candidate Update",
@@ -62,48 +62,6 @@
       "position": [
         680,
         300
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true
-          },
-          "conditions": [
-            {
-              "id": "missing-page-id",
-              "leftValue": "={{ $json.pageId || \"\" }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "isEmpty"
-              }
-            }
-          ]
-        }
-      },
-      "id": "if-candidate-error",
-      "name": "Has Candidate Error",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        900,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}"
-      },
-      "id": "respond-candidate-error",
-      "name": "Respond Candidate Error",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [
-        1120,
-        180
       ]
     },
     {
@@ -180,24 +138,6 @@
     },
     "Build Candidate Update": {
       "main": [
-        [
-          {
-            "node": "Has Candidate Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Has Candidate Error": {
-      "main": [
-        [
-          {
-            "node": "Respond Candidate Error",
-            "type": "main",
-            "index": 0
-          }
-        ],
         [
           {
             "node": "Update Vote Candidate",
