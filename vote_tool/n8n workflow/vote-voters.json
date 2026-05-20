@@ -24,6 +24,16 @@
           "mode": "id"
         },
         "returnAll": true,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "已投票|checkbox",
+              "condition": "equals",
+              "value": "={{ $json.query.status === 'voted' }}"
+            }
+          ]
+        },
         "simplify": false,
         "options": {}
       },

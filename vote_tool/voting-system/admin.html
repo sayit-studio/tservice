@@ -330,9 +330,32 @@
     .target-save-row {
       display: flex;
       justify-content: flex-end;
+      gap: 10px;
       padding-top: 4px;
       border-top: 1px solid var(--line);
       margin-top: 4px;
+    }
+
+    .search-grid {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(150px, 220px) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .candidate-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(120px, 170px) minmax(120px, 180px);
+      align-items: center;
+      gap: 12px;
+      padding: 7px 0;
+    }
+
+    .candidate-row input:disabled,
+    .candidate-row select:disabled {
+      background: #f7f9fc;
+      color: var(--text);
+      opacity: 1;
     }
 
     dialog {
@@ -385,6 +408,8 @@
       .count-summary { text-align: left; }
       .pagination { justify-content: space-between; }
       .target-row { grid-template-columns: 1fr minmax(100px, 160px); }
+      .search-grid,
+      .candidate-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -421,7 +446,8 @@
           <div class="hint">載入候選人後即可設定各投票對象的達標票數。</div>
         </div>
         <div class="target-save-row">
-          <button type="button" id="saveTargetBtn">儲存設定</button>
+          <button type="button" class="secondary" id="editCandidateBtn">編輯候選人與達標線</button>
+          <button type="button" id="saveTargetBtn" disabled>儲存設定</button>
         </div>
       </section>
 
@@ -433,6 +459,22 @@
             <div class="count-summary" id="countSummary">共 0 筆</div>
             <button type="button" id="addVoterBtn">新增名單</button>
           </div>
+        </div>
+
+        <div class="search-grid">
+          <label>
+            搜尋姓名
+            <input id="voterSearchInput" autocomplete="off" placeholder="輸入姓名後搜尋單一投票人">
+          </label>
+          <label>
+            投票狀態
+            <select id="voteStatusFilter">
+              <option value="">不限</option>
+              <option value="voted">已投票</option>
+              <option value="unvoted">未投票</option>
+            </select>
+          </label>
+          <button type="button" id="searchVotersBtn">搜尋</button>
         </div>
 
         <div class="table-wrap">
@@ -506,9 +548,11 @@
     const state = {
       voters: [],
       candidates: { chairman: [], rep: [], city: [] },
+      candidateItems: [],
       targets: {},
       currentPage: 1,
-      loading: false
+      loading: false,
+      editingCandidates: false
     };
 
     const $ = (id) => document.getElementById(id);
@@ -525,9 +569,11 @@
       state.loading = isLoading;
       $("reloadBtn").disabled = isLoading;
       $("reloadBtn").textContent = isLoading ? "載入中" : "重新載入";
-      $("saveTargetBtn").disabled = isLoading;
+      $("editCandidateBtn").disabled = isLoading;
+      $("saveTargetBtn").disabled = isLoading || !state.editingCandidates;
       $("createVoterBtn").disabled = isLoading;
       $("addVoterBtn").disabled = isLoading;
+      $("searchVotersBtn").disabled = isLoading;
     }
 
     async function api(path, options = {}) {
@@ -580,9 +626,11 @@
       // Real API format: { candidates: [{ name, category, votes }] }
       if (Array.isArray(data.candidates)) {
         const candidates = data.candidates.map(c => ({
+          pageId: c.pageId || c.id || c.notionPageId || "",
           name: c.name,
           category: c.category || categoryByName(c.name)
         }));
+        state.candidateItems = candidates;
         return {
           chairman: candidates.filter(c => c.category === "主委").map(c => c.name),
           rep: candidates.filter(c => c.category === "全代").map(c => c.name),
@@ -591,11 +639,17 @@
       }
       // Fallback for older formats
       const source = data.data || data.results || data;
-      return {
+      const fallback = {
         chairman: uniqueNames(source.chairman || source.chairmen || source.chairmanCandidates || []),
         rep: uniqueNames(source.rep || source.reps || source.representative || source.repCandidates || []),
         city: uniqueNames(source.city || source.cityCouncil || source.cityCandidates || [])
       };
+      state.candidateItems = [
+        ...fallback.chairman.map(name => ({ pageId: "", name, category: "主委" })),
+        ...fallback.rep.map(name => ({ pageId: "", name, category: "全代" })),
+        ...fallback.city.map(name => ({ pageId: "", name, category: "市代" }))
+      ];
+      return fallback;
     }
 
     function normalizeVoters(data) {
@@ -611,7 +665,7 @@
     }
 
     async function loadCandidates() {
-      const data = await api("/vote-results");
+      const data = await api("/vote-candidates");
       state.candidates = normalizeResults(data);
     }
 
@@ -627,8 +681,8 @@
       });
     }
 
-    async function loadVoters() {
-      const data = await api("/vote-voters");
+    async function loadVoters(status) {
+      const data = await api(`/vote-voters?status=${encodeURIComponent(status)}`);
       state.voters = normalizeVoters(data);
       state.currentPage = Math.min(state.currentPage, getTotalPages());
     }
@@ -637,51 +691,52 @@
       const form = $("targetSettingForm");
       form.innerHTML = "";
 
-      const categories = [
-        { label: "主委", names: state.candidates.chairman },
-        { label: "全代", names: state.candidates.rep },
-        { label: "市代", names: state.candidates.city }
-      ];
-
-      const allEmpty = categories.every(c => !c.names.length);
-      if (allEmpty) {
-        form.innerHTML = '<div class="hint">尚未取得候選人清單。</div>';
+      if (!state.candidateItems.length) {
+        form.innerHTML = '<div class="hint">尚未載入候選人資料。</div>';
         return;
       }
 
       const grid = document.createElement("div");
       grid.className = "target-grid";
 
-      categories.forEach(({ label, names }) => {
-        if (!names.length) return;
+      state.candidateItems.forEach((candidate, index) => {
+        const row = document.createElement("div");
+        row.className = "candidate-row";
 
-        const catLabel = document.createElement("div");
-        catLabel.className = "target-category-label";
-        catLabel.textContent = label;
-        grid.append(catLabel);
+        const nameInput = document.createElement("input");
+        nameInput.value = candidate.name;
+        nameInput.dataset.field = "name";
+        nameInput.dataset.index = String(index);
+        nameInput.disabled = !state.editingCandidates;
 
-        names.forEach(name => {
-          const row = document.createElement("div");
-          row.className = "target-row";
-
-          const nameSpan = document.createElement("span");
-          nameSpan.textContent = name;
-
-          const input = document.createElement("input");
-          input.type = "number";
-          input.min = "1";
-          input.step = "1";
-          input.dataset.candidate = name;
-          input.value = String(state.targets[name] || DEFAULT_TARGET_VOTES);
-
-          row.append(nameSpan, input);
-          grid.append(row);
+        const categorySelect = document.createElement("select");
+        categorySelect.dataset.field = "category";
+        categorySelect.dataset.index = String(index);
+        ["主委", "全代", "市代"].forEach(category => {
+          const option = new Option(category, category);
+          if (category === candidate.category) option.selected = true;
+          categorySelect.append(option);
         });
+        categorySelect.disabled = !state.editingCandidates;
+
+        const targetInput = document.createElement("input");
+        targetInput.type = "number";
+        targetInput.min = "1";
+        targetInput.step = "1";
+        targetInput.dataset.field = "target";
+        targetInput.dataset.index = String(index);
+        targetInput.dataset.candidate = candidate.name;
+        targetInput.value = String(state.targets[candidate.name] || DEFAULT_TARGET_VOTES);
+        targetInput.disabled = !state.editingCandidates;
+
+        row.append(nameInput, categorySelect, targetInput);
+        grid.append(row);
       });
 
       form.append(grid);
+      $("editCandidateBtn").textContent = state.editingCandidates ? "取消編輯" : "編輯候選人與達標線";
+      $("saveTargetBtn").disabled = !state.editingCandidates || state.loading;
     }
-
     function makeSelectEl(names, current, field, index) {
       const sel = document.createElement("select");
       sel.className = "row-select";
@@ -825,10 +880,47 @@
 
     async function loadAll() {
       await loadCandidates();
-      await Promise.all([loadTargetSettings(), loadVoters()]);
+      await loadTargetSettings();
+      state.voters = [];
+      state.currentPage = 1;
+      state.editingCandidates = false;
       renderTargetForm();
       renderVoterTable();
       $("lastUpdated").textContent = `最後更新：${new Date().toLocaleTimeString("zh-TW", { hour12: false })}`;
+    }
+
+    async function searchVoters() {
+      const name = $("voterSearchInput").value.trim();
+      const status = $("voteStatusFilter").value;
+      if (!name && !status) {
+        setNotice(adminMessage, "請輸入姓名，或選擇已投票/未投票狀態後再搜尋。", "warn");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setNotice(adminMessage, "正在搜尋投票人資料...");
+        if (name) {
+          const data = await api("/vote-check", {
+            method: "POST",
+            body: JSON.stringify({ name })
+          });
+          const voter = normalizeVoters({ voters: [data.voter || data] })[0];
+          const statusMatches = !status || (status === "voted" ? voter?.voted : !voter?.voted);
+          state.voters = voter && voter.pageId && statusMatches ? [voter] : [];
+        } else {
+          await loadVoters(status);
+        }
+        state.currentPage = 1;
+        renderVoterTable();
+        setNotice(adminMessage, `搜尋完成，共 ${state.voters.length} 筆。`, "success");
+      } catch (error) {
+        state.voters = [];
+        renderVoterTable();
+        setNotice(adminMessage, error.message || "搜尋失敗，請稍後再試。", "error");
+      } finally {
+        setLoading(false);
+      }
     }
 
     $("loginBtn").addEventListener("click", async () => {
@@ -869,42 +961,70 @@
       }
     });
 
+    $("searchVotersBtn").addEventListener("click", searchVoters);
+    $("voterSearchInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") searchVoters();
+    });
+
+    $("editCandidateBtn").addEventListener("click", () => {
+      state.editingCandidates = !state.editingCandidates;
+      renderTargetForm();
+    });
+
     $("saveTargetBtn").addEventListener("click", async () => {
-      const inputs = $("targetSettingForm").querySelectorAll("input[data-candidate]");
-      if (!inputs.length) {
+      const rows = Array.from($("targetSettingForm").querySelectorAll(".candidate-row"));
+      if (!rows.length) {
         setNotice(adminMessage, "尚未載入候選人資料，請重新載入後再試。", "error");
         return;
       }
 
-      let valid = true;
-      inputs.forEach(input => {
-        if (!Number.isFinite(Number(input.value)) || Number(input.value) <= 0) valid = false;
+      const updates = rows.map((row) => {
+        const index = Number(row.querySelector('[data-field="name"]').dataset.index);
+        const original = state.candidateItems[index];
+        return {
+          original,
+          pageId: original.pageId,
+          oldName: original.name,
+          name: row.querySelector('[data-field="name"]').value.trim(),
+          category: row.querySelector('[data-field="category"]').value,
+          targetVotes: Math.floor(Number(row.querySelector('[data-field="target"]').value))
+        };
       });
-      if (!valid) {
-        setNotice(adminMessage, "達標票數必須大於 0。", "error");
+
+      if (updates.some(item => !item.name || !Number.isFinite(item.targetVotes) || item.targetVotes <= 0)) {
+        setNotice(adminMessage, "候選人姓名不可空白，達標票數必須大於 0。", "error");
         return;
       }
 
       try {
         setLoading(true);
-        for (const input of inputs) {
-          const candidate = input.dataset.candidate;
-          const value = Math.floor(Number(input.value));
+        for (const item of updates) {
+          if (item.pageId && (item.name !== item.oldName || item.category !== item.original.category)) {
+            await api("/vote-candidate-save", {
+              method: "POST",
+              body: JSON.stringify({ pageId: item.pageId, name: item.name, category: item.category })
+            });
+          }
           await api("/vote-target-setting", {
             method: "POST",
-            body: JSON.stringify({ key: `target_${candidate}`, value })
+            body: JSON.stringify({ key: `target_${item.name}`, value: item.targetVotes })
           });
-          state.targets[candidate] = value;
+          state.targets[item.name] = item.targetVotes;
         }
-        setNotice(adminMessage, "達標線設定已儲存。", "success");
+
+        await loadCandidates();
+        await loadTargetSettings();
+        state.editingCandidates = false;
+        renderTargetForm();
+        setNotice(adminMessage, "候選人與達標線設定已儲存。", "success");
       } catch (error) {
-        setNotice(adminMessage, error.message || "達標線儲存失敗。", "error");
+        setNotice(adminMessage, error.message || "設定儲存失敗。", "error");
       } finally {
         setLoading(false);
+        renderTargetForm();
       }
     });
-
-    $("prevPageBtn").addEventListener("click", () => {
+    $('prevPageBtn').addEventListener("click", () => {
       state.currentPage -= 1;
       renderVoterTable();
     });

@@ -1,0 +1,69 @@
+{
+  "name": "vote-candidate-save",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vote-candidate-save",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-candidate-save",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": "={{ $json.body.pageId }}",
+        "properties": {
+          "姓名": {
+            "title": [
+              {
+                "text": {
+                  "content": "={{ $json.body.name || '' }}"
+                }
+              }
+            ]
+          },
+          "類別": {
+            "select": {
+              "name": "={{ $json.body.category || '' }}"
+            }
+          }
+        }
+      },
+      "id": "notion-update-candidate",
+      "name": "Update Vote Candidate",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, pageId: $('Webhook').item.json.body.pageId, name: $('Webhook').item.json.body.name || '', category: $('Webhook').item.json.body.category || '' }) }}"
+      },
+      "id": "respond-candidate-updated",
+      "name": "Respond Candidate Updated",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Update Vote Candidate", "type": "main", "index": 0 }]]
+    },
+    "Update Vote Candidate": {
+      "main": [[{ "node": "Respond Candidate Updated", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

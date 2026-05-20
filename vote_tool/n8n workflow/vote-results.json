@@ -63,29 +63,7 @@
     },
     {
       "parameters": {
-        "resource": "databasePage",
-        "operation": "getAll",
-        "databaseId": {
-          "__rl": true,
-          "value": "364b3ad1d1cd80169bb9de5426896e49",
-          "mode": "id"
-        },
-        "returnAll": true,
-        "simplify": false,
-        "options": {}
-      },
-      "id": "notion-get-voters",
-      "name": "Get Vote Voters",
-      "type": "n8n-nodes-base.notion",
-      "typeVersion": 2,
-      "position": [
-        460,
-        500
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const CAT_CHAIRMAN = '\\u4e3b\\u59d4';\nconst CAT_REP = '\\u5168\\u4ee3';\nconst CAT_CITY = '\\u5e02\\u4ee3';\nconst FIELD_NAME = '\\u59d3\\u540d';\nconst FIELD_CATEGORY = '\\u985e\\u5225';\nconst FIELD_CHAIRMAN_VOTE = '\\u6295\\u7d66\\u4e3b\\u59d4';\nconst FIELD_REP_VOTE = '\\u6295\\u7d66\\u5168\\u4ee3';\nconst FIELD_CITY_VOTE = '\\u6295\\u7d66\\u5e02\\u4ee3';\nconst CATEGORY_BY_NAME = {\n  '\\u8a31\\u6728\\u6842': CAT_CHAIRMAN,\n  '\\u9673\\u6021\\u6f54': CAT_REP,\n  '\\u90b1\\u67cf\\u745e': CAT_REP,\n  '\\u9ec3\\u7f8e\\u60e0': CAT_CITY,\n  '\\u8cf4\\u79c0\\u5982': CAT_CITY,\n  '\\u6797\\u5fd7\\u9d3b': CAT_CITY,\n  '\\u738b\\u4fca\\u5091': CAT_CITY,\n  '\\u9673\\u4f69\\u541b': CAT_CITY\n};\nfunction compact(value) {\n  return String(value || '').replace(/\\s+/g, '').trim();\n}\nfunction notionPropText(property) {\n  if (!property) return '';\n  const arr = property.title || property.rich_text;\n  if (Array.isArray(arr)) {\n    return arr.map(function(t) { return t.plain_text || (t.text && t.text.content) || ''; }).join('');\n  }\n  if (property.select && property.select.name != null) return String(property.select.name);\n  if (Array.isArray(property.multi_select)) return property.multi_select.map(function(s) { return s.name || ''; }).join(', ');\n  if (typeof property.number === 'number') return String(property.number);\n  return '';\n}\nfunction findProp(json, names) {\n  const props = json.properties || {};\n  for (const name of names) {\n    if (props[name] != null) return props[name];\n  }\n  const wantedCompact = names.map(compact);\n  for (const [key, value] of Object.entries(props)) {\n    if (wantedCompact.includes(compact(key))) return value;\n  }\n  return undefined;\n}\nfunction titleText(json) {\n  const p = findProp(json, [FIELD_NAME, 'name', 'Name']) ||\n    Object.values(json.properties || {}).find(function(p) { return p.type === 'title'; });\n  return notionPropText(p).trim();\n}\nfunction categoryText(json, candidateName) {\n  const p = findProp(json, [FIELD_CATEGORY, 'category', 'Category']);\n  const explicit = notionPropText(p).trim();\n  if ([CAT_CHAIRMAN, CAT_REP, CAT_CITY].includes(explicit)) return explicit;\n  return CATEGORY_BY_NAME[candidateName] || '';\n}\nfunction recordFieldText(json, fieldName) {\n  return notionPropText(findProp(json, [fieldName])).trim();\n}\nconst candidates = $('Get Vote Candidates').all().map(function(item) {\n  const name = titleText(item.json);\n  return { name: name, category: categoryText(item.json, name), votes: 0 };\n}).filter(function(item) { return item.name; });\nconst byName = new Map(candidates.map(function(item) { return [compact(item.name), item]; }));\nconst records = $('Get Vote Records').all();\nfor (const record of records) {\n  const votedNames = [\n    recordFieldText(record.json, FIELD_CHAIRMAN_VOTE),\n    recordFieldText(record.json, FIELD_REP_VOTE),\n    recordFieldText(record.json, FIELD_CITY_VOTE)\n  ].map(compact).filter(Boolean);\n  for (const votedName of votedNames) {\n    const candidate = byName.get(votedName);\n    if (candidate) candidate.votes += 1;\n  }\n}\nconst voters = $('Get Vote Voters').all();\nreturn [{ json: {\n  success: true,\n  candidates: candidates,\n  totalVoters: voters.length,\n  votedCount: records.length,\n  recordCount: records.length\n} }];"
+        "jsCode": "const CAT_CHAIRMAN = '\\u4e3b\\u59d4';\nconst CAT_REP = '\\u5168\\u4ee3';\nconst CAT_CITY = '\\u5e02\\u4ee3';\nconst FIELD_NAME = '\\u59d3\\u540d';\nconst FIELD_CATEGORY = '\\u985e\\u5225';\nconst FIELD_CHAIRMAN_VOTE = '\\u6295\\u7d66\\u4e3b\\u59d4';\nconst FIELD_REP_VOTE = '\\u6295\\u7d66\\u5168\\u4ee3';\nconst FIELD_CITY_VOTE = '\\u6295\\u7d66\\u5e02\\u4ee3';\nconst CATEGORY_BY_NAME = {\n  '\\u8a31\\u6728\\u6842': CAT_CHAIRMAN,\n  '\\u9673\\u6021\\u6f54': CAT_REP,\n  '\\u90b1\\u67cf\\u745e': CAT_REP,\n  '\\u9ec3\\u7f8e\\u60e0': CAT_CITY,\n  '\\u8cf4\\u79c0\\u5982': CAT_CITY,\n  '\\u6797\\u5fd7\\u9d3b': CAT_CITY,\n  '\\u738b\\u4fca\\u5091': CAT_CITY,\n  '\\u9673\\u4f69\\u541b': CAT_CITY\n};\nfunction compact(value) {\n  return String(value || '').replace(/\\s+/g, '').trim();\n}\nfunction notionPropText(property) {\n  if (!property) return '';\n  const arr = property.title || property.rich_text;\n  if (Array.isArray(arr)) {\n    return arr.map(function(t) { return t.plain_text || (t.text && t.text.content) || ''; }).join('');\n  }\n  if (property.select && property.select.name != null) return String(property.select.name);\n  if (Array.isArray(property.multi_select)) return property.multi_select.map(function(s) { return s.name || ''; }).join(', ');\n  if (typeof property.number === 'number') return String(property.number);\n  return '';\n}\nfunction findProp(json, names) {\n  const props = json.properties || {};\n  for (const name of names) {\n    if (props[name] != null) return props[name];\n  }\n  const wantedCompact = names.map(compact);\n  for (const [key, value] of Object.entries(props)) {\n    if (wantedCompact.includes(compact(key))) return value;\n  }\n  return undefined;\n}\nfunction titleText(json) {\n  const p = findProp(json, [FIELD_NAME, 'name', 'Name']) ||\n    Object.values(json.properties || {}).find(function(p) { return p.type === 'title'; });\n  return notionPropText(p).trim();\n}\nfunction categoryText(json, candidateName) {\n  const p = findProp(json, [FIELD_CATEGORY, 'category', 'Category']);\n  const explicit = notionPropText(p).trim();\n  if ([CAT_CHAIRMAN, CAT_REP, CAT_CITY].includes(explicit)) return explicit;\n  return CATEGORY_BY_NAME[candidateName] || '';\n}\nfunction recordFieldText(json, fieldName) {\n  return notionPropText(findProp(json, [fieldName])).trim();\n}\nconst candidates = $('Get Vote Candidates').all().map(function(item) {\n  const name = titleText(item.json);\n  return { name: name, category: categoryText(item.json, name), votes: 0 };\n}).filter(function(item) { return item.name; });\nconst byName = new Map(candidates.map(function(item) { return [compact(item.name), item]; }));\nconst records = $('Get Vote Records').all();\nfor (const record of records) {\n  const votedNames = [\n    recordFieldText(record.json, FIELD_CHAIRMAN_VOTE),\n    recordFieldText(record.json, FIELD_REP_VOTE),\n    recordFieldText(record.json, FIELD_CITY_VOTE)\n  ].map(compact).filter(Boolean);\n  for (const votedName of votedNames) {\n    const candidate = byName.get(votedName);\n    if (candidate) candidate.votes += 1;\n  }\n}\nreturn [{ json: {\n  success: true,\n  candidates: candidates,\n  totalVoters: 0,\n  votedCount: records.length,\n  recordCount: records.length,\n  generatedAt: new Date().toISOString()\n} }];"
       },
       "id": "code-build-results",
       "name": "Build Vote Results",
@@ -124,21 +102,6 @@
         680,
         260
       ]
-    },
-    {
-      "parameters": {
-        "mode": "combine",
-        "combinationMode": "mergeByPosition",
-        "options": {}
-      },
-      "id": "merge-all-results",
-      "name": "Merge All Vote Data",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2.1,
-      "position": [
-        900,
-        380
-      ]
     }
   ],
   "connections": {
@@ -152,11 +115,6 @@
           },
           {
             "node": "Get Vote Records",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Get Vote Voters",
             "type": "main",
             "index": 0
           }
@@ -186,28 +144,6 @@
       ]
     },
     "Merge Candidates Records": {
-      "main": [
-        [
-          {
-            "node": "Merge All Vote Data",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Vote Voters": {
-      "main": [
-        [
-          {
-            "node": "Merge All Vote Data",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge All Vote Data": {
       "main": [
         [
           {

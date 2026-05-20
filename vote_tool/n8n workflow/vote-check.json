@@ -26,14 +26,26 @@
           "value": "364b3ad1d1cd80169bb9de5426896e49",
           "mode": "id"
         },
-        "returnAll": true,
+        "returnAll": false,
+        "limit": 1,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "姓名|title",
+              "condition": "equals",
+              "value": "={{ String($json.body?.name || $json.name || '').trim() }}"
+            }
+          ]
+        },
         "simplify": false,
         "options": {}
       },
       "id": "notion-get-all-voters",
-      "name": "取得所有投票人",
+      "name": "依姓名查詢投票人",
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2,
+      "alwaysOutputData": true,
       "position": [
         460,
         300
@@ -86,14 +98,14 @@
       "main": [
         [
           {
-            "node": "取得所有投票人",
+            "node": "依姓名查詢投票人",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "取得所有投票人": {
+    "依姓名查詢投票人": {
       "main": [
         [
           {

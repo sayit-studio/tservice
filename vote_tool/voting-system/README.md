@@ -5,7 +5,7 @@
 ## 檔案
 
 - `index.html`：LIFF 投票頁，mobile 優先。
-- `results.html`：即時票數看板，desktop/電視牆優先，每 30 秒輪詢一次。
+- `results.html`：即時票數看板，desktop/電視牆優先，每 5 秒輪詢一次。
 - `admin.html`：管理員設定頁，預設密碼 `admin2026`，可設定達標人數與編輯投票人預設投票對象。
 - `mock-data.json`：2 筆測試用假名單與候選人票數範例。
 
@@ -42,14 +42,16 @@ const LIFF_ID = "LIFF_ID_HERE";
 
 ## API
 
-- `POST /vote-check`：查詢投票人，body `{ name, lineUserId }`
+- `POST /vote-check`：查詢投票人，body `{ name, lineUserId }`，n8n workflow 以 Notion `姓名` title filter 查 1 筆，避免每次進入投票時讀取全名單。
 - `POST /vote-submit`：送出投票，body `{ pageId, name, chairman, rep, city, lineUserId }`
-- `GET /vote-results`：取得即時票數與候選人清單
+- `GET /vote-results`：取得即時票數與候選人清單；看板每 5 秒呼叫一次，workflow 不再讀取投票人全表，票數由投票紀錄計算。
+- `GET /vote-candidates`：管理員取得候選人清單，回傳 `{ candidates: [{ pageId, name, category }] }`。
+- `POST /vote-candidate-save`：管理員更新候選人名稱與類別，body `{ pageId, name, category }`。
 - `POST /vote-change`：管理員更改預設投票對象，body `{ voterName, newChairman, newRep, newCity }`
-- `GET /vote-voters`：管理員取得投票人清單，回傳 `{ voters: [...] }`
+- `GET /vote-voters?status=voted|unvoted`：管理員依投票狀態取得投票人清單，回傳 `{ voters: [...] }`。姓名搜尋使用 `/vote-check`，避免載入全名單。
 - `POST /vote-voter-create`：管理員新增投票人，body `{ name, chairman, rep, city }`
-- `GET /vote-target-setting`：取得達標人數，回傳 `{ targetVotes }`
-- `POST /vote-target-setting`：儲存達標人數，body `{ targetVotes }`
+- `GET /vote-target-setting`：取得設定，回傳 `{ settings: [{ key, value }] }`。看板會讀取 `target_候選人姓名` 作為各候選人達標票數，也會讀取 `totalVoters` / `total_voters` / `voterTotal` 作為總投票人數。
+- `POST /vote-target-setting`：儲存設定，body `{ key, value }`，例如 `{ key: "target_候選人姓名", value: 300 }`。
 
 ## n8n workflows
 

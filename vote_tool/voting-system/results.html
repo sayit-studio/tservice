@@ -270,7 +270,12 @@
     const TARGET_STORAGE_KEY = "voteTargetVotes";
     const DEFAULT_TARGET_VOTES = 300;
     let targetVotes = Number(localStorage.getItem(TARGET_STORAGE_KEY)) || DEFAULT_TARGET_VOTES;
-    const POLL_MS = 30000;
+    let targetVotesByName = {};
+    let configuredTotalVoters = null;
+    const POLL_MS = 5000;
+    const TARGET_REFRESH_MS = 60000;
+    let isRefreshing = false;
+    let lastTargetLoadAt = 0;
     const MOCK_RESULTS = {
       totalVoters: 5,
       votedCount: 1,
@@ -297,7 +302,7 @@
       if (USE_MOCK_DATA) {
         await new Promise((resolve) => setTimeout(resolve, 250));
         if (path === "/vote-results") return { success: true, data: MOCK_RESULTS };
-        if (path === "/vote-target-setting") return { success: true, targetVotes };
+        if (path === "/vote-target-setting") return { success: true, targetVotes, settings: [] };
         throw new Error("Mock API 尚未支援此路徑");
       }
 
@@ -317,13 +322,32 @@
     }
 
     async function loadTargetVotes() {
+      const now = Date.now();
+      if (lastTargetLoadAt && now - lastTargetLoadAt < TARGET_REFRESH_MS) return;
+
       if (USE_MOCK_DATA) {
         targetVotes = Number(localStorage.getItem(TARGET_STORAGE_KEY)) || DEFAULT_TARGET_VOTES;
+        targetVotesByName = {};
+        configuredTotalVoters = null;
+        lastTargetLoadAt = now;
         return;
       }
 
       const data = await api("/vote-target-setting");
       targetVotes = Number(data.targetVotes) || DEFAULT_TARGET_VOTES;
+      targetVotesByName = {};
+      configuredTotalVoters = null;
+      asArray(data.settings).forEach((item) => {
+        const key = String(item.key || "").trim();
+        const value = Number(item.value);
+        if (!Number.isFinite(value) || value <= 0) return;
+        if (key.startsWith("target_")) {
+          targetVotesByName[key.slice(7)] = value;
+        } else if (["totalVoters", "total_voters", "voterTotal", "voters_total"].includes(key)) {
+          configuredTotalVoters = Math.floor(value);
+        }
+      });
+      lastTargetLoadAt = now;
     }
 
     function asArray(value) {
@@ -386,7 +410,8 @@
         .slice()
         .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name, "zh-Hant"))
         .forEach((candidate) => {
-          const percent = Math.min(100, Math.round((candidate.votes / targetVotes) * 100));
+          const candidateTargetVotes = targetVotesByName[candidate.name] || targetVotes;
+          const percent = Math.min(100, Math.round((candidate.votes / candidateTargetVotes) * 100));
           const item = document.createElement("article");
           item.className = "candidate";
           item.innerHTML = `
@@ -394,11 +419,11 @@
               <div class="name"></div>
               <div class="votes">${candidate.votes}</div>
             </div>
-            <div class="bar" aria-label="${candidate.votes} 票，目標 ${targetVotes} 票">
+            <div class="bar" aria-label="${candidate.votes} 票，目標 ${candidateTargetVotes} 票">
               <div class="fill" style="width: ${percent}%"></div>
-              <div class="target-line" title="${targetVotes}票達標線"></div>
+              <div class="target-line" title="${candidateTargetVotes}票達標線"></div>
             </div>
-            <div class="target-note">${targetVotes}票達標線</div>
+            <div class="target-note">${candidateTargetVotes}票達標線</div>
           `;
           item.querySelector(".name").textContent = candidate.name;
           el.append(item);
@@ -412,13 +437,15 @@
     }
 
     async function refreshResults() {
+      if (isRefreshing) return;
+      isRefreshing = true;
       const refreshBtn = $("refreshBtn");
       try {
         refreshBtn.disabled = true;
         refreshBtn.textContent = "更新中";
         await loadTargetVotes();
         const data = normalizeResults(await api("/vote-results"));
-        $("totalVoters").textContent = data.totalVoters;
+        $("totalVoters").textContent = configuredTotalVoters ?? data.totalVoters;
         $("votedCount").textContent = data.votedCount;
         renderList("chairmanList", data.chairman);
         renderList("repList", data.rep);
@@ -430,6 +457,7 @@
       } finally {
         refreshBtn.disabled = false;
         refreshBtn.textContent = "重新載入";
+        isRefreshing = false;
       }
     }
 
