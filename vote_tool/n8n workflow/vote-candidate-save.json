@@ -68,7 +68,11 @@
       "parameters": {
         "resource": "databasePage",
         "operation": "update",
-        "pageId": "={{ $json.pageId }}",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.pageId }}"
+        },
         "properties": {
           "姓名": {
             "title": [
