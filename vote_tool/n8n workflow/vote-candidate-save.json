@@ -12,7 +12,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -33,6 +36,9 @@
             "select": {
               "name": "={{ $json.body.category || '' }}"
             }
+          },
+          "票數": {
+            "number": "={{ Number($json.body.targetVotes) || 0 }}"
           }
         }
       },
@@ -40,26 +46,48 @@
       "name": "Update Vote Candidate",
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, pageId: $('Webhook').item.json.body.pageId, name: $('Webhook').item.json.body.name || '', category: $('Webhook').item.json.body.category || '' }) }}"
+        "responseBody": "={{ JSON.stringify({ success: true, pageId: $('Webhook').item.json.body.pageId, name: $('Webhook').item.json.body.name || '', category: $('Webhook').item.json.body.category || '', targetVotes: Number($('Webhook').item.json.body.targetVotes) || 0 }) }}"
       },
       "id": "respond-candidate-updated",
       "name": "Respond Candidate Updated",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "Update Vote Candidate", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Update Vote Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Update Vote Candidate": {
-      "main": [[{ "node": "Respond Candidate Updated", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Candidate Updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},

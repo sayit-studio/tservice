@@ -359,7 +359,8 @@
       return {
         name: item?.name || item?.candidate || item?.title || "未命名",
         category: item?.category || categoryByName(item?.name || item?.candidate || item?.title || ""),
-        votes: Number(item?.votes ?? item?.count ?? item?.total ?? 0)
+        votes: Number(item?.votes ?? item?.count ?? item?.total ?? 0),
+        targetVotes: Number(item?.targetVotes ?? item?.target ?? item?.goal ?? item?.threshold ?? 0)
       };
     }
 
@@ -410,7 +411,7 @@
         .slice()
         .sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name, "zh-Hant"))
         .forEach((candidate) => {
-          const candidateTargetVotes = targetVotesByName[candidate.name] || targetVotes;
+          const candidateTargetVotes = candidate.targetVotes || targetVotesByName[candidate.name] || targetVotes;
           const percent = Math.min(100, Math.round((candidate.votes / candidateTargetVotes) * 100));
           const item = document.createElement("article");
           item.className = "candidate";

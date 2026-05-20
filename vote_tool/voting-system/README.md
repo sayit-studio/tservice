@@ -45,12 +45,12 @@ const LIFF_ID = "LIFF_ID_HERE";
 - `POST /vote-check`：查詢投票人，body `{ name, lineUserId }`，n8n workflow 以 Notion `姓名` title filter 查 1 筆，避免每次進入投票時讀取全名單。
 - `POST /vote-submit`：送出投票，body `{ pageId, name, chairman, rep, city, lineUserId }`
 - `GET /vote-results`：取得即時票數與候選人清單；看板每 5 秒呼叫一次，workflow 不再讀取投票人全表，票數由投票紀錄計算。
-- `GET /vote-candidates`：管理員取得候選人清單，回傳 `{ candidates: [{ pageId, name, category }] }`。
-- `POST /vote-candidate-save`：管理員更新候選人名稱與類別，body `{ pageId, name, category }`。
+- `GET /vote-candidates`：管理員取得候選人清單，回傳 `{ candidates: [{ pageId, name, category, targetVotes }] }`。`targetVotes` 會讀候選人資料庫的 `達標數` / `達標票數` / `目標票數` / `票數` number 欄位。
+- `POST /vote-candidate-save`：管理員更新候選人名稱、類別與達標數，body `{ pageId, name, category, targetVotes }`；目前會把達標數寫入候選人資料庫的 `票數` 欄位。
 - `POST /vote-change`：管理員更改預設投票對象，body `{ voterName, newChairman, newRep, newCity }`
 - `GET /vote-voters?status=voted|unvoted`：管理員依投票狀態取得投票人清單，回傳 `{ voters: [...] }`。姓名搜尋使用 `/vote-check`，避免載入全名單。
 - `POST /vote-voter-create`：管理員新增投票人，body `{ name, chairman, rep, city }`
-- `GET /vote-target-setting`：取得設定，回傳 `{ settings: [{ key, value }] }`。看板會讀取 `target_候選人姓名` 作為各候選人達標票數，也會讀取 `totalVoters` / `total_voters` / `voterTotal` 作為總投票人數。
+- `GET /vote-target-setting`：取得設定，回傳 `{ settings: [{ key, value }] }`。看板只用它讀取 `totalVoters` / `total_voters` / `voterTotal` 作為總投票人數；候選人達標數改由候選人資料庫欄位提供。
 - `POST /vote-target-setting`：儲存設定，body `{ key, value }`，例如 `{ key: "target_候選人姓名", value: 300 }`。
 
 ## n8n workflows

@@ -628,7 +628,8 @@
         const candidates = data.candidates.map(c => ({
           pageId: c.pageId || c.id || c.notionPageId || "",
           name: c.name,
-          category: c.category || categoryByName(c.name)
+          category: c.category || categoryByName(c.name),
+          targetVotes: Number(c.targetVotes) || DEFAULT_TARGET_VOTES
         }));
         state.candidateItems = candidates;
         return {
@@ -645,9 +646,9 @@
         city: uniqueNames(source.city || source.cityCouncil || source.cityCandidates || [])
       };
       state.candidateItems = [
-        ...fallback.chairman.map(name => ({ pageId: "", name, category: "主委" })),
-        ...fallback.rep.map(name => ({ pageId: "", name, category: "全代" })),
-        ...fallback.city.map(name => ({ pageId: "", name, category: "市代" }))
+        ...fallback.chairman.map(name => ({ pageId: "", name, category: "主委", targetVotes: DEFAULT_TARGET_VOTES })),
+        ...fallback.rep.map(name => ({ pageId: "", name, category: "全代", targetVotes: DEFAULT_TARGET_VOTES })),
+        ...fallback.city.map(name => ({ pageId: "", name, category: "市代", targetVotes: DEFAULT_TARGET_VOTES }))
       ];
       return fallback;
     }
@@ -673,18 +674,6 @@
     async function loadCandidates() {
       const data = await api("/vote-candidates");
       state.candidates = normalizeResults(data);
-    }
-
-    async function loadTargetSettings() {
-      const data = await api("/vote-target-setting");
-      state.targets = {};
-      asArray(data.settings).forEach(item => {
-        const key = String(item.key || "");
-        if (key.startsWith("target_")) {
-          const name = key.slice(7);
-          state.targets[name] = Number(item.value) || DEFAULT_TARGET_VOTES;
-        }
-      });
     }
 
     async function loadVoters(status) {
@@ -732,7 +721,7 @@
         targetInput.dataset.field = "target";
         targetInput.dataset.index = String(index);
         targetInput.dataset.candidate = candidate.name;
-        targetInput.value = String(state.targets[candidate.name] || DEFAULT_TARGET_VOTES);
+        targetInput.value = String(candidate.targetVotes || DEFAULT_TARGET_VOTES);
         targetInput.disabled = !state.editingCandidates;
 
         row.append(nameInput, categorySelect, targetInput);
@@ -886,7 +875,6 @@
 
     async function loadAll() {
       await loadCandidates();
-      await loadTargetSettings();
       state.voters = [];
       state.currentPage = 1;
       state.editingCandidates = false;
@@ -1009,21 +997,14 @@
       try {
         setLoading(true);
         for (const item of updates) {
-          if (item.pageId && (item.name !== item.oldName || item.category !== item.original.category)) {
-            await api("/vote-candidate-save", {
-              method: "POST",
-              body: JSON.stringify({ pageId: item.pageId, name: item.name, category: item.category })
-            });
-          }
-          await api("/vote-target-setting", {
+          if (!item.pageId) continue;
+          await api("/vote-candidate-save", {
             method: "POST",
-            body: JSON.stringify({ key: `target_${item.name}`, value: item.targetVotes })
+            body: JSON.stringify({ pageId: item.pageId, name: item.name, category: item.category, targetVotes: item.targetVotes })
           });
-          state.targets[item.name] = item.targetVotes;
         }
 
         await loadCandidates();
-        await loadTargetSettings();
         state.editingCandidates = false;
         renderTargetForm();
         setNotice(adminMessage, "候選人與達標線設定已儲存。", "success");

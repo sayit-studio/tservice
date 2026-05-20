@@ -12,7 +12,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -31,17 +34,23 @@
       "name": "Get Vote Candidates",
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const CAT_CHAIRMAN = '\\u4e3b\\u59d4';\nconst CAT_REP = '\\u5168\\u4ee3';\nconst CAT_CITY = '\\u5e02\\u4ee3';\nconst FIELD_NAME = '\\u59d3\\u540d';\nconst FIELD_CATEGORY = '\\u985e\\u5225';\nconst CATEGORY_BY_NAME = {\n  '\\u8a31\\u6728\\u6842': CAT_CHAIRMAN,\n  '\\u9673\\u6021\\u6f54': CAT_REP,\n  '\\u90b1\\u67cf\\u745e': CAT_REP,\n  '\\u9ec3\\u7f8e\\u60e0': CAT_CITY,\n  '\\u8cf4\\u79c0\\u5982': CAT_CITY,\n  '\\u6797\\u5fd7\\u9d3b': CAT_CITY,\n  '\\u738b\\u4fca\\u5091': CAT_CITY,\n  '\\u9673\\u4f69\\u541b': CAT_CITY\n};\nfunction compact(value) { return String(value || '').replace(/\\s+/g, '').trim(); }\nfunction notionPropText(property) {\n  if (!property) return '';\n  const arr = property.title || property.rich_text;\n  if (Array.isArray(arr)) return arr.map(t => t.plain_text || (t.text && t.text.content) || '').join('');\n  if (property.select && property.select.name != null) return String(property.select.name);\n  if (typeof property.number === 'number') return String(property.number);\n  return '';\n}\nfunction findProp(json, names) {\n  const props = json.properties || {};\n  for (const name of names) if (props[name] != null) return props[name];\n  const wanted = names.map(compact);\n  for (const [key, value] of Object.entries(props)) if (wanted.includes(compact(key))) return value;\n  return undefined;\n}\nfunction titleText(json) {\n  const p = findProp(json, [FIELD_NAME, 'name', 'Name']) || Object.values(json.properties || {}).find(p => p.type === 'title');\n  return notionPropText(p).trim();\n}\nfunction categoryText(json, candidateName) {\n  const explicit = notionPropText(findProp(json, [FIELD_CATEGORY, 'category', 'Category'])).trim();\n  if ([CAT_CHAIRMAN, CAT_REP, CAT_CITY].includes(explicit)) return explicit;\n  return CATEGORY_BY_NAME[candidateName] || '';\n}\nconst candidates = $input.all().map(item => {\n  const name = titleText(item.json);\n  return { pageId: item.json.id || '', name, category: categoryText(item.json, name) };\n}).filter(item => item.name);\nreturn [{ json: { success: true, candidates } }];"
+        "jsCode": "const CAT_CHAIRMAN = '\\u4e3b\\u59d4';\nconst CAT_REP = '\\u5168\\u4ee3';\nconst CAT_CITY = '\\u5e02\\u4ee3';\nconst FIELD_NAME = '\\u59d3\\u540d';\nconst FIELD_CATEGORY = '\\u985e\\u5225';\nconst FIELD_TARGETS = ['\\u9054\\u6a19\\u6578', '\\u9054\\u6a19\\u7968\\u6578', '\\u76ee\\u6a19\\u7968\\u6578', '\\u7968\\u6578'];\nconst DEFAULT_TARGET_VOTES = 300;\nconst CATEGORY_BY_NAME = {\n  '\\u8a31\\u6728\\u6842': CAT_CHAIRMAN,\n  '\\u9673\\u6021\\u6f54': CAT_REP,\n  '\\u90b1\\u67cf\\u745e': CAT_REP,\n  '\\u9ec3\\u7f8e\\u60e0': CAT_CITY,\n  '\\u8cf4\\u79c0\\u5982': CAT_CITY,\n  '\\u6797\\u5fd7\\u9d3b': CAT_CITY,\n  '\\u738b\\u4fca\\u5091': CAT_CITY,\n  '\\u9673\\u4f69\\u541b': CAT_CITY\n};\nfunction compact(value) { return String(value || '').replace(/\\s+/g, '').trim(); }\nfunction notionPropText(property) {\n  if (!property) return '';\n  const arr = property.title || property.rich_text;\n  if (Array.isArray(arr)) return arr.map(t => t.plain_text || (t.text && t.text.content) || '').join('');\n  if (property.select && property.select.name != null) return String(property.select.name);\n  if (typeof property.number === 'number') return String(property.number);\n  return '';\n}\nfunction notionPropNumber(property) {\n  if (!property) return null;\n  if (typeof property.number === 'number') return property.number;\n  const parsed = Number(notionPropText(property));\n  return Number.isFinite(parsed) ? parsed : null;\n}\nfunction findProp(json, names) {\n  const props = json.properties || {};\n  for (const name of names) if (props[name] != null) return props[name];\n  const wanted = names.map(compact);\n  for (const [key, value] of Object.entries(props)) if (wanted.includes(compact(key))) return value;\n  return undefined;\n}\nfunction titleText(json) {\n  const p = findProp(json, [FIELD_NAME, 'name', 'Name']) || Object.values(json.properties || {}).find(p => p.type === 'title');\n  return notionPropText(p).trim();\n}\nfunction categoryText(json, candidateName) {\n  const explicit = notionPropText(findProp(json, [FIELD_CATEGORY, 'category', 'Category'])).trim();\n  if ([CAT_CHAIRMAN, CAT_REP, CAT_CITY].includes(explicit)) return explicit;\n  return CATEGORY_BY_NAME[candidateName] || '';\n}\nfunction targetVotes(json) {\n  const value = notionPropNumber(findProp(json, FIELD_TARGETS));\n  return value && value > 0 ? Math.floor(value) : DEFAULT_TARGET_VOTES;\n}\nconst candidates = $input.all().map(item => {\n  const name = titleText(item.json);\n  return { pageId: item.json.id || '', name, category: categoryText(item.json, name), targetVotes: targetVotes(item.json) };\n}).filter(item => item.name);\nreturn [{ json: { success: true, candidates } }];"
       },
       "id": "code-build-candidates",
       "name": "Build Vote Candidates",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -52,18 +61,45 @@
       "name": "Respond Vote Candidates",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "Get Vote Candidates", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Get Vote Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get Vote Candidates": {
-      "main": [[{ "node": "Build Vote Candidates", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Build Vote Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Build Vote Candidates": {
-      "main": [[{ "node": "Respond Vote Candidates", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond Vote Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},
