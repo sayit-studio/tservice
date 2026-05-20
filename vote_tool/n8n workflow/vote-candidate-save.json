@@ -72,12 +72,12 @@
           },
           "conditions": [
             {
-              "id": "has-error",
-              "leftValue": "={{ $json.success === false }}",
-              "rightValue": true,
+              "id": "missing-page-id",
+              "leftValue": "={{ $json.pageId || \"\" }}",
+              "rightValue": "",
               "operator": {
-                "type": "boolean",
-                "operation": "equals"
+                "type": "string",
+                "operation": "isEmpty"
               }
             }
           ]
@@ -126,7 +126,7 @@
               "name": "={{ $json.category }}"
             }
           },
-          "票數": {
+          "達標數": {
             "number": "={{ Number($json.targetVotes) || 0 }}"
           }
         }
