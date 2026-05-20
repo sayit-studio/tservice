@@ -441,7 +441,7 @@
       </div>
 
       <section class="panel">
-        <h2>達標線設定</h2>
+        <h2>候選人名單</h2>
         <div id="targetSettingForm">
           <div class="hint">載入候選人後即可設定各投票對象的達標票數。</div>
         </div>
@@ -657,11 +657,17 @@
         pageId: voter.pageId || voter.id || voter.notionPageId || "",
         name: voter.name || voter.voterName || "",
         lineUserId: voter.lineUserId || "",
-        voted: Boolean(voter.voted || voter.hasVoted || voter.isVoted),
+        voted: normalizeVoted(voter.voted ?? voter.hasVoted ?? voter.isVoted),
         chairman: voter.chairman || voter.currentChairman || voter.defaultChairman || "",
         rep: voter.rep || voter.currentRep || voter.defaultRep || "",
         city: voter.city || voter.currentCity || voter.defaultCity || ""
       })).filter((voter) => voter.name);
+    }
+
+    function normalizeVoted(value) {
+      if (typeof value === "boolean") return value;
+      const text = String(value || "").trim().toLowerCase();
+      return ["yes", "true", "1", "已投票"].includes(text);
     }
 
     async function loadCandidates() {
@@ -969,6 +975,10 @@
     $("editCandidateBtn").addEventListener("click", () => {
       state.editingCandidates = !state.editingCandidates;
       renderTargetForm();
+      $("targetSettingForm").querySelectorAll("input, select").forEach((field) => {
+        field.disabled = !state.editingCandidates;
+      });
+      $("saveTargetBtn").disabled = !state.editingCandidates;
     });
 
     $("saveTargetBtn").addEventListener("click", async () => {

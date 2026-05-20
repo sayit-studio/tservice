@@ -509,13 +509,19 @@
       return {
         pageId: voter.pageId || voter.id || voter.notionPageId || "",
         name: voter.name || voter.voterName || nameInput.value.trim(),
-        voted: Boolean(voter.voted || voter.hasVoted || voter.isVoted),
+        voted: normalizeVoted(voter.voted ?? voter.hasVoted ?? voter.isVoted),
         chairman: voter.chairman || voter.defaultChairman || voter.currentChairman || "",
         rep: voter.rep || voter.defaultRep || voter.currentRep || "",
         city: voter.city || voter.defaultCity || voter.currentCity || "",
         inList,
         needsAssistance: voter.needsAssistance || data.needsAssistance || !inList
       };
+    }
+
+    function normalizeVoted(value) {
+      if (typeof value === "boolean") return value;
+      const text = String(value || "").trim().toLowerCase();
+      return ["yes", "true", "1", "已投票"].includes(text);
     }
 
     function fillSelect(selectEl, names, selectedName) {

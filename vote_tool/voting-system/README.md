@@ -30,7 +30,7 @@ const USE_MOCK_DATA = true;
 
 正式串接 n8n 時，請把三個頁面的 `USE_MOCK_DATA` 改成 `false`。
 
-`admin.html` 目前清單模式會讀取 `/vote-voters` 作為投票人列表來源；假資料模式下使用內建 2 筆名單。正式串接 n8n 時需補上此清單 endpoint，回傳格式可為 `{ voters: [...] }`。
+`admin.html` 目前只會在搜尋姓名或選擇投票狀態後讀取投票人資料。`/vote-voters` 使用 `已投票` select 欄位篩選，選項值為 `Yes` / `No`。
 
 `index.html` 的 LIFF ID 目前是 placeholder：
 

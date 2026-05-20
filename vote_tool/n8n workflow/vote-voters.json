@@ -28,9 +28,9 @@
         "filters": {
           "conditions": [
             {
-              "key": "已投票|checkbox",
+              "key": "已投票|select",
               "condition": "equals",
-              "value": "={{ $json.query.status === 'voted' }}"
+              "value": "={{ $json.query.status === 'voted' ? 'Yes' : 'No' }}"
             }
           ]
         },
@@ -46,7 +46,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ success: true, voters: $('取得投票人清單').all().map(item => ({ pageId: item.json.id, name: item.json.properties['姓名']?.title?.[0]?.plain_text || '', lineUserId: item.json.properties['LINE USER ID']?.rich_text?.[0]?.plain_text || '', voted: item.json.properties['已投票']?.checkbox || false, chairman: item.json.properties['預設主委']?.select?.name || '', rep: item.json.properties['預設全代']?.select?.name || '', city: item.json.properties['預設市代']?.select?.name || '' })) }) }}"
+        "responseBody": "={{ JSON.stringify({ success: true, voters: $('取得投票人清單').all().map(item => ({ pageId: item.json.id, name: item.json.properties['姓名']?.title?.[0]?.plain_text || '', lineUserId: item.json.properties['LINE USER ID']?.rich_text?.[0]?.plain_text || '', voted: item.json.properties['已投票']?.select?.name === 'Yes', chairman: item.json.properties['預設主委']?.select?.name || '', rep: item.json.properties['預設全代']?.select?.name || '', city: item.json.properties['預設市代']?.select?.name || '' })) }) }}"
       },
       "id": "respond-voters",
       "name": "回傳投票人清單",

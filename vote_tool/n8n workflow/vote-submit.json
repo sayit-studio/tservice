@@ -42,8 +42,8 @@
         "propertiesUi": {
           "propertyValues": [
             {
-              "key": "已投票|checkbox",
-              "checkboxValue": true
+              "key": "已投票|select",
+              "selectValue": "Yes"
             },
             {
               "key": "投票時間|date",

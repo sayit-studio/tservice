@@ -107,7 +107,9 @@
             }
           },
           "已投票": {
-            "checkbox": false
+            "select": {
+              "name": "No"
+            }
           },
           "LINE USER ID": {
             "rich_text": [
