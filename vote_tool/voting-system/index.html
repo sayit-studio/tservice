@@ -481,10 +481,23 @@
     function uniqueNames(items) {
       const names = [];
       asArray(items).forEach((item) => {
-        const name = typeof item === "string" ? item : item?.name || item?.candidate || item?.title;
-        if (name && !names.includes(name)) names.push(name);
+        const name = normalizeText(typeof item === "string" ? item : item?.name || item?.candidate || item?.title);
+        if (name && !names.some((existing) => sameText(existing, name))) names.push(name);
       });
       return names;
+    }
+
+    function normalizeText(value) {
+      return String(value || "").replace(/\s+/g, "").trim();
+    }
+
+    function sameText(a, b) {
+      return normalizeText(a) === normalizeText(b);
+    }
+
+    function findMatchingName(names, selectedName) {
+      if (!selectedName) return "";
+      return names.find((name) => sameText(name, selectedName)) || "";
     }
 
     function normalizeResults(data) {
@@ -510,9 +523,9 @@
         pageId: voter.pageId || voter.id || voter.notionPageId || "",
         name: voter.name || voter.voterName || nameInput.value.trim(),
         voted: normalizeVoted(voter.voted ?? voter.hasVoted ?? voter.isVoted),
-        chairman: voter.chairman || voter.defaultChairman || voter.currentChairman || "",
-        rep: voter.rep || voter.defaultRep || voter.currentRep || "",
-        city: voter.city || voter.defaultCity || voter.currentCity || "",
+        chairman: normalizeText(voter.chairman || voter.defaultChairman || voter.currentChairman || ""),
+        rep: normalizeText(voter.rep || voter.defaultRep || voter.currentRep || ""),
+        city: normalizeText(voter.city || voter.defaultCity || voter.currentCity || ""),
         inList,
         needsAssistance: voter.needsAssistance || data.needsAssistance || !inList
       };
@@ -526,8 +539,9 @@
 
     function fillSelect(selectEl, names, selectedName) {
       selectEl.innerHTML = "";
-      const merged = [...names];
-      if (selectedName && !merged.includes(selectedName)) merged.unshift(selectedName);
+      const merged = names.map(normalizeText).filter(Boolean);
+      const matchedName = findMatchingName(merged, selectedName);
+      if (selectedName && !matchedName) merged.unshift(normalizeText(selectedName));
 
       if (!merged.length) {
         selectEl.disabled = true;
@@ -537,7 +551,7 @@
 
       selectEl.disabled = false;
       merged.forEach((name) => selectEl.append(new Option(name, name)));
-      selectEl.value = selectedName && merged.includes(selectedName) ? selectedName : merged[0];
+      selectEl.value = matchedName || (selectedName && findMatchingName(merged, selectedName)) || merged[0];
     }
 
     async function loadCandidates() {
