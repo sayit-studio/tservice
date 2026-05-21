@@ -100,7 +100,7 @@ LINE 整合           Messaging API + LIFF SDK
 | Notion DB 重命名 Title 欄位 | DB `330b3ad1...` 的 title 欄改名為「請託案號」|
 | Notion DB 新增欄位（10 個） | 請託日期、接案秘書、當事人名、行動電話、通訊地址、委託人名、關係、託辦事項、處理天數、交辦會勘記錄 |
 | `config.js` 填入 imgbb API key | `imgbbApiKey: "YOUR_KEY"` |
-| Zeabur n8n 重新匯入 workflow | `REPLACE_admin-cases_CRUD_Notion_relation.json` |
+| Zeabur n8n 重新匯入 workflow | `Admin Cases.json` |
 
 ---
 
@@ -144,9 +144,9 @@ LINE 整合           Messaging API + LIFF SDK
 | `index.html` | 前台主頁（SPA，民眾用） |
 | `form.html` | 公開陳情表單 |
 | `zcy-staff-console-406/index.html` | 後台 HTML 入口（防爬蟲路徑） |
-| `n8n/workflows/REPLACE_admin-cases_CRUD_Notion_relation.json` | 後台陳情 CRUD（需 re-import） |
-| `n8n/workflows/REPLACE_admin-blog_CRUD_Notion.json` | 後台部落格 CRUD（需 import） |
-| `n8n/workflows/查詢陳情案件petition_list.json` | 公開案件查詢 |
-| `n8n/workflows/接收陳情表單petition_submit.json` | 公開表單提交 |
+| `n8n/workflows/Admin Cases.json` | 後台陳情 CRUD（需 re-import） |
+| `n8n/workflows/Admin Blog.json` | 後台部落格 CRUD（需 import） |
+| `n8n/workflows/查詢陳情案件petition list.json` | 公開案件查詢 |
+| `n8n/workflows/接收陳情表單petition submit.json` | 公開表單提交 |
 | `n8n/ADMIN_CRUD_ACTIONS.md` | API 規格文件 |
 | `PROGRESS.md` | 本開發進度文件 |

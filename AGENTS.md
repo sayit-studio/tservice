@@ -20,8 +20,8 @@
 
 - LINE OA settings Notion database ID: `35db3ad1d1cd80c28616dc1e2bc8917c`.
 - Admin LINE OA settings endpoint: `/admin-line-accounts`.
-- LINE OA settings workflow: `C:\dev\tseng-service\n8n\workflows\admin-line-accounts.json`.
-- Public LINE OA webhook workflow: `C:\dev\tseng-service\n8n\workflows\public-line-oa-members.json`.
+- LINE OA settings workflow: `C:\dev\tseng-service\n8n\workflows\Admin LINE OA Settings - Notion Nodes.json`.
+- Public LINE OA webhook workflow: `C:\dev\tseng-service\n8n\workflows\Public LINE OA Members - Notion Nodes.json`.
 - Public LINE OA webhook path currently remains `/webhook/line-oa-members`.
 - Do not store real LINE channel access tokens or channel secrets in frontend files, Notion, or exported workflow JSON.
 - Current Zeabur plan cannot reliably read runtime environment variables from n8n Code nodes.

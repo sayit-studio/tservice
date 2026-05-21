@@ -45,8 +45,8 @@ LINE OA 設定資料庫：
 - 後台表單可輸入 `Channel Access Token` 與 `Channel Secret`。
 - 輸入欄位是 password，不提供再次確認或顯示明碼。
 - 欄位留空代表保留原本加密值。
-- `admin-line-accounts.json` 使用 `Prepare LINE OA Save` Code node 內的 `LINE_CONFIG_ENCRYPTION_KEY` 常數，將 Token/Secret 加密後寫入 Notion。
-- `public-line-oa-members.json` 讀取 `public-service` 設定，並用 `Prepare LINE Member Upsert` Code node 內同一把 `LINE_CONFIG_ENCRYPTION_KEY` 解密 Token，再呼叫 LINE profile API。
+- `Admin LINE OA Settings - Notion Nodes.json` 使用 `Prepare LINE OA Save` Code node 的 `LINE_CONFIG_ENCRYPTION_KEY`，將 Token/Secret 加密後寫入 Notion。
+- `Public LINE OA Members - Notion Nodes.json` 讀取 `public-service` 設定，並用 `Prepare LINE Member Upsert` Code node 的同一把 `LINE_CONFIG_ENCRYPTION_KEY` 解密 Token，再呼叫 LINE profile API。
 - 儲存後後台 list API 只回傳 `hasAccessToken` / `hasChannelSecret`，不回傳明碼或加密值。
 - n8n Code node 會優先使用 Web Crypto API；若環境沒有 Web Crypto，需允許 Node.js `crypto` builtin。
 
@@ -75,7 +75,7 @@ NODE_FUNCTION_ALLOW_BUILTIN=crypto
 n8n Notion node 使用 data source ID：
 
 ```text
-292b3ad1d1cd8066b50c000b82565915
+292b3ad1d1cd8075b2d5e86e08d3d68f
 ```
 
 | LINE / Workflow value | Notion property |
