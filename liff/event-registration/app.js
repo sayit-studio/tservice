@@ -57,9 +57,22 @@
   const completeText = document.getElementById("completeText");
   const closeButton = document.getElementById("closeButton");
 
-  function showNotice(message, tone) {
-    noticeEl.textContent = displayMessage(message);
+  function showNotice(message, tone, withRetry) {
+    noticeEl.textContent = "";
     noticeEl.dataset.tone = tone || "info";
+    const text = document.createTextNode(displayMessage(message));
+    noticeEl.appendChild(text);
+    if (withRetry) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "重試";
+      btn.style.cssText = "margin-left:12px;padding:2px 12px;font-size:0.9em;cursor:pointer;";
+      btn.addEventListener("click", function () {
+        hideNotice();
+        initLiff();
+      });
+      noticeEl.appendChild(btn);
+    }
     noticeEl.hidden = false;
   }
 
@@ -140,13 +153,9 @@
       setValue("lineDisplayName", profile.displayName);
       captureMember("event_liff_open");
     } catch (error) {
-      const code = error && error.code;
-      if (code === "init_failed" || code === "INIT_FAILED") {
-        // Opened in external browser — LIFF context unavailable, form still works.
-        return;
-      }
+      const code = (error && error.code) || "";
       const detail = code || (error && error.message) ? ` (${code || error.message})` : "";
-      showNotice("LIFF 初始化失敗，請確認 LIFF ID 與 Endpoint URL。" + detail, "error");
+      showNotice("LINE 初始化失敗，請點此重試。" + detail, "error", true);
     }
   }
 
