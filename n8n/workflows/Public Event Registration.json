@@ -61,7 +61,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Event Registration Webhook').first().json.body || {};\nconst data = body.data || {};\nconst required = ['eventId', 'name', 'phone'];\nconst missing = required.filter((key) => !String(data[key] || '').trim());\nif (missing.length) {\n  return [{ json: { ok: false, statusCode: 400, message: `缺少必填欄位：${missing.join(', ')}` } }];\n}\nconst companions = Number(data.companions || 0);\nif (!Number.isFinite(companions) || companions < 0) {\n  return [{ json: { ok: false, statusCode: 400, message: '同行人數格式錯誤' } }];\n}\nreturn [{ json: {\n  ok: true,\n  eventId: String(data.eventId).trim(),\n  name: String(data.name).trim(),\n  phone: String(data.phone).trim(),\n  companions,\n  note: String(data.note || '').trim(),\n  lineUserId: String(data.lineUserId || '').trim(),\n  lineDisplayName: String(data.lineDisplayName || '').trim(),\n  liffLanguage: String(data.liffLanguage || '').trim(),\n  liffOS: String(data.liffOS || '').trim(),\n  isInClient: Boolean(data.isInClient),\n  submittedAt: body.submittedAt || new Date().toISOString()\n} }];"
+        "jsCode": "const body = $('Event Registration Webhook').first().json.body || {};\nconst data = body.data || {};\nconst required = ['name', 'phone'];\nconst missing = required.filter((key) => !String(data[key] || '').trim());\nif (missing.length) {\n  return [{ json: { ok: false, statusCode: 400, message: '???????' + missing.join(', ') } }];\n}\nconst companions = Number(data.companions || 0);\nif (!Number.isFinite(companions) || companions < 0) {\n  return [{ json: { ok: false, statusCode: 400, message: '????????' } }];\n}\nreturn [{ json: {\n  ok: true,\n  eventId: String(data.eventId || '').trim(),\n  name: String(data.name).trim(),\n  phone: String(data.phone).trim(),\n  companions,\n  note: String(data.note || '').trim(),\n  lineUserId: String(data.lineUserId || '').trim(),\n  lineDisplayName: String(data.lineDisplayName || '').trim(),\n  liffLanguage: String(data.liffLanguage || '').trim(),\n  liffOS: String(data.liffOS || '').trim(),\n  isInClient: Boolean(data.isInClient),\n  submittedAt: body.submittedAt || new Date().toISOString()\n} }];"
       },
       "id": "event-registration-validate",
       "name": "Validate Payload",
@@ -128,10 +128,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $('Validate Payload').first().json;\nif (!input.ok) return [{ json: input }];\n\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join(',');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.date) return value.date.start || '';\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.number != null) return String(value.number);\n  if (value.url) return String(value.url);\n  return '';\n}\n\nfunction prop(json, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (json[name] != null) return textFromValue(json[name]).trim();\n    const p = json.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = json.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nconst events = $('Query Events').all();\nconst event = events.find((item) => item.json.id === input.eventId);\nif (!event) {\n  return [{ json: { ok: false, statusCode: 404, message: '找不到活動，請確認報名網址是否正確。' } }];\n}\n\nconst eventJson = event.json;\nconst title = prop(eventJson, ['活動主題', 'title', 'Name']);\nconst community = prop(eventJson, ['社區名稱', 'community']);\nconst eventDate = prop(eventJson, ['活動日期', 'date', 'eventDate']);\n\nconst enabledRaw = prop(eventJson, ['報名表單', 'registrationEnabled']);\nconst enabled = ['true', '開放報名', '開放', 'yes', '1'].includes(String(enabledRaw).toLowerCase()) || enabledRaw === '';\nif (!enabled) {\n  return [{ json: { ok: false, statusCode: 409, message: '此活動目前未開放報名' } }];\n}\n\nconst deadline = prop(eventJson, ['報名截止時間', 'registrationDeadline']);\nif (deadline && new Date(deadline).getTime() < Date.now()) {\n  return [{ json: { ok: false, statusCode: 409, message: '活動報名已截止。' } }];\n}\n\nconst limit = Number(prop(eventJson, ['報名名額上限', 'registrationLimit']) || 0);\nconst registrations = $('Query Existing Registrations').all();\n\nconst active = registrations.filter((item) => {\n  const eventId = prop(item.json, ['活動ID', 'eventId']);\n  const status = prop(item.json, ['狀態', 'status']);\n  return eventId === input.eventId && status !== 'cancelled';\n});\n\nif (input.lineUserId) {\n  const duplicate = active.find((item) => prop(item.json, ['LINE User ID']) === input.lineUserId);\n  if (duplicate) {\n    return [{ json: { ok: false, statusCode: 409, message: '你已完成報名，請勿重複報名。' } }];\n  }\n}\n\nif (limit > 0 && active.length >= limit) {\n  return [{ json: { ok: false, statusCode: 409, message: '活動名額已滿。' } }];\n}\n\nlet isDuplicate = false;\nlet duplicateNote = '';\nif (input.lineUserId) {\n  const crossEventRegs = registrations.filter((item) => {\n    const regEventId = prop(item.json, ['活動ID', 'eventId']);\n    const regLineId = prop(item.json, ['LINE User ID']);\n    const regStatus = prop(item.json, ['狀態', 'status']);\n    return regLineId === input.lineUserId && regEventId !== input.eventId && regStatus !== 'cancelled';\n  });\n  if (crossEventRegs.length > 0) {\n    isDuplicate = true;\n    const otherTitles = [...new Set(crossEventRegs.map((item) => {\n      return prop(item.json, ['活動名稱']) || prop(item.json, ['活動ID', 'eventId']);\n    }).filter(Boolean))];\n    duplicateNote = '重複報名：亦報名 ' + otherTitles.join('、');\n  }\n}\n\nconst noteText = [duplicateNote, input.note].filter(Boolean).join('\\n');\n\nconst date = new Date();\nconst y = date.getFullYear();\nconst m = String(date.getMonth() + 1).padStart(2, '0');\nconst d = String(date.getDate()).padStart(2, '0');\nconst serial = String(active.length + 1).padStart(3, '0');\n\nreturn [{ json: { ...input, eventTitle: title, community, eventDate, noteText, registrationId: `REG-${y}${m}${d}-${serial}`, status: 'registered', isDuplicate, duplicateNote, createdAt: new Date().toISOString() } }];"
+        "jsCode": "const input = $('Validate Payload').first().json;\nif (!input.ok) return [{ json: input }];\n\nconst registrations = $('Query Existing Registrations').all();\nconst date = new Date();\nconst y = date.getFullYear();\nconst m = String(date.getMonth() + 1).padStart(2, '0');\nconst d = String(date.getDate()).padStart(2, '0');\nconst todayKey = y + m + d;\n\nfunction textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join(',');\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.date) return value.date.start || '';\n  return '';\n}\nfunction prop(json, name) {\n  if (json[name] != null) return textFromValue(json[name]).trim();\n  const p = json.properties?.[name];\n  if (p != null) return textFromValue(p).trim();\n  return '';\n}\nconst sameDayCount = registrations.filter((item) => String(prop(item.json, '????') || item.json.created_time || '').slice(0, 10).replaceAll('-', '') === todayKey).length;\nconst serial = String(sameDayCount + 1).padStart(3, '0');\nconst noteText = input.note;\nreturn [{ json: { ...input, eventTitle: input.eventId ? '????' : '????', community: '', eventDate: '', noteText, registrationId: 'SIGN-' + todayKey + '-' + serial, status: 'registered', isDuplicate: false, duplicateNote: '', createdAt: new Date().toISOString() } }];"
       },
       "id": "event-registration-check",
-      "name": "Check Event And Capacity",
+      "name": "Prepare Sign In",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -240,7 +240,7 @@
         "options": {}
       },
       "id": "event-registration-create",
-      "name": "Create Event Registration",
+      "name": "Create Event Sign In",
       "type": "n8n-nodes-base.notion",
       "typeVersion": 2.2,
       "position": [
@@ -257,7 +257,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { ok: true, message: '報名已送出', registrationId: $('Check Event And Capacity').item.json.registrationId } }}",
+        "responseBody": "={{ { ok: true, message: '?????', registrationId: $('Prepare Sign In').item.json.registrationId } }}",
         "options": {}
       },
       "id": "event-registration-success-response",
@@ -272,7 +272,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { ok: false, message: $json.message || '報名送出失敗' } }}",
+        "responseBody": "={{ { ok: false, message: $json.message || '??????' } }}",
         "options": {
           "responseCode": "={{ $json.statusCode || 400 }}"
         }
@@ -339,17 +339,6 @@
       "main": [
         [
           {
-            "node": "Query Events",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Query Events": {
-      "main": [
-        [
-          {
             "node": "Query Existing Registrations",
             "type": "main",
             "index": 0
@@ -361,18 +350,7 @@
       "main": [
         [
           {
-            "node": "Check Event And Capacity",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Event And Capacity": {
-      "main": [
-        [
-          {
-            "node": "Is Valid",
+            "node": "Prepare Sign In",
             "type": "main",
             "index": 0
           }
@@ -383,7 +361,7 @@
       "main": [
         [
           {
-            "node": "Create Event Registration",
+            "node": "Create Event Sign In",
             "type": "main",
             "index": 0
           }
@@ -397,7 +375,18 @@
         ]
       ]
     },
-    "Create Event Registration": {
+    "Prepare Sign In": {
+      "main": [
+        [
+          {
+            "node": "Is Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Event Sign In": {
       "main": [
         [
           {
@@ -413,7 +402,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "public-event-registration-v1",
+  "versionId": "public-event-sign-in-v2",
   "meta": {
     "templateCredsSetupCompleted": false
   },

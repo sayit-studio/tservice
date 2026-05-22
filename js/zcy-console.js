@@ -127,7 +127,11 @@
     taskSummary: document.getElementById("taskSummary"),
     taskList: document.getElementById("taskList"),
     taskDetail: document.getElementById("taskDetail"),
-    registrationEventSelect: document.getElementById("registrationEventSelect"),
+    registrationSearch: document.getElementById("registrationSearch"),
+    registrationStatusFilter: document.getElementById("registrationStatusFilter"),
+    registrationStartFilter: document.getElementById("registrationStartFilter"),
+    registrationEndFilter: document.getElementById("registrationEndFilter"),
+    searchRegistrationsButton: document.getElementById("searchRegistrationsButton"),
     refreshRegistrationsButton: document.getElementById("refreshRegistrationsButton"),
     registrationsTable: document.getElementById("registrationsTable"),
     registrationsPager: document.getElementById("registrationsPager"),
@@ -593,7 +597,7 @@
       renderRegistrationEventOptions();
     }
     if (view === "registrations") {
-      await loadEventRegistrations(els.registrationEventSelect.value);
+      renderRegistrations();
     }
     if (view === "legal") {
       const legal = await AdminApi.listLegalConsultations();
@@ -1027,29 +1031,29 @@
     return `${item.title || "未命名活動"}${meta ? `（${meta}）` : ""}`;
   }
 
-  function renderRegistrationEventOptions() {
-    if (!els.registrationEventSelect) return;
-    const selected = state.selected.registrationEventId || els.registrationEventSelect.value;
-    els.registrationEventSelect.innerHTML = [
-      '<option value="">請先選擇活動</option>',
-      ...state.events.map((item) => `<option value="${escapeHtml(item.id)}" ${String(selected) === String(item.id) ? "selected" : ""}>${escapeHtml(eventOptionLabel(item))}</option>`)
-    ].join("");
+  function renderRegistrationEventOptions() {}
+
+  function getRegistrationFilters() {
+    return {
+      keyword: els.registrationSearch?.value.trim() || "",
+      status: els.registrationStatusFilter?.value || "",
+      startDate: els.registrationStartFilter?.value || "",
+      endDate: els.registrationEndFilter?.value || ""
+    };
   }
 
-  async function loadEventRegistrations(eventId) {
-    state.selected.registrationEventId = eventId || "";
+  async function loadEventRegistrations(filters = getRegistrationFilters()) {
     state.eventRegistrations = [];
     resetPage("registrations");
     renderRegistrations();
-    if (!eventId) return;
 
-    els.registrationsTable.innerHTML = `<tr><td colspan="7" class="registration-empty">載入報名名單中...</td></tr>`;
+    els.registrationsTable.innerHTML = `<tr><td colspan="8" class="registration-empty">載入簽到名單中...</td></tr>`;
     try {
-      const registrations = await AdminApi.listEventRegistrations(eventId);
+      const registrations = await AdminApi.listEventRegistrations(filters);
       state.eventRegistrations = Array.isArray(registrations) ? registrations : [];
     } catch (error) {
       state.eventRegistrations = [];
-      els.registrationsTable.innerHTML = `<tr><td colspan="7" class="registration-empty">${escapeHtml(error.message || "名單載入失敗")}</td></tr>`;
+      els.registrationsTable.innerHTML = `<tr><td colspan="8" class="registration-empty">${escapeHtml(error.message || "名單載入失敗")}</td></tr>`;
       return;
     }
     renderRegistrations();
@@ -1057,27 +1061,25 @@
 
   function renderRegistrations() {
     if (!els.registrationsTable) return;
-    const eventId = state.selected.registrationEventId || "";
-    if (!eventId) {
-      els.registrationsTable.innerHTML = `<tr><td colspan="8" class="registration-empty">請先從上方下拉選擇活動，系統才會顯示報名名單。</td></tr>`;
+    if (!state.eventRegistrations.length) {
+      els.registrationsTable.innerHTML = `<tr><td colspan="8" class="registration-empty">請設定條件後按搜尋，系統才會載入簽到名單。</td></tr>`;
       renderPager(els.registrationsPager, "registrations", 0, 1);
       return;
     }
 
-    const items = state.eventRegistrations.filter((item) => !item.eventId || item.eventId === eventId);
+    const items = state.eventRegistrations;
     const { pageItems, totalPages } = paginate(items, "registrations");
     renderPager(els.registrationsPager, "registrations", items.length, totalPages);
     if (!pageItems.length) {
-      els.registrationsTable.innerHTML = `<tr><td colspan="8" class="registration-empty">這個活動目前沒有報名資料。</td></tr>`;
+      els.registrationsTable.innerHTML = `<tr><td colspan="8" class="registration-empty">目前沒有符合條件的簽到資料。</td></tr>`;
       return;
     }
 
     els.registrationsTable.innerHTML = pageItems.map((item) => {
       const isCancelled = item.status === "cancelled";
       const actionBtn = isCancelled
-        ? `<button class="secondary-button compact" type="button" data-restore-reg="${escapeHtml(item.id)}">恢復報名</button>`
-        : `<button class="danger-button compact" type="button" data-cancel-reg="${escapeHtml(item.id)}">取消報名</button>`;
-      const dupBadge = item.isDuplicate ? `<span class="dup-badge" title="${escapeHtml(item.note || "重複報名")}">重複報名</span>` : "";
+        ? `<button class="secondary-button compact" type="button" data-restore-reg="${escapeHtml(item.id)}">恢復簽到</button>`
+        : `<button class="danger-button compact" type="button" data-cancel-reg="${escapeHtml(item.id)}">取消簽到</button>`;
       return `
         <tr${isCancelled ? ' class="row-cancelled"' : ""}>
           <td><span class="title-cell"><strong>${escapeHtml(item.registrationId || item.id || "")}</strong><small>${escapeHtml(item.note || "")}</small></span></td>
@@ -1085,7 +1087,7 @@
           <td>${escapeHtml(item.phone || "")}</td>
           <td>${escapeHtml(item.companions || 0)}</td>
           <td><span class="title-cell"><strong>${escapeHtml(item.lineDisplayName || "")}</strong><small>${escapeHtml(item.lineUserId || "")}</small></span></td>
-          <td><span class="status-group">${badge(item.status || "registered")}${dupBadge}</span></td>
+          <td><span class="status-group">${badge(item.status || "registered")}</span></td>
           <td>${formatDateTime(item.createdAt || item.createdTime)}</td>
           <td>${actionBtn}</td>
         </tr>`;
@@ -1094,14 +1096,14 @@
 
   async function updateRegistrationStatus(id, status) {
     const label = status === "cancelled" ? "取消" : "恢復";
-    if (!confirm(`確定要${label}這筆報名嗎？`)) return;
+    if (!confirm(`確定要${label}這筆簽到嗎？`)) return;
     try {
       await AdminApi.updateEventRegistration({ id, status });
       const item = state.eventRegistrations.find((r) => r.id === id);
       if (item) item.status = status;
       renderRegistrations();
     } catch (error) {
-      alert(error.message || `${label}報名失敗`);
+      alert(error.message || `${label}簽到失敗`);
     }
   }
 
@@ -2187,8 +2189,8 @@
       els.taskDate.value = dateKeyFromDate(new Date());
       renderTaskView();
     });
-    els.registrationEventSelect.addEventListener("change", (event) => loadEventRegistrations(event.target.value));
-    els.refreshRegistrationsButton.addEventListener("click", () => loadEventRegistrations(els.registrationEventSelect.value));
+    els.searchRegistrationsButton.addEventListener("click", () => loadEventRegistrations());
+    els.refreshRegistrationsButton.addEventListener("click", () => loadEventRegistrations());
     els.registrationsTable.addEventListener("click", (event) => {
       const cancelBtn = event.target.closest("[data-cancel-reg]");
       const restoreBtn = event.target.closest("[data-restore-reg]");

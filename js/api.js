@@ -117,11 +117,22 @@
       if (config.useMockData) return mutateMock("events", "delete", { id });
       return post(config.endpoints.eventsList, { action: "events.delete", id });
     },
-    async listEventRegistrations(eventId) {
+    async listEventRegistrations(filters = {}) {
       if (config.useMockData) {
-        return mock.eventRegistrations.filter((item) => !eventId || item.eventId === eventId);
+        const keyword = String(filters.keyword || filters.lineName || "").trim();
+        const status = String(filters.status || "").trim();
+        const startDate = String(filters.startDate || "").trim();
+        const endDate = String(filters.endDate || "").trim();
+        return mock.eventRegistrations.filter((item) => {
+          const createdAt = String(item.createdAt || item.createdTime || "");
+          const keywordText = [item.registrationId, item.name, item.phone, item.lineDisplayName, item.lineUserId].join(" ");
+          return (!keyword || keywordText.includes(keyword))
+            && (!status || item.status === status)
+            && (!startDate || createdAt >= startDate)
+            && (!endDate || createdAt <= endDate);
+        });
       }
-      return post(config.endpoints.eventRegistrationsList, { action: "eventRegistrations.list", eventId });
+      return post(config.endpoints.eventRegistrationsList, { action: "eventRegistrations.list", filters });
     },
     async updateEventRegistration(payload) {
       if (config.useMockData) return mutateMock("eventRegistrations", "update", payload);

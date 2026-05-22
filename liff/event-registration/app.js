@@ -98,7 +98,7 @@
             displayName: document.getElementById("lineDisplayName").value.trim() || profile.displayName || "",
             sourcePage: "event-registration",
             stage,
-            tags: ["LIFF 綁定", "活動報名"],
+            tags: ["LIFF 綁定", "活動簽到"],
             ...extraData
           }
         })
@@ -115,12 +115,6 @@
       eventDateText.textContent = state.eventDate || "";
       eventDateText.hidden = !state.eventDate;
       eventNamePill.hidden = false;
-    }
-
-    if (!state.eventId) {
-      showNotice("缺少活動編號，請重新開啟簽到連結。", "error");
-      form.querySelector("button[type='submit']").disabled = true;
-      return;
     }
 
     if (!window.liff || !config.liffId || config.liffId.includes("請填入")) {
@@ -172,7 +166,7 @@
         name: payload.data.name,
         phone: payload.data.phone,
         note: payload.data.note,
-        tags: ["LIFF 綁定", "活動報名", "已填聯絡資料"]
+        tags: ["LIFF 綁定", "活動簽到", "已填聯絡資料"]
       });
       const response = await fetch(config.webhookBaseUrl, {
         method: "POST",
