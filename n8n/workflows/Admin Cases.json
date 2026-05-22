@@ -109,6 +109,28 @@
               },
               "renameOutput": true,
               "outputKey": "cases.delete"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "cases.debugRaw",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cases.debugRaw"
             }
           ]
         },
@@ -135,7 +157,8 @@
           "value": "330b3ad1d1cd8047aabfc9e95de6658d"
         },
         "returnAll": true,
-        "options": {}
+        "options": {},
+        "simplify": false
       },
       "id": "query-cases",
       "name": "Query Cases",
@@ -154,7 +177,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  if (value.files) return (value.files || []).map(f => f.external?.url || f.file?.url || '').filter(Boolean).join(',');\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  caseNo: prop(item, ['請託案號', '案件編號']),\n  requestDate: prop(item, ['請託日期']),\n  category: prop(item, ['託辦類別', '案件類型']),\n  staff: prop(item, ['接案秘書']),\n  petitioner: prop(item, ['當事人名', '陳情人姓名']),\n  phone: prop(item, ['行動電話', '聯絡手機']),\n  address: prop(item, ['通訊地址', '聯絡地址']),\n  commissioner: prop(item, ['委託人名']),\n  relation: prop(item, ['關係']),\n  content: prop(item, ['託辦事項', '案件原始內容', '案件詳細說明']),\n  status: prop(item, ['處理狀況', '案件狀態', '執行狀態']),\n  processingDays: prop(item, ['處理天數']),\n  inspectionNote: prop(item, ['交辦會勘記錄']),\n  summary: prop(item, ['公開摘要']),\n  isPublic: prop(item, ['是否公開']),\n  beforeImages: prop(item, ['改善前圖片']),\n  afterImages: prop(item, ['改善後圖片'])\n})) } }];"
+        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('\\u3001');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.content) return textFromValue(value.content);\n  if (value.value != null) return textFromValue(value.value);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.created_time) return String(value.created_time);\n  if (value.last_edited_time) return String(value.last_edited_time);\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  if (value.files) return (value.files || []).map(f => f.external?.url || f.file?.url || f.url || '').filter(Boolean).join(',');\n  return '';\n}\nfunction simplifiedFallback(item, names) {\n  const direct = [];\n  for (const name of names) {\n    direct.push(name, name.replace(/\\s/g, ''), 'property_' + name, 'property_' + name.replace(/\\s/g, ''));\n  }\n  direct.push('property_');\n  for (const key of direct) {\n    if (item.json?.[key] != null) return textFromValue(item.json[key]).trim();\n  }\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    if (item.json?.[name.replace(/\\s/g, '')] != null) return textFromValue(item.json[name.replace(/\\s/g, '')]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return simplifiedFallback(item, wanted);\n}\nfunction dateKey(value) {\n  return String(value || '').slice(0, 10);\n}\nconst body = $('Admin Cases Webhook').first().json.body || {};\nif (body.action === 'cases.debugRaw') {\n  return [{ json: { ok: true, count: items.length, sample: items.slice(0, 3).map((item) => item.json) } }];\n}\nconst filters = body.filters || {};\nconst data = items.map(item => {\n  const requestDate = prop(item, ['\\u8acb\\u8a17\\u65e5\\u671f']);\n  const createdAt = requestDate || item.json.created_time || item.json.createdTime || prop(item, ['\\u5efa\\u7acb\\u6642\\u9593']) || '';\n  const caseNo = prop(item, ['\\u8acb\\u8a17\\u6848\\u865f']) || textFromValue(item.json.property_ || item.json.name || item.json.title || item.json.Name || item.json['\\u540d\\u7a31']).trim();\n  return {\n    id: item.json.id,\n    caseNo,\n    requestDate,\n    createdAt,\n    category: prop(item, ['\\u8a17\\u8fa6\\u985e\\u5225']),\n    staff: prop(item, ['\\u63a5\\u6848\\u79d8\\u66f8']),\n    petitioner: prop(item, ['\\u7576\\u4e8b\\u4eba\\u540d', '\\u9673\\u60c5\\u4eba\\u59d3\\u540d']),\n    homePhone: prop(item, ['\\u4f4f\\u5bb6\\u96fb\\u8a71']),\n    phone: prop(item, ['\\u884c\\u52d5\\u96fb\\u8a71', '\\u806f\\u7d61\\u624b\\u6a5f']),\n    address: prop(item, ['\\u901a\\u8a0a\\u5730\\u5740', '\\u806f\\u7d61\\u5730\\u5740']),\n    householdAddress: prop(item, ['\\u6236\\u7c4d\\u5730\\u5740']),\n    commissioner: prop(item, ['\\u59d4\\u8a17\\u4eba\\u540d']),\n    relation: prop(item, ['\\u95dc\\u4fc2']),\n    content: prop(item, ['\\u8a17\\u8fa6\\u4e8b\\u9805', '\\u6848\\u4ef6\\u539f\\u59cb\\u5167\\u5bb9', '\\u6848\\u4ef6\\u8a73\\u7d30\\u8aaa\\u660e']),\n    status: prop(item, ['\\u8655\\u7406\\u72c0\\u6cc1']),\n    processingDays: prop(item, ['\\u8655\\u7406\\u5929\\u6578']),\n    inspectionNote: prop(item, ['\\u4ea4\\u8fa6\\u6703\\u52d8\\u8a18\\u9304']),\n    summary: prop(item, ['\\u516c\\u958b\\u6458\\u8981']),\n    isPublic: prop(item, ['\\u662f\\u5426\\u516c\\u958b']),\n    beforeImages: prop(item, ['\\u6539\\u5584\\u524d\\u5716\\u7247']),\n    afterImages: prop(item, ['\\u6539\\u5584\\u5f8c\\u5716\\u7247'])\n  };\n}).filter(item => {\n  const date = dateKey(item.requestDate || item.createdAt);\n  return (!filters.caseNo || String(item.caseNo || '').includes(String(filters.caseNo).trim()))\n    && (!filters.status || item.status === filters.status)\n    && (!filters.category || item.category === filters.category)\n    && (!filters.startDate || date >= filters.startDate)\n    && (!filters.endDate || date <= filters.endDate);\n});\nreturn [{ json: { ok: true, data } }];"
       },
       "id": "normalize-cases",
       "name": "Normalize Cases",
@@ -182,7 +205,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = body.data || {};\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
+        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = { ...(body.data || {}) };\nif (!data.createdAt && data.requestDate) data.createdAt = data.requestDate;\nconst textFields = ['caseNo', 'requestDate', 'category', 'staff', 'petitioner', 'homePhone', 'phone', 'address', 'householdAddress', 'commissioner', 'relation', 'content', 'status', 'inspectionNote', 'summary'];\nfor (const field of textFields) {\n  if (data[field] == null) data[field] = '';\n}\nif (data.processingDays == null || data.processingDays === '') data.processingDays = null;\nif (!Array.isArray(data.beforeImages)) data.beforeImages = [];\nif (!Array.isArray(data.afterImages)) data.afterImages = [];\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
       },
       "id": "prepare-create-cases",
       "name": "Prepare Create Cases",
@@ -205,66 +228,14 @@
         "propertiesUi": {
           "propertyValues": [
             {
+              "key": "請託案號|title",
+              "title": "={{ $json.data.caseNo }}"
+            },
+            {
               "key": "請託日期|date",
               "includeTime": false,
               "date": "={{ $json.data.requestDate }}",
               "timezone": "Asia/Taipei"
-            },
-            {
-              "key": "託辦類別|select",
-              "selectValue": "={{ $json.data.category }}"
-            },
-            {
-              "key": "接案秘書|rich_text",
-              "textContent": "={{ $json.data.staff }}"
-            },
-            {
-              "key": "當事人名|rich_text",
-              "textContent": "={{ $json.data.petitioner }}"
-            },
-            {
-              "key": "行動電話|phone_number",
-              "phoneValue": "={{ $json.data.phone }}"
-            },
-            {
-              "key": "通訊地址|rich_text",
-              "textContent": "={{ $json.data.address }}"
-            },
-            {
-              "key": "委託人名|rich_text",
-              "textContent": "={{ $json.data.commissioner }}"
-            },
-            {
-              "key": "關係|rich_text",
-              "textContent": "={{ $json.data.relation }}"
-            },
-            {
-              "key": "託辦事項|rich_text",
-              "textContent": "={{ $json.data.content }}"
-            },
-            {
-              "key": "處理狀況|select",
-              "selectValue": "={{ $json.data.status }}"
-            },
-            {
-              "key": "處理天數|number",
-              "numberValue": "={{ $json.data.processingDays ? Number($json.data.processingDays) : null }}"
-            },
-            {
-              "key": "交辦會勘記錄|rich_text",
-              "textContent": "={{ $json.data.inspectionNote }}"
-            },
-            {
-              "key": "公開摘要|rich_text",
-              "textContent": "={{ $json.data.summary }}"
-            },
-            {
-              "key": "改善前圖片|files",
-              "fileUrls": "={{ $json.data.beforeImages }}"
-            },
-            {
-              "key": "改善後圖片|files",
-              "fileUrls": "={{ $json.data.afterImages }}"
             }
           ]
         },
@@ -283,7 +254,8 @@
           "id": "TUc2PAbFfQKWYUgA",
           "name": "Notion-n8n"
         }
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -302,7 +274,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = body.data || {};\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
+        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = { ...(body.data || {}) };\nif (!data.createdAt && data.requestDate) data.createdAt = data.requestDate;\nconst textFields = ['caseNo', 'requestDate', 'category', 'staff', 'petitioner', 'homePhone', 'phone', 'address', 'householdAddress', 'commissioner', 'relation', 'content', 'status', 'inspectionNote', 'summary'];\nfor (const field of textFields) {\n  if (data[field] == null) data[field] = '';\n}\nif (data.processingDays == null || data.processingDays === '') data.processingDays = null;\nif (!Array.isArray(data.beforeImages)) data.beforeImages = [];\nif (!Array.isArray(data.afterImages)) data.afterImages = [];\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
       },
       "id": "prepare-update-cases",
       "name": "Prepare Update Cases",
@@ -326,69 +298,13 @@
           "propertyValues": [
             {
               "key": "請託案號|title",
-              "textContent": "={{ $json.data.caseNo }}"
+              "title": "={{ $json.data.caseNo }}"
             },
             {
               "key": "請託日期|date",
               "includeTime": false,
               "date": "={{ $json.data.requestDate }}",
               "timezone": "Asia/Taipei"
-            },
-            {
-              "key": "託辦類別|select",
-              "selectValue": "={{ $json.data.category }}"
-            },
-            {
-              "key": "接案秘書|rich_text",
-              "textContent": "={{ $json.data.staff }}"
-            },
-            {
-              "key": "當事人名|rich_text",
-              "textContent": "={{ $json.data.petitioner }}"
-            },
-            {
-              "key": "行動電話|phone_number",
-              "phoneValue": "={{ $json.data.phone }}"
-            },
-            {
-              "key": "通訊地址|rich_text",
-              "textContent": "={{ $json.data.address }}"
-            },
-            {
-              "key": "委託人名|rich_text",
-              "textContent": "={{ $json.data.commissioner }}"
-            },
-            {
-              "key": "關係|rich_text",
-              "textContent": "={{ $json.data.relation }}"
-            },
-            {
-              "key": "託辦事項|rich_text",
-              "textContent": "={{ $json.data.content }}"
-            },
-            {
-              "key": "處理狀況|select",
-              "selectValue": "={{ $json.data.status }}"
-            },
-            {
-              "key": "處理天數|number",
-              "numberValue": "={{ $json.data.processingDays ? Number($json.data.processingDays) : null }}"
-            },
-            {
-              "key": "交辦會勘記錄|rich_text",
-              "textContent": "={{ $json.data.inspectionNote }}"
-            },
-            {
-              "key": "公開摘要|rich_text",
-              "textContent": "={{ $json.data.summary }}"
-            },
-            {
-              "key": "改善前圖片|files",
-              "fileUrls": "={{ $json.data.beforeImages }}"
-            },
-            {
-              "key": "改善後圖片|files",
-              "fileUrls": "={{ $json.data.afterImages }}"
             }
           ]
         },
@@ -407,7 +323,8 @@
           "id": "TUc2PAbFfQKWYUgA",
           "name": "Notion-n8n"
         }
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -461,7 +378,8 @@
           "id": "TUc2PAbFfQKWYUgA",
           "name": "Notion-n8n"
         }
-      }
+      },
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -532,6 +450,13 @@
         [
           {
             "node": "Prepare Delete Cases",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query Cases",
             "type": "main",
             "index": 0
           }

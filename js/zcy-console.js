@@ -70,6 +70,7 @@
     lineAccounts: [],
     staff: [],
     selected: {},
+    caseSearchPerformed: false,
     calendarMode: "month",
     calendarDate: "",
     eventDetailOpen: false,
@@ -103,6 +104,10 @@
     casePager: document.getElementById("casePager"),
     caseSearch: document.getElementById("caseSearch"),
     caseStatusFilter: document.getElementById("caseStatusFilter"),
+    caseCategoryFilter: document.getElementById("caseCategoryFilter"),
+    caseStartDateFilter: document.getElementById("caseStartDateFilter"),
+    caseEndDateFilter: document.getElementById("caseEndDateFilter"),
+    caseSearchButton: document.getElementById("caseSearchButton"),
     addCaseButton: document.getElementById("addCaseButton"),
     calendarPrev: document.getElementById("calendarPrev"),
     calendarNext: document.getElementById("calendarNext"),
@@ -373,7 +378,8 @@
     try {
       const cached = JSON.parse(sessionStorage.getItem(cacheKey()) || "{}");
       if (!cached.savedAt) return false;
-      state.cases = Array.isArray(cached.cases) ? cached.cases : [];
+      state.cases = [];
+      state.caseSearchPerformed = false;
       state.events = Array.isArray(cached.events) ? cached.events : [];
       state.eventRegistrations = [];
       state.legal = Array.isArray(cached.legal) ? cached.legal : [];
@@ -390,7 +396,6 @@
   function writeCache() {
     sessionStorage.setItem(cacheKey(), JSON.stringify({
       savedAt: new Date().toISOString(),
-      cases: state.cases,
       events: state.events,
       legal: state.legal,
       members: state.members,
@@ -431,6 +436,9 @@
   }
 
   function renderActions(type, id) {
+    const inspect = type === "case"
+      ? `<button class="secondary-button compact" type="button" data-inspect-case="${escapeHtml(id)}">放大檢視</button>`
+      : "";
     const extra = type === "event"
       ? `<button class="secondary-button compact" type="button" data-registration="${escapeHtml(id)}">報名設定</button>`
       : "";
@@ -439,6 +447,7 @@
       : "";
     return `
       <div class="detail-actions">
+        ${inspect}
         <button class="secondary-button compact" type="button" data-edit="${type}" data-id="${escapeHtml(id)}">編輯</button>
         ${extra}
         <button class="danger-button compact" type="button" data-delete="${type}" data-id="${escapeHtml(id)}">刪除</button>
@@ -470,15 +479,15 @@
       return;
     }
     els.syncStatus.textContent = "同步中";
-    const [cases, events, legal, members, lineAccounts, staff] = await Promise.all([
-      AdminApi.listCases(),
+    const [events, legal, members, lineAccounts, staff] = await Promise.all([
       AdminApi.listEvents(),
       AdminApi.listLegalConsultations(),
       AdminApi.listMembers().catch(() => []),
       AdminApi.listLineAccounts().catch(() => []),
       AdminApi.listStaff()
     ]);
-    state.cases = Array.isArray(cases) ? cases : [];
+    state.cases = [];
+    state.caseSearchPerformed = false;
     state.events = Array.isArray(events) ? events : [];
     state.eventRegistrations = [];
     state.legal = Array.isArray(legal) ? legal : [];
@@ -506,13 +515,59 @@
     return document.querySelector(".nav-item.is-active")?.dataset.view || "cases";
   }
 
+  function caseSearchFilters() {
+    return {
+      caseNo: els.caseSearch?.value.trim() || "",
+      status: els.caseStatusFilter?.value || "",
+      category: els.caseCategoryFilter?.value || "",
+      startDate: els.caseStartDateFilter?.value || "",
+      endDate: els.caseEndDateFilter?.value || ""
+    };
+  }
+
+  function renderCaseCategoryOptions(items = state.cases) {
+    if (!els.caseCategoryFilter) return;
+    const selected = els.caseCategoryFilter.value;
+    const categories = Array.from(new Set([
+      ...CASE_CATEGORIES,
+      ...items.map((item) => item.category).filter(Boolean)
+    ])).sort((a, b) => a.localeCompare(b, "zh-Hant"));
+    els.caseCategoryFilter.innerHTML = [
+      '<option value="">全部類別</option>',
+      ...categories.map((category) => `<option value="${escapeHtml(category)}" ${category === selected ? "selected" : ""}>${escapeHtml(category)}</option>`)
+    ].join("");
+  }
+
+  function itemMatchesCaseFilters(item, filters = caseSearchFilters()) {
+    const caseNo = String(item.caseNo || item.title || "").trim();
+    const date = String(item.requestDate || item.startDate || item.createdAt || item.created_at || "").slice(0, 10);
+    return (!filters.caseNo || caseNo.includes(filters.caseNo))
+      && (!filters.status || item.status === filters.status)
+      && (!filters.category || item.category === filters.category)
+      && (!filters.startDate || date >= filters.startDate)
+      && (!filters.endDate || date <= filters.endDate);
+  }
+
+  async function searchCases() {
+    els.syncStatus.textContent = "查詢中";
+    resetPage("cases");
+    const filters = caseSearchFilters();
+    const cases = await AdminApi.listCases(filters);
+    state.cases = Array.isArray(cases) ? cases : [];
+    state.caseSearchPerformed = true;
+    state.selected.caseId = "";
+    renderCaseCategoryOptions(state.cases);
+    renderCases();
+    els.syncStatus.textContent = "已同步";
+  }
+
   async function refreshCurrentView() {
     const view = currentView();
     els.syncStatus.textContent = "\u540c\u6b65\u4e2d";
     if (view === "cases") {
-      const cases = await AdminApi.listCases();
-      state.cases = Array.isArray(cases) ? cases : [];
-      renderCases();
+      await searchCases();
+      writeCache();
+      return;
     }
     if (view === "events") {
       const events = await AdminApi.listEvents();
@@ -577,12 +632,16 @@
   }
 
   function renderCases() {
-    const keyword = els.caseSearch.value.trim();
-    const status = els.caseStatusFilter.value;
-    const items = state.cases.filter((item) => {
-      const text = `${item.caseNo} ${item.petitioner || ""} ${item.staff || ""} ${item.category || ""} ${item.content || ""}`;
-      return (!keyword || text.includes(keyword)) && (!status || item.status === status);
-    }).sort(compareCases);
+    if (!state.caseSearchPerformed) {
+      els.casesTable.innerHTML = "";
+      els.casePager.innerHTML = "";
+      els.caseDetail.innerHTML = detail("請先查詢案件", [
+        { label: "提示", value: "請輸入案號或選擇類別、日期、狀態後按搜尋。" }
+      ]);
+      return;
+    }
+    const filters = caseSearchFilters();
+    const items = state.cases.filter((item) => itemMatchesCaseFilters(item, filters)).sort(compareCases);
     const { pageItems, totalPages } = paginate(items, "cases");
     renderPager(els.casePager, "cases", items.length, totalPages);
     els.casesTable.innerHTML = pageItems.map((item) => `
@@ -619,6 +678,59 @@
       { label: "公開摘要", value: item.summary, multiline: true }
     ], renderActions("case", item.id));
     markSelected(els.casesTable, id);
+  }
+
+  function closeCaseInspect() {
+    document.querySelector(".case-inspect-layer")?.remove();
+  }
+
+  function openCaseInspect(id) {
+    const item = state.cases.find((entry) => entry.id === id);
+    if (!item) return;
+    closeCaseInspect();
+    const rows = [
+      ["請託案號", item.caseNo],
+      ["建立時間", item.createdAt || item.created_at || item.requestDate],
+      ["請託日期", item.requestDate || item.startDate],
+      ["託辦類別", item.category],
+      ["處理狀況", item.status],
+      ["接案秘書", item.staff],
+      ["當事人名", casePetitionerName(item.petitioner)],
+      ["聯絡電話", item.phone],
+      ["地址", item.address],
+      ["當事人關係", item.relation],
+      ["接洽人", item.commissioner],
+      ["處理天數", item.processingDays],
+      ["託辦事項", item.content],
+      ["會勘紀錄", item.inspectionNote],
+      ["摘要", item.summary],
+      ["公開", item.isPublic],
+      ["改善前照片", item.beforeImages],
+      ["改善後照片", item.afterImages],
+      ["Notion ID", item.id]
+    ];
+    const layer = document.createElement("div");
+    layer.className = "case-inspect-layer";
+    layer.innerHTML = `
+      <section class="case-inspect-modal" role="dialog" aria-modal="true" aria-labelledby="caseInspectTitle">
+        <header class="case-inspect-head">
+          <h3 id="caseInspectTitle">${escapeHtml(item.caseNo || "案件詳情")}</h3>
+          <button class="icon-button case-inspect-close" type="button" aria-label="關閉">×</button>
+        </header>
+        <div class="case-inspect-grid">
+          ${rows.map(([label, value]) => `
+            <div class="detail-row ${String(value || "").length > 60 ? "is-wide" : ""}">
+              <span>${escapeHtml(label)}</span>
+              <p>${escapeHtml(value || "未填寫")}</p>
+            </div>
+          `).join("")}
+        </div>
+      </section>
+    `;
+    layer.addEventListener("click", (event) => {
+      if (event.target.classList.contains("case-inspect-layer") || event.target.closest(".case-inspect-close")) closeCaseInspect();
+    });
+    document.body.append(layer);
   }
 
   function renderEvents() {
@@ -1761,6 +1873,11 @@
       }
       return;
     }
+    const inspectCase = event.target.closest("[data-inspect-case]");
+    if (inspectCase) {
+      openCaseInspect(inspectCase.dataset.inspectCase);
+      return;
+    }
     const edit = event.target.closest("[data-edit]");
     const del = event.target.closest("[data-delete]");
     const registration = event.target.closest("[data-registration]");
@@ -1843,19 +1960,21 @@
   }
 
   const EXCEL_FIELD_MAP = {
-    "請託案號": "caseNo",
     "請託日期": "requestDate",
+    "請託案號": "caseNo",
     "託辦類別": "category",
     "接案秘書": "staff",
     "當事人名": "petitioner",
+    "住家電話": "homePhone",
     "行動電話": "phone",
     "通訊地址": "address",
+    "戶籍地址": "householdAddress",
     "委託人名": "commissioner",
     "關係": "relation",
     "託辦事項": "content",
     "處理狀況": "status",
     "處理天數": "processingDays",
-    "交辦會勘記錄": "inspectionNote"
+    "交辦會勘記錄": "inspectionNote",
   };
 
   function convertRocDate(value) {
@@ -1866,6 +1985,11 @@
     if (rocDot) {
       const year = parseInt(rocDot[1], 10) + 1911;
       return `${year}-${rocDot[2]}-${rocDot[3]}`;
+    }
+    const rocDotCompact = str.match(/^(\d{2,3})[./](\d{2})(\d{2})$/);
+    if (rocDotCompact) {
+      const year = parseInt(rocDotCompact[1], 10) + 1911;
+      return `${year}-${rocDotCompact[2]}-${rocDotCompact[3]}`;
     }
     // 民國格式 1150508（7碼，rocYear=115, mmdd=0508）
     const rocCompact = str.match(/^(\d{3})(\d{2})(\d{2})$/);
@@ -1895,6 +2019,7 @@
       if (field === "requestDate") val = convertRocDate(val);
       if (field === "processingDays") val = val !== undefined && val !== "" ? Number(val) : undefined;
       result[field] = val !== undefined && val !== null ? String(val).trim() : "";
+      if (field === "requestDate") result.createdAt = result[field];
     });
     return result;
   }
@@ -1967,9 +2092,7 @@
     confirmBtn.disabled = false;
     if (ok > 0) {
       clearCache();
-      const cases = await AdminApi.listCases();
-      state.cases = Array.isArray(cases) ? cases : [];
-      renderCases();
+      await searchCases();
     }
   }
 
@@ -2034,7 +2157,14 @@
     els.calendarPrev.addEventListener("click", () => navigateCalendar(-1));
     els.calendarNext.addEventListener("click", () => navigateCalendar(1));
     els.calendarNavLabel.addEventListener("click", () => openMonthPicker());
-    [els.caseSearch, els.caseStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("cases"); renderCases(); }));
+    els.caseSearchButton?.addEventListener("click", () => searchCases().catch((error) => {
+      els.syncStatus.textContent = error.message;
+    }));
+    [els.caseSearch, els.caseStatusFilter, els.caseCategoryFilter, els.caseStartDateFilter, els.caseEndDateFilter].forEach((el) => {
+      el?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") searchCases().catch((error) => { els.syncStatus.textContent = error.message; });
+      });
+    });
     els.eventStatusFilter.addEventListener("input", () => { resetPage("events"); renderEvents(); });
     [els.taskDate, els.taskTypeFilter, els.taskStatusFilter, els.taskStaffFilter].forEach((el) => el.addEventListener("input", renderTaskView));
     els.taskTodayButton.addEventListener("click", () => {
@@ -2120,6 +2250,7 @@
 
   async function init() {
     bindEvents();
+    renderCaseCategoryOptions([]);
     initLegalCategories();
     const saved = sessionStorage.getItem("staffConsoleUser");
     if (saved) {

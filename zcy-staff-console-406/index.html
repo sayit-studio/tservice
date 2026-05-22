@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>曾辦任務管理後台</title>
     <meta name="robots" content="noindex,nofollow,noarchive" />
-    <link rel="stylesheet" href="../css/zcy-console.css?v=20260518-line-oa-layout" />
+    <link rel="stylesheet" href="../css/zcy-console.css?v=20260522-case-search" />
   </head>
   <body>
     <main class="login-view" id="loginView">
@@ -66,7 +66,7 @@
           <div class="toolbar">
             <label class="search-field">
               <span>搜尋</span>
-              <input id="caseSearch" placeholder="案號、類別、當事人名、託辦事項" />
+              <input id="caseSearch" placeholder="請輸入案號" />
             </label>
             <label class="select-field">
               <span>狀態</span>
@@ -80,6 +80,21 @@
                 <option>已完成案件</option>
               </select>
             </label>
+            <label class="select-field">
+              <span>託辦類別</span>
+              <select id="caseCategoryFilter">
+                <option value="">全部類別</option>
+              </select>
+            </label>
+            <label class="search-field date-field">
+              <span>起始日期</span>
+              <input id="caseStartDateFilter" type="date" />
+            </label>
+            <label class="search-field date-field">
+              <span>結束日期</span>
+              <input id="caseEndDateFilter" type="date" />
+            </label>
+            <button class="primary-button compact" id="caseSearchButton" type="button">搜尋</button>
             <button class="secondary-button compact" id="importCasesButton" type="button">匯入 Excel</button>
             <button class="primary-button compact" id="addCaseButton" type="button">新增案件</button>
           </div>
@@ -377,7 +392,7 @@
 
     <script src="../js/vendor/xlsx.full.min.js?v=0.20.3"></script>
     <script src="../js/config.js?v=20260515-line-oa-endpoint"></script>
-    <script src="../js/api.js"></script>
-    <script src="../js/zcy-console.js?v=20260521-sheetjs-local"></script>
+    <script src="../js/api.js?v=20260522-case-search"></script>
+    <script src="../js/zcy-console.js?v=20260522-case-search"></script>
   </body>
 </html>

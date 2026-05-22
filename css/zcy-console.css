@@ -179,6 +179,10 @@ h3 {
   min-width: 96px;
 }
 
+.date-field {
+  max-width: 170px;
+}
+
 .segmented-control {
   display: inline-grid;
   grid-template-columns: repeat(2, minmax(48px, 1fr));
@@ -1484,6 +1488,46 @@ tr.is-selected {
   padding-top: 6px;
 }
 
+.case-inspect-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 32;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(17, 24, 39, 0.42);
+}
+
+.case-inspect-modal {
+  width: min(980px, 100%);
+  max-height: min(86vh, 860px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(24, 35, 31, 0.24);
+  overflow: hidden;
+}
+
+.case-inspect-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.case-inspect-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+  padding: 18px 20px 22px;
+  overflow: auto;
+}
+
 .modal-status {
   margin: 0;
   color: var(--muted);
@@ -1552,6 +1596,7 @@ button:disabled {
 
   .modal-grid,
   .modal-actions,
+  .case-inspect-grid,
   .pager {
     grid-template-columns: 1fr;
   }

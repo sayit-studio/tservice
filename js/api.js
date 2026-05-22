@@ -79,8 +79,23 @@
       }
       return post(config.endpoints.login, { action: "login", account, password });
     },
-    async listCases() {
-      return config.useMockData ? mock.cases : post(config.endpoints.casesList, { action: "cases.list" });
+    async listCases(filters = {}) {
+      if (config.useMockData) {
+        const keyword = String(filters.caseNo || "").trim();
+        const category = String(filters.category || "").trim();
+        const status = String(filters.status || "").trim();
+        const startDate = String(filters.startDate || "").trim();
+        const endDate = String(filters.endDate || "").trim();
+        return mock.cases.filter((item) => {
+          const date = String(item.requestDate || item.startDate || item.createdAt || "").slice(0, 10);
+          return (!keyword || String(item.caseNo || "").includes(keyword))
+            && (!category || item.category === category)
+            && (!status || item.status === status)
+            && (!startDate || date >= startDate)
+            && (!endDate || date <= endDate);
+        });
+      }
+      return post(config.endpoints.casesList, { action: "cases.list", filters });
     },
     async saveCase(payload) {
       if (config.useMockData) return mutateMock("cases", payload.id ? "update" : "create", payload);
