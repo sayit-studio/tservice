@@ -140,7 +140,8 @@
       setValue("lineDisplayName", profile.displayName);
       captureMember("event_liff_open");
     } catch (error) {
-      showNotice("LIFF 初始化失敗，請確認 LIFF ID 與 Endpoint URL。", "error");
+      const detail = error && (error.code || error.message) ? ` (${error.code || error.message})` : "";
+      showNotice("LIFF 初始化失敗，請確認 LIFF ID 與 Endpoint URL。" + detail, "error");
     }
   }
 
