@@ -1834,8 +1834,8 @@
     ], (data) => saveEventWithRegistration(item, data), item.id ? () => deleteItem("event", item.id) : null);
   }
 
-  function openEventRegistrationForm(_, button) {
-    copyText(eventRegistrationUrl(), button);
+  function openEventRegistrationForm(item, button) {
+    copyText(eventRegistrationUrl(item), button);
   }
 
   function buildEventRegistrationUrl(item) {
