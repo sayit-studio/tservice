@@ -140,7 +140,12 @@
       setValue("lineDisplayName", profile.displayName);
       captureMember("event_liff_open");
     } catch (error) {
-      const detail = error && (error.code || error.message) ? ` (${error.code || error.message})` : "";
+      const code = error && error.code;
+      if (code === "init_failed" || code === "INIT_FAILED") {
+        // Opened in external browser — LIFF context unavailable, form still works.
+        return;
+      }
+      const detail = code || (error && error.message) ? ` (${code || error.message})` : "";
       showNotice("LIFF 初始化失敗，請確認 LIFF ID 與 Endpoint URL。" + detail, "error");
     }
   }
