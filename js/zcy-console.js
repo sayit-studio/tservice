@@ -14,7 +14,7 @@
   ];
   const CASE_AREAS = ["中區", "東區", "西區", "南區", "北區", "西屯區", "南屯區", "北屯區", "豐原區", "大里區", "太平區", "清水區", "沙鹿區", "大甲區", "東勢區", "梧棲區", "烏日區", "神岡區", "大肚區", "大雅區", "后里區", "霧峰區", "潭子區", "龍井區", "外埔區", "和平區", "石岡區", "大安區", "新社區"];
   const EVENT_STATUSES = ["籌備中", "進行中", "已完成"];
-  const EVENT_SIGN_IN_ENTRY_URL = "https://tseng-service.pages.dev/liff/event-registration/";
+  const EVENT_SIGN_IN_ENTRY_URL = "https://liff.line.me/2009640939-ACYipKCx";
   const LEGAL_STATUSES = [
     { value: "confirmed", label: "已預約" },
     { value: "cancelled", label: "已取消" }
@@ -1785,7 +1785,8 @@
 
   async function saveEventWithRegistration(item, data) {
     const enabled = data.registrationEnabled === "true" || data.registrationEnabled === true;
-    const payload = { ...item, ...data, registrationUrl: enabled ? eventRegistrationUrl() : "" };
+    const merged = { ...item, ...data };
+    const payload = { ...merged, registrationUrl: enabled ? eventRegistrationUrl(merged) : "" };
     return AdminApi.saveEvent(payload);
   }
 
@@ -1827,7 +1828,7 @@
       { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "false", label: "不開放報名" }, { value: "true", label: "綁定預設活動報名表單" }], String(item.registrationEnabled === true ? "true" : item.registrationEnabled || "false")) },
       { name: "registrationDeadline", label: "報名截止時間", type: "datetime-local", value: datetimeForInput(item.registrationDeadline) },
       { name: "registrationLimit", label: "報名名額上限", type: "number", value: item.registrationLimit },
-      { name: "registrationUrl", label: "簽到入口", type: "copy-url", value: eventRegistrationUrl(), wide: true },
+      { name: "registrationUrl", label: "簽到入口", type: "copy-url", value: eventRegistrationUrl(item), wide: true },
       { name: "registrationNote", label: "報名注意事項", type: "textarea", value: item.registrationNote },
       { name: "detail", label: "活動詳情", type: "textarea", value: item.detail }
     ], (data) => saveEventWithRegistration(item, data), item.id ? () => deleteItem("event", item.id) : null);
@@ -1837,12 +1838,18 @@
     copyText(eventRegistrationUrl(), button);
   }
 
-  function buildEventRegistrationUrl() {
-    return EVENT_SIGN_IN_ENTRY_URL;
+  function buildEventRegistrationUrl(item) {
+    if (!item || !item.id) return EVENT_SIGN_IN_ENTRY_URL;
+    const p = new URLSearchParams();
+    p.set("eventId", item.id);
+    if (item.title) p.set("eventName", item.title);
+    const date = eventDateValue(item);
+    if (date) p.set("eventDate", date);
+    return EVENT_SIGN_IN_ENTRY_URL + "?" + p.toString();
   }
 
-  function eventRegistrationUrl() {
-    return buildEventRegistrationUrl();
+  function eventRegistrationUrl(item) {
+    return buildEventRegistrationUrl(item);
   }
 
   function openLegalForm(item = {}) {
