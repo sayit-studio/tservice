@@ -1479,6 +1479,12 @@ tr.is-selected {
   line-height: 1.6;
 }
 
+.checkbox-field input[type="checkbox"] {
+  min-height: 24px;
+  width: 24px;
+  accent-color: var(--brand);
+}
+
 .modal-actions {
   grid-column: 1 / -1;
   display: grid;

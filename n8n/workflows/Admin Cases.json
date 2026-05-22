@@ -13,179 +13,22 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -900,
+        -520,
         0
       ],
       "webhookId": "admin-cases"
     },
     {
       "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict"
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "cases.list",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "cases.list"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict"
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "cases.create",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "cases.create"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict"
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "cases.update",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "cases.update"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict"
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "cases.delete",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "cases.delete"
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict"
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $json.body.action }}",
-                    "rightValue": "cases.debugRaw",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "cases.debugRaw"
-            }
-          ]
-        },
-        "options": {
-          "fallbackOutput": "extra"
-        }
+        "jsCode": "const NOTION_VERSION = '2022-06-28';\nconst ENV = typeof process !== 'undefined' && process.env ? process.env : {};\nconst DATABASE_ID = ENV.NOTION_CASES_DATABASE_ID || '330b3ad1d1cd8047aabfc9e95de6658d';\nconst NOTION_TOKEN = ENV.NOTION_API_TOKEN || '???NotionIntegrationToken';\nconst body = $('Admin Cases Webhook').first().json.body || {};\nconst action = String(body.action || 'cases.list').trim();\nconst data = body.data || {};\n\nfunction response(ok, payload = {}, statusCode = 200) {\n  return [{ json: ok ? { ok: true, data: payload } : { ok: false, statusCode, message: payload.message || '????????' } }];\n}\n\nif (!DATABASE_ID || DATABASE_ID.includes('???') || !NOTION_TOKEN || NOTION_TOKEN.includes('???')) {\n  return response(false, { message: '???? NOTION_CASES_DATABASE_ID ? NOTION_API_TOKEN?' }, 500);\n}\n\nasync function notion(path, options = {}) {\n  const res = await fetch(`https://api.notion.com/v1${path}`, {\n    method: options.method || 'GET',\n    headers: { Authorization: `Bearer ${NOTION_TOKEN}`, 'Notion-Version': NOTION_VERSION, 'Content-Type': 'application/json' },\n    body: options.body ? JSON.stringify(options.body) : undefined\n  });\n  const json = await res.json().catch(() => ({}));\n  if (!res.ok) throw new Error(json.message || `Notion API ${res.status}`);\n  return json;\n}\n\nfunction rich(value) { return [{ type: 'text', text: { content: String(value || '') } }]; }\nfunction truthy(value) { return value === true || value === 'true' || value === '1' || value === '__YES__' || value === '?' || value === '??'; }\nfunction prop(page, name) {\n  const p = page.properties?.[name];\n  if (!p) return '';\n  if (p.type === 'title') return (p.title || []).map((v) => v.plain_text || '').join('');\n  if (p.type === 'rich_text') return (p.rich_text || []).map((v) => v.plain_text || '').join('');\n  if (p.type === 'select') return p.select?.name || '';\n  if (p.type === 'date') return p.date?.start || '';\n  if (p.type === 'phone_number') return p.phone_number || '';\n  if (p.type === 'checkbox') return p.checkbox ? 'true' : 'false';\n  if (p.type === 'number') return p.number ?? '';\n  if (p.type === 'files') return (p.files || []).map((v) => v.file?.url || v.external?.url || v.name).join(', ');\n  if (p.type === 'created_time') return p.created_time || '';\n  if (p.type === 'last_edited_time') return p.last_edited_time || '';\n  if (p.type === 'formula') return p.formula?.string ?? p.formula?.number ?? p.formula?.boolean ?? '';\n  return '';\n}\nfunction normalize(page) {\n  return {\n    id: page.id,\n    caseNo: prop(page, '????'),\n    requestDate: prop(page, '????'),\n    createdAt: page.created_time || prop(page, '????'),\n    updatedAt: page.last_edited_time || prop(page, '??????'),\n    category: prop(page, '????'),\n    area: prop(page, '????'),\n    staff: prop(page, '????'),\n    petitioner: prop(page, '????'),\n    homePhone: prop(page, '????'),\n    phone: prop(page, '????'),\n    email: prop(page, '??Email'),\n    address: prop(page, '????'),\n    householdAddress: prop(page, '????'),\n    commissioner: prop(page, '????'),\n    relation: prop(page, '??'),\n    content: prop(page, '????'),\n    status: prop(page, '????'),\n    processingDays: prop(page, '????'),\n    inspectionNote: prop(page, '??????'),\n    summary: prop(page, '????'),\n    reply: prop(page, '????'),\n    isPublic: prop(page, '????'),\n    beforeImages: prop(page, '?????'),\n    afterImages: prop(page, '?????')\n  };\n}\nfunction selectProp(value) { return value ? { select: { name: String(value) } } : { select: null }; }\nfunction phoneProp(value) { return value ? { phone_number: String(value) } : { phone_number: null }; }\nfunction textProp(value) { return { rich_text: rich(value) }; }\nfunction fileList(value) { return Array.isArray(value) ? value : String(value || '').split(',').map((url) => url.trim()).filter(Boolean); }\nfunction filesProp(value) { return { files: fileList(value).map((url) => ({ name: url.split('/').pop() || 'image', type: 'external', external: { url } })) }; }\nfunction propertiesFrom(input) {\n  const props = {\n    '????': { title: rich(input.caseNo || input.title || input.content || '???') },\n    '????': selectProp(input.status),\n    '????': { checkbox: truthy(input.isPublic) },\n    '????': selectProp(input.area),\n    '????': selectProp(input.category),\n    '????': textProp(input.staff || input.ownerName || input.owner),\n    '????': textProp(input.petitioner),\n    '????': phoneProp(input.homePhone),\n    '????': phoneProp(input.phone),\n    '??Email': textProp(input.email),\n    '????': textProp(input.address || input.mailingAddress),\n    '????': textProp(input.householdAddress),\n    '????': textProp(input.commissioner || input.principal),\n    '??': textProp(input.relation),\n    '????': textProp(input.content),\n    '??????': textProp(input.inspectionNote || input.meetingRecord),\n    '????': textProp(input.summary || input.publicSummary),\n    '????': textProp(input.reply),\n    '?????': filesProp(input.beforeImages),\n    '?????': filesProp(input.afterImages)\n  };\n  props['????'] = input.requestDate || input.startDate ? { date: { start: input.requestDate || input.startDate } } : { date: null };\n  if (input.processingDays !== '' && input.processingDays != null) {\n    const value = Number(input.processingDays);\n    props['????'] = { number: Number.isFinite(value) ? value : null };\n  }\n  return props;\n}\nfunction dateKey(value) { return String(value || '').slice(0, 10); }\nasync function listCases(filters = {}) {\n  const out = [];\n  let cursor;\n  do {\n    const result = await notion(`/databases/${DATABASE_ID}/query`, { method: 'POST', body: { page_size: 100, start_cursor: cursor, sorts: [{ property: '????', direction: 'descending' }] } });\n    out.push(...(result.results || []));\n    cursor = result.has_more ? result.next_cursor : null;\n  } while (cursor);\n  return out.map(normalize).filter((item) => {\n    const date = dateKey(item.requestDate || item.createdAt);\n    const keywordText = [item.caseNo, item.petitioner, item.phone, item.homePhone, item.email, item.content, item.summary, item.reply, item.staff, item.area, item.category].join(' ');\n    return (!filters.caseNo || keywordText.includes(String(filters.caseNo).trim()))\n      && (!filters.status || item.status === filters.status)\n      && (!filters.category || item.category === filters.category)\n      && (!filters.startDate || date >= filters.startDate)\n      && (!filters.endDate || date <= filters.endDate);\n  });\n}\ntry {\n  if (action === 'cases.list') return response(true, await listCases(body.filters || {}));\n  if (action === 'cases.debugRaw') return response(true, { count: (await listCases(body.filters || {})).length });\n  if (action === 'cases.create') {\n    const page = await notion('/pages', { method: 'POST', body: { parent: { database_id: DATABASE_ID }, properties: propertiesFrom(data) } });\n    return response(true, normalize(page));\n  }\n  if (action === 'cases.update') {\n    if (!data.id) return response(false, { message: '???? page id?' }, 400);\n    const page = await notion(`/pages/${data.id}`, { method: 'PATCH', body: { properties: propertiesFrom(data) } });\n    return response(true, normalize(page));\n  }\n  if (action === 'cases.delete') {\n    if (!body.id) return response(false, { message: '???? page id?' }, 400);\n    await notion(`/pages/${body.id}`, { method: 'PATCH', body: { archived: true } });\n    return response(true, { ok: true });\n  }\n  return response(false, { message: `???? action: ${action}` }, 400);\n} catch (error) {\n  return response(false, { message: error.message }, 500);\n}"
       },
-      "id": "route-action",
-      "name": "Route Action",
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3,
-      "position": [
-        -680,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "databasePage",
-        "operation": "getAll",
-        "databaseId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "330b3ad1d1cd8047aabfc9e95de6658d"
-        },
-        "returnAll": true,
-        "options": {},
-        "simplify": false
-      },
-      "id": "query-cases",
-      "name": "Query Cases",
-      "type": "n8n-nodes-base.notion",
-      "typeVersion": 2.2,
-      "position": [
-        -420,
-        -260
-      ],
-      "credentials": {
-        "notionApi": {
-          "id": "TUc2PAbFfQKWYUgA",
-          "name": "Notion-n8n"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('\\u3001');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.content) return textFromValue(value.content);\n  if (value.value != null) return textFromValue(value.value);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.created_time) return String(value.created_time);\n  if (value.last_edited_time) return String(value.last_edited_time);\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  if (value.files) return (value.files || []).map(f => f.external?.url || f.file?.url || f.url || '').filter(Boolean).join(',');\n  return '';\n}\nfunction simplifiedFallback(item, names) {\n  const direct = [];\n  for (const name of names) {\n    direct.push(name, name.replace(/\\s/g, ''), 'property_' + name, 'property_' + name.replace(/\\s/g, ''));\n  }\n  direct.push('property_');\n  for (const key of direct) {\n    if (item.json?.[key] != null) return textFromValue(item.json[key]).trim();\n  }\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    if (item.json?.[name.replace(/\\s/g, '')] != null) return textFromValue(item.json[name.replace(/\\s/g, '')]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return simplifiedFallback(item, wanted);\n}\nfunction dateKey(value) {\n  return String(value || '').slice(0, 10);\n}\nconst body = $('Admin Cases Webhook').first().json.body || {};\nif (body.action === 'cases.debugRaw') {\n  return [{ json: { ok: true, count: items.length, sample: items.slice(0, 3).map((item) => item.json) } }];\n}\nconst filters = body.filters || {};\nconst data = items.map(item => {\n  const requestDate = prop(item, ['\\u8acb\\u8a17\\u65e5\\u671f']);\n  const createdAt = requestDate || item.json.created_time || item.json.createdTime || prop(item, ['\\u5efa\\u7acb\\u6642\\u9593']) || '';\n  const caseNo = prop(item, ['\\u8acb\\u8a17\\u6848\\u865f']) || textFromValue(item.json.property_ || item.json.name || item.json.title || item.json.Name || item.json['\\u540d\\u7a31']).trim();\n  return {\n    id: item.json.id,\n    caseNo,\n    requestDate,\n    createdAt,\n    category: prop(item, ['\\u8a17\\u8fa6\\u985e\\u5225']),\n    staff: prop(item, ['\\u63a5\\u6848\\u79d8\\u66f8']),\n    petitioner: prop(item, ['\\u7576\\u4e8b\\u4eba\\u540d', '\\u9673\\u60c5\\u4eba\\u59d3\\u540d']),\n    homePhone: prop(item, ['\\u4f4f\\u5bb6\\u96fb\\u8a71']),\n    phone: prop(item, ['\\u884c\\u52d5\\u96fb\\u8a71', '\\u806f\\u7d61\\u624b\\u6a5f']),\n    address: prop(item, ['\\u901a\\u8a0a\\u5730\\u5740', '\\u806f\\u7d61\\u5730\\u5740']),\n    householdAddress: prop(item, ['\\u6236\\u7c4d\\u5730\\u5740']),\n    commissioner: prop(item, ['\\u59d4\\u8a17\\u4eba\\u540d']),\n    relation: prop(item, ['\\u95dc\\u4fc2']),\n    content: prop(item, ['\\u8a17\\u8fa6\\u4e8b\\u9805', '\\u6848\\u4ef6\\u539f\\u59cb\\u5167\\u5bb9', '\\u6848\\u4ef6\\u8a73\\u7d30\\u8aaa\\u660e']),\n    status: prop(item, ['\\u8655\\u7406\\u72c0\\u6cc1']),\n    processingDays: prop(item, ['\\u8655\\u7406\\u5929\\u6578']),\n    inspectionNote: prop(item, ['\\u4ea4\\u8fa6\\u6703\\u52d8\\u8a18\\u9304']),\n    summary: prop(item, ['\\u516c\\u958b\\u6458\\u8981']),\n    isPublic: prop(item, ['\\u662f\\u5426\\u516c\\u958b']),\n    beforeImages: prop(item, ['\\u6539\\u5584\\u524d\\u5716\\u7247']),\n    afterImages: prop(item, ['\\u6539\\u5584\\u5f8c\\u5716\\u7247'])\n  };\n}).filter(item => {\n  const date = dateKey(item.requestDate || item.createdAt);\n  return (!filters.caseNo || String(item.caseNo || '').includes(String(filters.caseNo).trim()))\n    && (!filters.status || item.status === filters.status)\n    && (!filters.category || item.category === filters.category)\n    && (!filters.startDate || date >= filters.startDate)\n    && (!filters.endDate || date <= filters.endDate);\n});\nreturn [{ json: { ok: true, data } }];"
-      },
-      "id": "normalize-cases",
-      "name": "Normalize Cases",
+      "id": "admin-cases-handler",
+      "name": "Handle Cases",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -180,
-        -260
+        -240,
+        0
       ]
     },
     {
@@ -194,364 +37,34 @@
         "responseBody": "={{ $json }}",
         "options": {}
       },
-      "id": "respond-cases",
+      "id": "admin-cases-response",
       "name": "Respond Cases",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        40,
-        -260
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = { ...(body.data || {}) };\nif (!data.createdAt && data.requestDate) data.createdAt = data.requestDate;\nconst textFields = ['caseNo', 'requestDate', 'category', 'staff', 'petitioner', 'homePhone', 'phone', 'address', 'householdAddress', 'commissioner', 'relation', 'content', 'status', 'inspectionNote', 'summary'];\nfor (const field of textFields) {\n  if (data[field] == null) data[field] = '';\n}\nif (data.processingDays == null || data.processingDays === '') data.processingDays = null;\nif (!Array.isArray(data.beforeImages)) data.beforeImages = [];\nif (!Array.isArray(data.afterImages)) data.afterImages = [];\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
-      },
-      "id": "prepare-create-cases",
-      "name": "Prepare Create Cases",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -420,
-        -60
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "databasePage",
-        "databaseId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "330b3ad1d1cd8047aabfc9e95de6658d"
-        },
-        "title": "={{ $json.data.caseNo }}",
-        "propertiesUi": {
-          "propertyValues": [
-            {
-              "key": "請託案號|title",
-              "title": "={{ $json.data.caseNo }}"
-            },
-            {
-              "key": "請託日期|date",
-              "includeTime": false,
-              "date": "={{ $json.data.requestDate }}",
-              "timezone": "Asia/Taipei"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "create-cases",
-      "name": "Create Cases",
-      "type": "n8n-nodes-base.notion",
-      "typeVersion": 2.2,
-      "position": [
-        -180,
-        -60
-      ],
-      "credentials": {
-        "notionApi": {
-          "id": "TUc2PAbFfQKWYUgA",
-          "name": "Notion-n8n"
-        }
-      },
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { ok: true, data: { id: $json.id }, page: $json } }}",
-        "options": {}
-      },
-      "id": "respond-create-cases",
-      "name": "Respond Create Cases",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        40,
-        -60
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = { ...(body.data || {}) };\nif (!data.createdAt && data.requestDate) data.createdAt = data.requestDate;\nconst textFields = ['caseNo', 'requestDate', 'category', 'staff', 'petitioner', 'homePhone', 'phone', 'address', 'householdAddress', 'commissioner', 'relation', 'content', 'status', 'inspectionNote', 'summary'];\nfor (const field of textFields) {\n  if (data[field] == null) data[field] = '';\n}\nif (data.processingDays == null || data.processingDays === '') data.processingDays = null;\nif (!Array.isArray(data.beforeImages)) data.beforeImages = [];\nif (!Array.isArray(data.afterImages)) data.afterImages = [];\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
-      },
-      "id": "prepare-update-cases",
-      "name": "Prepare Update Cases",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -420,
-        140
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "databasePage",
-        "operation": "update",
-        "pageId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $json.id }}"
-        },
-        "propertiesUi": {
-          "propertyValues": [
-            {
-              "key": "請託案號|title",
-              "title": "={{ $json.data.caseNo }}"
-            },
-            {
-              "key": "請託日期|date",
-              "includeTime": false,
-              "date": "={{ $json.data.requestDate }}",
-              "timezone": "Asia/Taipei"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "update-cases",
-      "name": "Update Cases",
-      "type": "n8n-nodes-base.notion",
-      "typeVersion": 2.2,
-      "position": [
-        -180,
-        140
-      ],
-      "credentials": {
-        "notionApi": {
-          "id": "TUc2PAbFfQKWYUgA",
-          "name": "Notion-n8n"
-        }
-      },
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { ok: true, data: { id: $json.id }, page: $json } }}",
-        "options": {}
-      },
-      "id": "respond-update-cases",
-      "name": "Respond Update Cases",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        40,
-        140
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const body = $('Admin Cases Webhook').first().json.body || {};\nconst data = body.data || {};\nreturn [{ json: {\n  id: String(data.id || body.id || '').trim(),\n  data,\n  now: new Date().toISOString()\n} }];"
-      },
-      "id": "prepare-delete-cases",
-      "name": "Prepare Delete Cases",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -420,
-        340
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "page",
-        "operation": "archive",
-        "pageId": {
-          "__rl": true,
-          "mode": "id",
-          "value": "={{ $json.id }}"
-        },
-        "options": {}
-      },
-      "id": "archive-cases",
-      "name": "Archive Cases",
-      "type": "n8n-nodes-base.notion",
-      "typeVersion": 2.2,
-      "position": [
-        -180,
-        340
-      ],
-      "credentials": {
-        "notionApi": {
-          "id": "TUc2PAbFfQKWYUgA",
-          "name": "Notion-n8n"
-        }
-      },
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { ok: true, data: { id: $json.id } } }}",
-        "options": {}
-      },
-      "id": "respond-delete-cases",
-      "name": "Respond Delete Cases",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        40,
-        340
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { ok: false, message: 'Unsupported action: ' + ($json.body?.action || '') } }}",
-        "options": {}
-      },
-      "id": "respond-unsupported-action",
-      "name": "Respond Unsupported Action",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        -420,
-        520
+        60,
+        0
       ]
     }
   ],
+  "pinData": {},
   "connections": {
     "Admin Cases Webhook": {
       "main": [
         [
           {
-            "node": "Route Action",
+            "node": "Handle Cases",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Route Action": {
-      "main": [
-        [
-          {
-            "node": "Query Cases",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Prepare Create Cases",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Prepare Update Cases",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Prepare Delete Cases",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Query Cases",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond Unsupported Action",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Query Cases": {
-      "main": [
-        [
-          {
-            "node": "Normalize Cases",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Normalize Cases": {
+    "Handle Cases": {
       "main": [
         [
           {
             "node": "Respond Cases",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Create Cases": {
-      "main": [
-        [
-          {
-            "node": "Create Cases",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Cases": {
-      "main": [
-        [
-          {
-            "node": "Respond Create Cases",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Update Cases": {
-      "main": [
-        [
-          {
-            "node": "Update Cases",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Update Cases": {
-      "main": [
-        [
-          {
-            "node": "Respond Update Cases",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Delete Cases": {
-      "main": [
-        [
-          {
-            "node": "Archive Cases",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Archive Cases": {
-      "main": [
-        [
-          {
-            "node": "Respond Delete Cases",
             "type": "main",
             "index": 0
           }
@@ -563,7 +76,10 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "admin-cases-replace-crud-v2",
+  "versionId": "admin-cases-v3",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
   "id": "admin-cases",
   "tags": []
 }

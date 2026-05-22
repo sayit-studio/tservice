@@ -66,18 +66,16 @@
           <div class="toolbar">
             <label class="search-field">
               <span>搜尋</span>
-              <input id="caseSearch" placeholder="請輸入案號" />
+              <input id="caseSearch" placeholder="請託案號、當事人、電話、託辦事項" />
             </label>
             <label class="select-field">
               <span>狀態</span>
               <select id="caseStatusFilter">
                 <option value="">全部狀態</option>
-                <option>新案件</option>
                 <option>處理中</option>
-                <option>進行中</option>
-                <option>追蹤中</option>
-                <option>未完成案件</option>
-                <option>已完成案件</option>
+                <option>已結案</option>
+                <option>不受理</option>
+                <option>完成結案</option>
               </select>
             </label>
             <label class="select-field">
@@ -135,6 +133,7 @@
                     <th>接案秘書</th>
                     <th>狀態</th>
                     <th>當事人名</th>
+                    <th>是否公開</th>
                     <th>請託日期</th>
                   </tr>
                 </thead>

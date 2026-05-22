@@ -88,7 +88,8 @@
         const endDate = String(filters.endDate || "").trim();
         return mock.cases.filter((item) => {
           const date = String(item.requestDate || item.startDate || item.createdAt || "").slice(0, 10);
-          return (!keyword || String(item.caseNo || "").includes(keyword))
+          const keywordText = [item.caseNo, item.petitioner, item.phone, item.homePhone, item.email, item.content, item.summary, item.reply, item.staff, item.area, item.category].join(" ");
+          return (!keyword || keywordText.includes(keyword))
             && (!category || item.category === category)
             && (!status || item.status === status)
             && (!startDate || date >= startDate)

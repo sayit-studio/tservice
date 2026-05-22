@@ -1,19 +1,18 @@
 (function () {
-  const CASE_STATUSES = ["新案件", "進行中", "追蹤中", "未完成案件", "已完成案件"];
+  const CASE_STATUSES = ["處理中", "已結案", "不受理", "完成結案"];
   const CASE_CATEGORIES = [
-    "陳情建議",
-    "市府單位",
-    "一般請託",
-    "人事案",
-    "託辦類別",
-    "學籍安排",
-    "府外單位",
-    "民間救助",
     "醫療院所",
-    "兵役",
-    "總質詢",
-    "車禍"
+    "市府單位",
+    "法律諮詢",
+    "一般請託",
+    "學籍安排",
+    "法律服務",
+    "府外單位",
+    "車禍",
+    "人事案",
+    "違章建築"
   ];
+  const CASE_AREAS = ["中區", "東區", "西區", "南區", "北區", "西屯區", "南屯區", "北屯區", "豐原區", "大里區", "太平區", "清水區", "沙鹿區", "大甲區", "東勢區", "梧棲區", "烏日區", "神岡區", "大肚區", "大雅區", "后里區", "霧峰區", "潭子區", "龍井區", "外埔區", "和平區", "石岡區", "大安區", "新社區"];
   const EVENT_STATUSES = ["籌備中", "進行中", "已完成"];
   const LEGAL_STATUSES = [
     { value: "confirmed", label: "已預約" },
@@ -363,10 +362,14 @@
     return caseTimestamp(b) - caseTimestamp(a);
   }
 
+  function isTruthy(value) {
+    return value === true || value === "true" || value === "1" || value === "__YES__" || value === "是" || value === "公開";
+  }
+
   function badge(status, type) {
     const label = type === "legal" ? (LEGAL_STATUSES.find((item) => item.value === status)?.label || status || "未設定") : (status || "未設定");
-    const done = status === "已完成" || status === "confirmed";
-    const cancelled = status === "cancelled";
+    const done = ["已完成", "已結案", "完成結案", "confirmed"].includes(status);
+    const cancelled = ["cancelled", "不受理"].includes(status);
     return `<span class="status-badge ${done ? "done" : cancelled ? "cancelled" : "warn"}">${escapeHtml(label)}</span>`;
   }
 
@@ -539,9 +542,22 @@
   }
 
   function itemMatchesCaseFilters(item, filters = caseSearchFilters()) {
-    const caseNo = String(item.caseNo || item.title || "").trim();
+    const keywordText = [
+      item.caseNo,
+      item.title,
+      item.petitioner,
+      item.phone,
+      item.homePhone,
+      item.email,
+      item.content,
+      item.summary,
+      item.reply,
+      item.staff,
+      item.area,
+      item.category
+    ].join(" ");
     const date = String(item.requestDate || item.startDate || item.createdAt || item.created_at || "").slice(0, 10);
-    return (!filters.caseNo || caseNo.includes(filters.caseNo))
+    return (!filters.caseNo || keywordText.includes(filters.caseNo))
       && (!filters.status || item.status === filters.status)
       && (!filters.category || item.category === filters.category)
       && (!filters.startDate || date >= filters.startDate)
@@ -650,6 +666,7 @@
         <td>${escapeHtml(item.staff || "未指派")}</td>
         <td>${badge(item.status)}</td>
         <td>${escapeHtml(casePetitionerName(item.petitioner))}</td>
+        <td><span class="status-badge ${isTruthy(item.isPublic) ? "done" : "cancelled"}">${isTruthy(item.isPublic) ? "公開" : "不公開"}</span></td>
         <td>${escapeHtml(item.requestDate || "")}</td>
       </tr>
     `).join("");
@@ -664,15 +681,21 @@
     if (!item) return;
     els.caseDetail.innerHTML = detail(item.caseNo || "未編號案件", [
       { label: "處理狀況", value: item.status },
+      { label: "是否公開", value: isTruthy(item.isPublic) ? "公開" : "不公開" },
       { label: "請託日期", value: item.requestDate || "無" },
       { label: "託辦類別", value: item.category || "無" },
+      { label: "案件區域", value: item.area || "無" },
       { label: "接案秘書", value: item.staff || "未指派" },
       { label: "當事人名", value: item.petitioner || "未填寫" },
       { label: "行動電話", value: item.phone || "無" },
+      { label: "住家電話", value: item.homePhone || "無" },
+      { label: "聯絡Email", value: item.email || "無" },
       { label: "通訊地址", value: item.address || "無" },
+      { label: "戶籍地址", value: item.householdAddress || "無" },
       { label: "委託人名", value: item.commissioner || "無" },
       { label: "關係", value: item.relation || "無" },
       { label: "處理天數", value: item.processingDays || "無" },
+      { label: "回覆內容", value: item.reply, multiline: true },
       { label: "託辦事項", value: item.content, multiline: true },
       { label: "交辦會勘記錄", value: item.inspectionNote, multiline: true },
       { label: "公開摘要", value: item.summary, multiline: true }
@@ -694,17 +717,22 @@
       ["請託日期", item.requestDate || item.startDate],
       ["託辦類別", item.category],
       ["處理狀況", item.status],
+      ["是否公開", isTruthy(item.isPublic) ? "公開" : "不公開"],
+      ["案件區域", item.area],
       ["接案秘書", item.staff],
       ["當事人名", casePetitionerName(item.petitioner)],
+      ["住家電話", item.homePhone],
       ["聯絡電話", item.phone],
+      ["聯絡Email", item.email],
       ["地址", item.address],
+      ["戶籍地址", item.householdAddress],
       ["當事人關係", item.relation],
       ["接洽人", item.commissioner],
       ["處理天數", item.processingDays],
       ["託辦事項", item.content],
       ["會勘紀錄", item.inspectionNote],
       ["摘要", item.summary],
-      ["公開", item.isPublic],
+      ["回覆內容", item.reply],
       ["改善前照片", item.beforeImages],
       ["改善後照片", item.afterImages],
       ["Notion ID", item.id]
@@ -1356,6 +1384,7 @@
         { label: "請託案號", value: source.caseNo || "無" },
         { label: "當事人名", value: casePetitionerName(source.petitioner) },
         { label: "託辦類別", value: source.category || "無" },
+        { label: "是否公開", value: isTruthy(source.isPublic) ? "公開" : "不公開" },
         { label: "公開摘要", value: source.summary || source.content, multiline: true, wide: true }
       );
     }
@@ -1546,6 +1575,14 @@
     if (field.type === "select") {
       return `<label class="field"><span>${escapeHtml(field.label)}</span><select name="${field.name}">${field.options}</select></label>`;
     }
+    if (field.type === "checkbox") {
+      return `
+        <label class="field checkbox-field ${field.wide ? "wide" : ""}">
+          <span>${escapeHtml(field.label)}</span>
+          <input name="${field.name}" type="checkbox" value="true" ${isTruthy(value) ? "checked" : ""} />
+        </label>
+      `;
+    }
     if (field.type === "image-upload") {
       const urls = String(value).split(",").map((s) => s.trim()).filter(Boolean);
       const previews = urls.map((url) => `<div class="upload-thumb" data-url="${escapeHtml(url)}"><img src="${escapeHtml(url)}" alt="" /><button type="button" class="upload-thumb-remove" data-remove-url="${escapeHtml(url)}">✕</button></div>`).join("");
@@ -1592,7 +1629,11 @@
   }
 
   function formObject(form) {
-    return Object.fromEntries(Array.from(new FormData(form).entries()).map(([key, value]) => [key, String(value).trim()]));
+    const data = Object.fromEntries(Array.from(new FormData(form).entries()).map(([key, value]) => [key, String(value).trim()]));
+    form.querySelectorAll('input[type="checkbox"][name]').forEach((input) => {
+      data[input.name] = input.checked ? "true" : "false";
+    });
+    return data;
   }
 
   async function submitModal(event) {
@@ -1641,10 +1682,15 @@
       { name: "caseNo", label: "請託案號", value: autoCaseNo, wide: true, readonly: isNew },
       { name: "requestDate", label: "請託日期", type: "date", value: item.requestDate ? dateForInput(item.requestDate) : today },
       { name: "category", label: "託辦類別", type: "select", options: '<option value="">未設定</option>' + selectOptions(CASE_CATEGORIES, item.category) },
+      { name: "area", label: "案件區域", type: "select", options: '<option value="">未設定</option>' + selectOptions(CASE_AREAS, item.area) },
+      { name: "isPublic", label: "是否公開", type: "checkbox", value: item.isPublic },
       { name: "staff", label: "接案秘書", value: item.staff },
       { name: "petitioner", label: "當事人名", value: item.petitioner },
       { name: "phone", label: "行動電話", value: item.phone },
+      { name: "homePhone", label: "住家電話", value: item.homePhone },
+      { name: "email", label: "聯絡Email", value: item.email },
       { name: "address", label: "通訊地址", value: item.address, wide: true },
+      { name: "householdAddress", label: "戶籍地址", value: item.householdAddress, wide: true },
       { name: "commissioner", label: "委託人名", value: item.commissioner },
       { name: "relation", label: "與當事人關係", value: item.relation },
       { name: "content", label: "託辦事項", type: "textarea", value: item.content, wide: true },
@@ -1652,6 +1698,7 @@
       { name: "processingDays", label: "處理天數", type: "number", value: item.processingDays },
       { name: "inspectionNote", label: "交辦會勘記錄", type: "textarea", value: item.inspectionNote },
       { name: "summary", label: "公開摘要", type: "textarea", value: item.summary },
+      { name: "reply", label: "回覆內容", type: "textarea", value: item.reply },
       { name: "beforeImages", label: "改善前圖片", type: "image-upload", value: item.beforeImages || "" },
       { name: "afterImages", label: "改善後圖片", type: "image-upload", value: item.afterImages || "" }
     ], (data) => AdminApi.saveCase({ ...item, ...data }), item.id ? () => deleteItem("case", item.id) : null);
@@ -1963,10 +2010,12 @@
     "請託日期": "requestDate",
     "請託案號": "caseNo",
     "託辦類別": "category",
+    "案件區域": "area",
     "接案秘書": "staff",
     "當事人名": "petitioner",
     "住家電話": "homePhone",
     "行動電話": "phone",
+    "聯絡Email": "email",
     "通訊地址": "address",
     "戶籍地址": "householdAddress",
     "委託人名": "commissioner",
@@ -1975,6 +2024,9 @@
     "處理狀況": "status",
     "處理天數": "processingDays",
     "交辦會勘記錄": "inspectionNote",
+    "公開摘要": "summary",
+    "回覆內容": "reply",
+    "是否公開": "isPublic",
   };
 
   function convertRocDate(value) {
