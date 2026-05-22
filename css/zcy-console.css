@@ -93,7 +93,8 @@ h3 {
 
 .field,
 .search-field,
-.select-field {
+.select-field,
+.date-field {
   display: grid;
   gap: 6px;
   color: var(--muted);
@@ -104,7 +105,8 @@ h3 {
 .field input,
 .search-field input,
 .select-field input,
-.select-field select {
+.select-field select,
+.date-field input {
   min-height: 42px;
   width: 100%;
   border: 1px solid var(--line);
@@ -118,7 +120,8 @@ h3 {
 .field input:focus,
 .search-field input:focus,
 .select-field input:focus,
-.select-field select:focus {
+.select-field select:focus,
+.date-field input:focus {
   border-color: var(--brand-2);
   box-shadow: 0 0 0 3px rgba(47, 143, 131, 0.16);
 }
@@ -180,6 +183,7 @@ h3 {
 }
 
 .date-field {
+  min-width: 140px;
   max-width: 170px;
 }
 
@@ -351,7 +355,15 @@ h3 {
 }
 
 .registration-toolbar {
-  grid-template-columns: minmax(320px, 1fr) auto;
+  align-items: end;
+}
+
+.registration-toolbar .search-field {
+  min-width: 230px;
+}
+
+.registration-toolbar .select-field {
+  min-width: 108px;
 }
 
 .task-toolbar {
@@ -1304,6 +1316,103 @@ tr.is-selected {
   color: var(--muted);
   text-align: center;
   font-weight: 800;
+}
+
+.legal-slot-panel {
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+}
+
+.legal-slot-panel header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.legal-slot-panel h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.legal-slot-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.legal-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.legal-slot-day {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.legal-slot-day > strong {
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.legal-slot-options {
+  display: grid;
+  gap: 6px;
+}
+
+.slot-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  padding: 0 8px;
+  color: var(--muted);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.slot-toggle input {
+  accent-color: var(--brand);
+}
+
+.slot-toggle.is-open {
+  border-color: rgba(47, 143, 131, 0.38);
+  background: #e8f4ef;
+  color: var(--brand);
+}
+
+.slot-toggle.is-closed {
+  background: #f7f2f0;
+  color: #9a4b3f;
+  text-decoration: line-through;
+}
+
+@media (max-width: 1100px) {
+  .legal-slot-grid {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .legal-slot-panel header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .legal-slot-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .day-events-layer {

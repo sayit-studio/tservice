@@ -76,6 +76,11 @@
     return String(message || "").replace(/報名/g, "簽到");
   }
 
+  function readableMessage(message, fallback) {
+    const text = displayMessage(message).trim();
+    return !text || /^\?+$/.test(text) ? fallback : text;
+  }
+
   function hasMemberWebhook() {
     return Boolean(config.memberWebhookBaseUrl && !config.memberWebhookBaseUrl.includes("YOUR_N8N_DOMAIN"));
   }
@@ -147,6 +152,7 @@
     event.preventDefault();
     hideNotice();
     const button = form.querySelector("button[type='submit']");
+    let keepButtonDisabled = false;
     button.disabled = true;
     button.textContent = "送出中";
 
@@ -168,21 +174,33 @@
         note: payload.data.note,
         tags: ["LIFF 綁定", "活動簽到", "已填聯絡資料"]
       });
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), Number(config.submitTimeoutMs) || 15000);
       const response = await fetch(config.webhookBaseUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
+      window.clearTimeout(timeoutId);
       const body = await response.json().catch(() => ({}));
-      if (!response.ok || body.ok === false) throw new Error(body.message || "簽到送出失敗");
-      completeText.textContent = displayMessage(body.message) || "服務團隊已收到您的簽到資料。";
+      if (response.status === 409 || body.duplicate === true) {
+        keepButtonDisabled = true;
+        button.textContent = "今日已簽到";
+        throw new Error(readableMessage(body.message, "今天已經完成簽到，請勿重複簽到。"));
+      }
+      if (!response.ok || body.ok === false) throw new Error(readableMessage(body.message, "簽到送出失敗"));
+      completeText.textContent = readableMessage(body.message, "簽到已送出，服務團隊已收到您的簽到資料。");
       completeLayer.hidden = false;
       window.setTimeout(closeWindow, Number(config.closeDelayMs) || 1400);
     } catch (error) {
-      showNotice(error.message || "簽到送出失敗，請稍後再試。", "error");
+      const message = error.name === "AbortError" ? "簽到送出逾時，請稍後再試或通知服務人員檢查 n8n。" : error.message;
+      showNotice(readableMessage(message, "簽到送出失敗，請稍後再試。"), "error");
     } finally {
-      button.disabled = false;
-      button.textContent = "送出簽到";
+      if (!keepButtonDisabled) {
+        button.disabled = false;
+        button.textContent = "送出簽到";
+      }
     }
   }
 

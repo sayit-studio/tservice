@@ -3,6 +3,7 @@
   liffId: "2009640939-ACYipKCx",
   webhookBaseUrl: "https://drwu.zeabur.app/webhook/event-registration",
   memberWebhookBaseUrl: "https://drwu.zeabur.app/webhook/line-oa-members",
+  submitTimeoutMs: 15000,
   closeDelayMs: 1400
 };
 

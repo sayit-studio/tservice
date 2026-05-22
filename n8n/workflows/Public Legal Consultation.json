@@ -12,18 +12,328 @@
       "name": "Public Legal Consultation Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-520, 0],
+      "position": [
+        -980,
+        0
+      ],
       "webhookId": "legal-consultation"
     },
     {
       "parameters": {
-        "jsCode": "const NOTION_TOKEN = (typeof process !== \u0027undefined\u0027 \u0026\u0026 process.env ? process.env.NOTION_API_TOKEN : \u0027\u0027) || \u0027\u0027;\nconst DATABASE_ID = (typeof process !== \u0027undefined\u0027 \u0026\u0026 process.env ? process.env.NOTION_LEGAL_DATABASE_ID : \u0027\u0027) || \u00272ccb3ad1d1cd8175aba6e21110f71145\u0027;\nconst NOTION_VERSION = \u00272022-06-28\u0027;\nconst FILE_VERSION = \u00272026-03-11\u0027;\nconst binaryHelpers = this.helpers || {};\nconst item = $input.first();\nconst rawBody = item.json.body || item.json || {};\nlet body = rawBody;\nif (typeof rawBody.payload === \u0027string\u0027) {\n  try { body = JSON.parse(rawBody.payload); } catch (error) { return response(false, { message: \u0027Invalid payload JSON.\u0027 }, 400); }\n}\nconst action = String(body.action || \u0027\u0027).trim();\nconst data = body.data || {};\nconst binary = item.binary || {};\nconst F = { id: \u0027預約編號\u0027, name: \u0027姓名\u0027, phone: \u0027電話\u0027, statement: \u0027事件陳述\u0027, photos: \u0027提供照片資訊\u0027, type: \u0027諮詢類別\u0027, category: \u0027法扶項目\u0027, case1999: \u00271999案號\u0027, files: \u0027案件附件\u0027, slot: \u0027指定預約時間\u0027, date: \u0027預約日期\u0027, status: \u0027狀態\u0027, caseStatus: \u0027案件狀態\u0027, lineName: \u0027LINE名稱\u0027, notifyStatus: \u0027通知狀態\u0027, cancelReason: \u0027取消原因\u0027, cancelTime: \u0027取消時間\u0027 };\nconst CATEGORY_FIELD = { \u0027民事\u0027: \u0027民事\u0027, \u0027刑事\u0027: \u0027刑事\u0027, \u0027行政訴訟\u0027: \u0027行政訴訟\u0027, \u0027家事\u0027: \u0027家事\u0027, \u0027勞資糾紛\u0027: \u0027勞資糾紛\u0027, \u0027消費糾紛\u0027: \u0027消費糾紛\u0027, \u0027強制執行\u0027: \u0027強制執行\u0027 };\nfunction response(ok, payload = {}, statusCode = 200) { return [{ json: ok ? { ok: true, statusCode, ...payload } : { ok: false, statusCode, message: payload.message || \u0027Request failed\u0027 } }]; }\nif (!NOTION_TOKEN) return response(false, { message: \u0027Missing NOTION_API_TOKEN in n8n environment.\u0027 }, 500);\nasync function notion(path, options = {}) {\n  const res = await fetch(\u0027https://api.notion.com/v1\u0027 + path, { method: options.method || \u0027GET\u0027, headers: { Authorization: \u0027Bearer \u0027 + NOTION_TOKEN, \u0027Notion-Version\u0027: options.version || NOTION_VERSION, \u0027Content-Type\u0027: \u0027application/json\u0027 }, body: options.body ? JSON.stringify(options.body) : undefined });\n  const json = await res.json().catch(() => ({}));\n  if (!res.ok) throw new Error(json.message || \u0027Notion API \u0027 + res.status);\n  return json;\n}\nfunction rich(value) { return [{ type: \u0027text\u0027, text: { content: String(value || \u0027\u0027) } }]; }\nfunction prop(page, name) {\n  const p = page.properties?.[name];\n  if (!p) return \u0027\u0027;\n  if (p.type === \u0027title\u0027) return (p.title || []).map(v => v.plain_text || \u0027\u0027).join(\u0027\u0027);\n  if (p.type === \u0027rich_text\u0027) return (p.rich_text || []).map(v => v.plain_text || \u0027\u0027).join(\u0027\u0027);\n  if (p.type === \u0027select\u0027) return p.select?.name || \u0027\u0027;\n  if (p.type === \u0027multi_select\u0027) return (p.multi_select || []).map(v => v.name).join(\u0027、\u0027);\n  if (p.type === \u0027date\u0027) return p.date?.start || \u0027\u0027;\n  if (p.type === \u0027phone_number\u0027) return p.phone_number || \u0027\u0027;\n  return \u0027\u0027;\n}\nfunction dateSlots(dateValue) {\n  const day = new Date(dateValue + \u0027T00:00:00+08:00\u0027).getDay();\n  if (day < 1 || day > 5) return [];\n  const hour = day === 3 ? \u002710\u0027 : \u002715\u0027;\n  return [hour + \u0027:00\u0027, hour + \u0027:15\u0027, hour + \u0027:30\u0027, hour + \u0027:45\u0027];\n}\nfunction slotLabel(dateValue, time) {\n  const day = new Date(dateValue + \u0027T00:00:00+08:00\u0027).getDay();\n  const label = [\u0027星期日\u0027,\u0027星期一\u0027,\u0027星期二\u0027,\u0027星期三\u0027,\u0027星期四\u0027,\u0027星期五\u0027,\u0027星期六\u0027][day] || \u0027\u0027;\n  return label + \u0027 \u0027 + time;\n}\nasync function queryPages() {\n  const out = [];\n  let cursor;\n  do {\n    const result = await notion(\u0027/databases/\u0027 + DATABASE_ID + \u0027/query\u0027, { method: \u0027POST\u0027, body: { page_size: 100, start_cursor: cursor } });\n    out.push(...(result.results || []));\n    cursor = result.has_more ? result.next_cursor : null;\n  } while (cursor);\n  return out;\n}\nfunction rocDateKey(dateValue) {\n  const parts = String(dateValue).slice(0, 10).split(\u0027-\u0027).map(Number);\n  return String(parts[0] - 1911).padStart(3, \u00270\u0027) + String(parts[1]).padStart(2, \u00270\u0027) + String(parts[2]).padStart(2, \u00270\u0027);\n}\nasync function nextAppointmentId(dateValue, pages) {\n  const prefix = rocDateKey(dateValue);\n  const max = pages.map(page => prop(page, F.id)).filter(id => id.startsWith(prefix)).map(id => Number(id.slice(prefix.length))).filter(Number.isFinite).reduce((a, b) => Math.max(a, b), 0);\n  return prefix + String(max + 1).padStart(3, \u00270\u0027);\n}\nfunction normalize(page) { return { id: page.id, appointmentId: prop(page, F.id), name: prop(page, F.name), phone: prop(page, F.phone), appointmentDate: prop(page, F.date), appointmentTime: prop(page, F.slot), status: prop(page, F.status), statement: prop(page, F.statement), category: prop(page, F.category), case1999: prop(page, F.case1999) }; }\nasync function uploadBinaryFile(key, file) {\n  const filename = file.fileName || file.filename || \u0027attachment.bin\u0027;\n  const contentType = file.mimeType || \u0027application/octet-stream\u0027;\n  const created = await notion(\u0027/file_uploads\u0027, { method: \u0027POST\u0027, version: FILE_VERSION, body: { mode: \u0027single_part\u0027, filename, content_type: contentType } });\n  const form = new FormData();\n  const buffer = binaryHelpers.getBinaryDataBuffer ? await binaryHelpers.getBinaryDataBuffer(0, key) : Buffer.from(file.data, \u0027base64\u0027);\n  form.append(\u0027file\u0027, new Blob([buffer], { type: contentType }), filename);\n  const res = await fetch(created.upload_url || (\u0027https://api.notion.com/v1/file_uploads/\u0027 + created.id + \u0027/send\u0027), { method: \u0027POST\u0027, headers: { Authorization: \u0027Bearer \u0027 + NOTION_TOKEN, \u0027Notion-Version\u0027: FILE_VERSION }, body: form });\n  const sent = await res.json().catch(() => ({}));\n  if (!res.ok) throw new Error(sent.message || \u0027Notion file upload failed\u0027);\n  return { type: \u0027file_upload\u0027, file_upload: { id: created.id }, name: filename };\n}\nasync function uploadGroup(kind) {\n  const entries = Object.entries(binary).filter(([key, file]) => key.includes(kind) || (kind === \u0027photoFiles\u0027 && String(file.mimeType || \u0027\u0027).startsWith(\u0027image/\u0027)));\n  const uploaded = [];\n  for (const [key, file] of entries) uploaded.push(await uploadBinaryFile(key, file));\n  return uploaded;\n}\ntry {\n  const pages = await queryPages();\n  if (action === \u0027availability\u0027) {\n    const dateValue = String(data.appointmentDate || \u0027\u0027).slice(0, 10);\n    const allSlots = dateSlots(dateValue);\n    const bookedSlots = pages.filter(page => prop(page, F.status) === \u0027confirmed\u0027).filter(page => prop(page, F.date).startsWith(dateValue)).map(page => prop(page, F.date).slice(11, 16)).filter(Boolean);\n    return response(true, { availableSlots: allSlots.filter(slot => !bookedSlots.includes(slot)), bookedSlots, slots: allSlots.map(time => ({ time, label: slotLabel(dateValue, time), available: !bookedSlots.includes(time) })) });\n  }\n  if (action === \u0027book\u0027) {\n    const dateValue = String(data.appointmentDate || \u0027\u0027).slice(0, 10);\n    const timeValue = String(data.appointmentTime || \u0027\u0027).slice(0, 5);\n    const allSlots = dateSlots(dateValue);\n    if (!allSlots.includes(timeValue)) return response(false, { message: \u0027此日期或時段不開放預約。\u0027 }, 400);\n    const duplicate = pages.some(page => prop(page, F.status) === \u0027confirmed\u0027 && prop(page, F.date).startsWith(dateValue) && prop(page, F.date).slice(11, 16) === timeValue);\n    if (duplicate) return response(false, { message: \u0027此時段已被預約，請改選其他時間。\u0027 }, 409);\n    const appointmentId = await nextAppointmentId(dateValue, pages);\n    const category = String(data.legalCategory || \u0027\u0027).trim();\n    const legalItem = String(data.legalItem || \u0027\u0027).trim();\n    const photoFiles = await uploadGroup(\u0027photoFiles\u0027);\n    const caseFiles = await uploadGroup(\u0027caseFiles\u0027);\n    const properties = { [F.id]: { title: rich(appointmentId) }, [F.name]: { rich_text: rich(data.name) }, [F.phone]: { phone_number: data.phone || null }, [F.statement]: { rich_text: rich(data.statement) }, [F.type]: { multi_select: [{ name: \u0027法律諮詢\u0027 }] }, [F.category]: { multi_select: category ? [{ name: category }] : [] }, [F.case1999]: { rich_text: rich(data.case1999) }, [F.slot]: { multi_select: [{ name: slotLabel(dateValue, timeValue) }] }, [F.date]: { date: { start: dateValue + \u0027T\u0027 + timeValue + \u0027:00+08:00\u0027, time_zone: null } }, [F.status]: { select: { name: \u0027confirmed\u0027 } }, [F.caseStatus]: { select: { name: \u0027待諮詢\u0027 } }, [F.lineName]: { rich_text: rich(data.lineDisplayName) }, [F.notifyStatus]: { select: { name: \u0027pending\u0027 } } };\n    if (CATEGORY_FIELD[category] && legalItem) properties[CATEGORY_FIELD[category]] = { multi_select: [{ name: legalItem }] };\n    if (legalItem.includes(\u0027其它\u0027) && data.legalOtherItem) properties[\u0027其它項目名稱\u0027] = { rich_text: rich(data.legalOtherItem) };\n    if (photoFiles.length) properties[F.photos] = { files: photoFiles };\n    if (caseFiles.length) properties[F.files] = { files: caseFiles };\n    const page = await notion(\u0027/pages\u0027, { method: \u0027POST\u0027, body: { parent: { database_id: DATABASE_ID }, properties } });\n    return response(true, { message: \u0027預約已送出。預約諮詢編號：\u0027 + appointmentId, appointmentId, data: normalize(page) });\n  }\n  if (action === \u0027query\u0027) {\n    const appointmentId = String(data.appointmentId || \u0027\u0027).trim();\n    const page = pages.find(page => prop(page, F.id) === appointmentId);\n    if (!page) return response(false, { message: \u0027查無此預約諮詢編號。\u0027 }, 404);\n    const found = normalize(page);\n    return response(true, { message: \u0027預約狀態：\u0027 + (found.status || \u0027未設定\u0027) + \u0027。預約時間：\u0027 + (found.appointmentDate || \u0027未設定\u0027), data: found });\n  }\n  if (action === \u0027cancel\u0027) {\n    const appointmentId = String(data.appointmentId || \u0027\u0027).trim();\n    const page = pages.find(page => prop(page, F.id) === appointmentId);\n    if (!page) return response(false, { message: \u0027查無此預約諮詢編號。\u0027 }, 404);\n    await notion(\u0027/pages/\u0027 + page.id, { method: \u0027PATCH\u0027, body: { properties: { [F.status]: { select: { name: \u0027cancelled\u0027 } }, [F.cancelReason]: { rich_text: rich(data.reason) }, [F.cancelTime]: { date: { start: new Date().toISOString() } } } } });\n    return response(true, { message: \u0027取消申請已送出。\u0027 });\n  }\n  return response(false, { message: \u0027Unsupported action: \u0027 + action }, 400);\n} catch (error) { return response(false, { message: error.message }, 500); }"
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2ccb3ad1d1cd8175aba6e21110f71145"
+        },
+        "returnAll": true,
+        "options": {},
+        "simple": false
+      },
+      "id": "public-legal-query-pages",
+      "name": "Query Legal Consultation Pages",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -740,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const bodySource = $('Public Legal Consultation Webhook').first().json.body || $('Public Legal Consultation Webhook').first().json || {};\nlet body = bodySource;\nif (typeof bodySource.payload === 'string') {\n  try { body = JSON.parse(bodySource.payload); } catch (_) { return [{ json: { ok: false, operation: 'respond', statusCode: 400, message: 'Invalid payload JSON.' } }]; }\n}\nconst action = String(body.action || '').trim();\nconst data = body.data || {};\nconst F = { id: '\\u9810\\u7d04\\u7de8\\u865f', name: '\\u59d3\\u540d', phone: '\\u96fb\\u8a71', statement: '\\u4e8b\\u4ef6\\u9673\\u8ff0', category: '\\u6cd5\\u6276\\u9805\\u76ee', case1999: '1999\\u6848\\u865f', slot: '\\u6307\\u5b9a\\u9810\\u7d04\\u6642\\u9593', date: '\\u9810\\u7d04\\u65e5\\u671f', status: '\\u72c0\\u614b' };\nconst CATEGORY_FIELD = { '\\u6c11\\u4e8b': '\\u6c11\\u4e8b', '\\u5211\\u4e8b': '\\u5211\\u4e8b', '\\u884c\\u653f\\u8a34\\u8a1f': '\\u884c\\u653f\\u8a34\\u8a1f', '\\u5bb6\\u4e8b': '\\u5bb6\\u4e8b', '\\u52de\\u8cc7\\u7cfe\\u7d1b': '\\u52de\\u8cc7\\u7cfe\\u7d1b', '\\u6d88\\u8cbb\\u7cfe\\u7d1b': '\\u6d88\\u8cbb\\u7cfe\\u7d1b', '\\u5f37\\u5236\\u57f7\\u884c': '\\u5f37\\u5236\\u57f7\\u884c' };\nfunction text(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(text).filter(Boolean).join('');\n  if (value.plain_text) return String(value.plain_text);\n  if (value.text?.content) return String(value.text.content);\n  if (value.name) return String(value.name);\n  if (value.title) return text(value.title);\n  if (value.rich_text) return text(value.rich_text);\n  if (value.select) return text(value.select);\n  if (value.multi_select) return text(value.multi_select);\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  return '';\n}\nfunction prop(json, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (json[name] != null) return text(json[name]).trim();\n    if (json.properties?.[name] != null) return text(json.properties[name]).trim();\n  }\n  return '';\n}\nconst rawPages = items.map(item => item.json || {});\nconst pages = rawPages.filter(page => prop(page, F.id) !== '__LEGAL_SLOT_SETTINGS__');\nconst settingsPage = rawPages.find(page => prop(page, F.id) === '__LEGAL_SLOT_SETTINGS__');\nfunction dateSlots(dateValue) {\n  const day = new Date(dateValue + 'T00:00:00').getDay();\n  if (day < 1 || day > 5) return [];\n  const hour = day === 3 ? '10' : '15';\n  return [hour + ':00', hour + ':15', hour + ':30', hour + ':45'];\n}\nfunction dayKey(dateValue, time) {\n  const day = new Date(dateValue + 'T00:00:00').getDay();\n  return day + '-' + String(time || '').slice(0, 5);\n}\nfunction slotSettings() {\n  if (!settingsPage) return { disabledSlots: [] };\n  try {\n    const parsed = JSON.parse(prop(settingsPage, F.statement) || '{}');\n    return { disabledSlots: Array.isArray(parsed.disabledSlots) ? parsed.disabledSlots.map(String) : [] };\n  } catch (_) { return { disabledSlots: [] }; }\n}\nfunction slotLabel(dateValue, time) {\n  const day = new Date(dateValue + 'T00:00:00').getDay();\n  return ['\\u661f\\u671f\\u65e5','\\u661f\\u671f\\u4e00','\\u661f\\u671f\\u4e8c','\\u661f\\u671f\\u4e09','\\u661f\\u671f\\u56db','\\u661f\\u671f\\u4e94','\\u661f\\u671f\\u516d'][day] + ' ' + time;\n}\nfunction rocDateKey(dateValue) {\n  const parts = String(dateValue).slice(0, 10).split('-').map(Number);\n  return String(parts[0] - 1911).padStart(3, '0') + String(parts[1]).padStart(2, '0') + String(parts[2]).padStart(2, '0');\n}\nfunction nextAppointmentId(dateValue) {\n  const prefix = rocDateKey(dateValue);\n  const max = pages.map(page => prop(page, F.id)).filter(id => id.startsWith(prefix)).map(id => Number(id.slice(prefix.length))).filter(Number.isFinite).reduce((a, b) => Math.max(a, b), 0);\n  return prefix + String(max + 1).padStart(3, '0');\n}\nfunction response(payload, statusCode = 200) { return [{ json: { operation: 'respond', statusCode, ...payload } }]; }\nif (action === 'availability') {\n  const dateValue = String(data.appointmentDate || '').slice(0, 10);\n  const allSlots = dateSlots(dateValue);\n  const disabled = new Set(slotSettings().disabledSlots);\n  const closedSlots = allSlots.filter(slot => disabled.has(dayKey(dateValue, slot)));\n  const bookedSlots = pages.filter(page => prop(page, F.status) === 'confirmed').filter(page => prop(page, F.date).startsWith(dateValue)).map(page => prop(page, F.date).slice(11, 16)).filter(Boolean);\n  const availableSlots = allSlots.filter(slot => !closedSlots.includes(slot) && !bookedSlots.includes(slot));\n  return response({ ok: true, availableSlots, bookedSlots, closedSlots, slots: allSlots.map(time => ({ time, label: slotLabel(dateValue, time), available: availableSlots.includes(time), closed: closedSlots.includes(time), booked: bookedSlots.includes(time) })) });\n}\nif (action === 'book') {\n  const dateValue = String(data.appointmentDate || '').slice(0, 10);\n  const timeValue = String(data.appointmentTime || '').slice(0, 5);\n  const allSlots = dateSlots(dateValue);\n  if (!allSlots.includes(timeValue)) return response({ ok: false, message: '\\u6b64\\u65e5\\u671f\\u6216\\u6642\\u6bb5\\u4e0d\\u958b\\u653e\\u9810\\u7d04\\u3002' }, 400);\n  if (new Set(slotSettings().disabledSlots).has(dayKey(dateValue, timeValue))) return response({ ok: false, message: '\\u6b64\\u6642\\u6bb5\\u76ee\\u524d\\u672a\\u958b\\u653e\\u9810\\u7d04\\uff0c\\u8acb\\u6539\\u9078\\u5176\\u4ed6\\u6642\\u9593\\u3002' }, 400);\n  const duplicate = pages.some(page => prop(page, F.status) === 'confirmed' && prop(page, F.date).startsWith(dateValue) && prop(page, F.date).slice(11, 16) === timeValue);\n  if (duplicate) return response({ ok: false, message: '\\u6b64\\u6642\\u6bb5\\u5df2\\u88ab\\u9810\\u7d04\\uff0c\\u8acb\\u6539\\u9078\\u5176\\u4ed6\\u6642\\u9593\\u3002' }, 409);\n  const appointmentId = nextAppointmentId(dateValue);\n  const category = String(data.legalCategory || '').trim();\n  const legalItem = String(data.legalItem || '').trim();\n  return [{ json: { operation: 'create', ok: true, appointmentId, name: String(data.name || '').trim(), phone: String(data.phone || '').trim(), statement: String(data.statement || '').trim(), case1999: String(data.case1999 || '').trim(), appointmentDateTime: dateValue + 'T' + timeValue + ':00+08:00', slotLabel: slotLabel(dateValue, timeValue), category, legalItem, categoryField: CATEGORY_FIELD[category] || '', legalOtherItem: String(data.legalOtherItem || '').trim(), lineDisplayName: String(data.lineDisplayName || '').trim() } }];\n}\nif (action === 'query') {\n  const appointmentId = String(data.appointmentId || '').trim();\n  const page = pages.find(page => prop(page, F.id) === appointmentId);\n  if (!page) return response({ ok: false, message: '\\u67e5\\u7121\\u6b64\\u9810\\u7d04\\u8aee\\u8a62\\u7de8\\u865f\\u3002' }, 404);\n  return response({ ok: true, message: '\\u9810\\u7d04\\u72c0\\u614b\\uff1a' + (prop(page, F.status) || '\\u672a\\u8a2d\\u5b9a') + '\\u3002\\u9810\\u7d04\\u6642\\u9593\\uff1a' + (prop(page, F.date) || '\\u672a\\u8a2d\\u5b9a'), data: { appointmentId, name: prop(page, F.name), phone: prop(page, F.phone), appointmentDate: prop(page, F.date), status: prop(page, F.status) } });\n}\nif (action === 'cancel') {\n  const appointmentId = String(data.appointmentId || '').trim();\n  const page = pages.find(page => prop(page, F.id) === appointmentId);\n  if (!page) return response({ ok: false, message: '\\u67e5\\u7121\\u6b64\\u9810\\u7d04\\u8aee\\u8a62\\u7de8\\u865f\\u3002' }, 404);\n  return [{ json: { operation: 'cancel', ok: true, pageId: page.id, reason: String(data.reason || '').trim(), cancelledAt: new Date().toISOString(), message: '\\u53d6\\u6d88\\u7533\\u8acb\\u5df2\\u9001\\u51fa\\u3002' } }];\n}\nreturn response({ ok: false, message: 'Unsupported action: ' + action }, 400);"
       },
       "id": "public-legal-handle-action",
       "name": "Handle Legal Consultation",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-280, 0]
+      "position": [
+        -500,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "create"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "cancel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cancel"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.operation }}",
+                    "rightValue": "respond",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "respond"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "public-legal-route-result",
+      "name": "Route Legal Result",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2ccb3ad1d1cd8175aba6e21110f71145"
+        },
+        "title": "={{ $json.appointmentId }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "預約編號|title",
+              "title": "={{ $json.appointmentId }}"
+            },
+            {
+              "key": "姓名|rich_text",
+              "textContent": "={{ $json.name }}"
+            },
+            {
+              "key": "電話|phone_number",
+              "phoneValue": "={{ $json.phone }}"
+            },
+            {
+              "key": "事件陳述|rich_text",
+              "textContent": "={{ $json.statement }}"
+            },
+            {
+              "key": "諮詢類別|multi_select",
+              "multiSelectValue": "={{ [\"\\u6cd5\\u5f8b\\u8aee\\u8a62\"] }}"
+            },
+            {
+              "key": "法扶項目|multi_select",
+              "multiSelectValue": "={{ [$json.category].filter(Boolean) }}"
+            },
+            {
+              "key": "1999案號|rich_text",
+              "textContent": "={{ $json.case1999 }}"
+            },
+            {
+              "key": "指定預約時間|multi_select",
+              "multiSelectValue": "={{ [$json.slotLabel] }}"
+            },
+            {
+              "key": "預約日期|date",
+              "includeTime": true,
+              "date": "={{ $json.appointmentDateTime }}",
+              "timezone": "Asia/Taipei"
+            },
+            {
+              "key": "狀態|select",
+              "selectValue": "confirmed"
+            },
+            {
+              "key": "案件狀態|select",
+              "selectValue": "待諮詢"
+            },
+            {
+              "key": "LINE名稱|rich_text",
+              "textContent": "={{ $json.lineDisplayName }}"
+            },
+            {
+              "key": "通知狀態|select",
+              "selectValue": "pending"
+            },
+            {
+              "key": "民事|multi_select",
+              "multiSelectValue": "={{ $json.categoryField === \"\\u6c11\\u4e8b\" && $json.legalItem ? [$json.legalItem] : [] }}"
+            },
+            {
+              "key": "刑事|multi_select",
+              "multiSelectValue": "={{ $json.categoryField === \"\\u5211\\u4e8b\" && $json.legalItem ? [$json.legalItem] : [] }}"
+            },
+            {
+              "key": "行政訴訟|multi_select",
+              "multiSelectValue": "={{ $json.categoryField === \"\\u884c\\u653f\\u8a34\\u8a1f\" && $json.legalItem ? [$json.legalItem] : [] }}"
+            },
+            {
+              "key": "家事|multi_select",
+              "multiSelectValue": "={{ $json.categoryField === \"\\u5bb6\\u4e8b\" && $json.legalItem ? [$json.legalItem] : [] }}"
+            },
+            {
+              "key": "勞資糾紛|multi_select",
+              "multiSelectValue": "={{ $json.categoryField === \"\\u52de\\u8cc7\\u7cfe\\u7d1b\" && $json.legalItem ? [$json.legalItem] : [] }}"
+            },
+            {
+              "key": "消費糾紛|multi_select",
+              "multiSelectValue": "={{ $json.categoryField === \"\\u6d88\\u8cbb\\u7cfe\\u7d1b\" && $json.legalItem ? [$json.legalItem] : [] }}"
+            },
+            {
+              "key": "強制執行|multi_select",
+              "multiSelectValue": "={{ $json.categoryField === \"\\u5f37\\u5236\\u57f7\\u884c\" && $json.legalItem ? [$json.legalItem] : [] }}"
+            },
+            {
+              "key": "其它項目名稱|rich_text",
+              "textContent": "={{ $json.legalOtherItem }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "public-legal-create-booking",
+      "name": "Create Legal Booking",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -180
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.pageId }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "狀態|select",
+              "selectValue": "cancelled"
+            },
+            {
+              "key": "取消原因|rich_text",
+              "textContent": "={{ $json.reason }}"
+            },
+            {
+              "key": "取消時間|date",
+              "includeTime": true,
+              "date": "={{ $json.cancelledAt }}",
+              "timezone": "Asia/Taipei"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "public-legal-cancel-booking",
+      "name": "Cancel Legal Booking",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, message: '\\u9810\\u7d04\\u5df2\\u9001\\u51fa\\u3002\\u9810\\u7d04\\u8aee\\u8a62\\u7de8\\u865f\\uff1a' + $('Handle Legal Consultation').first().json.appointmentId, appointmentId: $('Handle Legal Consultation').first().json.appointmentId } }}",
+        "options": {}
+      },
+      "id": "public-legal-respond-create",
+      "name": "Respond Legal Create",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, message: $('Handle Legal Consultation').first().json.message } }}",
+        "options": {}
+      },
+      "id": "public-legal-respond-cancel",
+      "name": "Respond Legal Cancel",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        0
+      ]
     },
     {
       "parameters": {
@@ -33,27 +343,111 @@
           "responseCode": "={{ $json.statusCode || 200 }}"
         }
       },
-      "id": "public-legal-respond",
-      "name": "Respond Legal Consultation",
+      "id": "public-legal-respond-direct",
+      "name": "Respond Legal Direct",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [-40, 0]
+      "position": [
+        0,
+        200
+      ]
     }
   ],
   "pinData": {},
   "connections": {
     "Public Legal Consultation Webhook": {
-      "main": [[{ "node": "Handle Legal Consultation", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Query Legal Consultation Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Legal Consultation Pages": {
+      "main": [
+        [
+          {
+            "node": "Handle Legal Consultation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Handle Legal Consultation": {
-      "main": [[{ "node": "Respond Legal Consultation", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Route Legal Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Legal Result": {
+      "main": [
+        [
+          {
+            "node": "Create Legal Booking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancel Legal Booking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Legal Direct",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Legal Direct",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Legal Booking": {
+      "main": [
+        [
+          {
+            "node": "Respond Legal Create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Legal Booking": {
+      "main": [
+        [
+          {
+            "node": "Respond Legal Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "public-legal-consultation-notion-schema-v2",
+  "versionId": "public-legal-consultation-notion-nodes-v7",
   "meta": {
     "templateCredsSetupCompleted": false
   },

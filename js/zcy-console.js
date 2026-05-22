@@ -20,6 +20,13 @@
     { value: "cancelled", label: "已取消" }
   ];
   const LEGAL_CATEGORIES = ["民事", "刑事", "行政訴訟", "家事", "勞資糾紛", "消費糾紛", "強制執行"];
+  const LEGAL_SLOT_SCHEDULE = [
+    { day: 1, label: "星期一", times: ["15:00", "15:15", "15:30", "15:45"] },
+    { day: 2, label: "星期二", times: ["15:00", "15:15", "15:30", "15:45"] },
+    { day: 3, label: "星期三", times: ["10:00", "10:15", "10:30", "10:45"] },
+    { day: 4, label: "星期四", times: ["15:00", "15:15", "15:30", "15:45"] },
+    { day: 5, label: "星期五", times: ["15:00", "15:15", "15:30", "15:45"] }
+  ];
   const STAFF_IDENTITIES = ["管理員", "志工", "助理", "主任", "議員", "一般人員"];
   const STAFF_PERMISSIONS = ["小編", "助理", "管理員", "一般人員"];
   const LINE_ACCOUNT_DEFAULTS = [
@@ -66,6 +73,7 @@
     events: [],
     eventRegistrations: [],
     legal: [],
+    legalSlotSettings: { disabledSlots: [] },
     members: [],
     lineAccounts: [],
     staff: [],
@@ -141,6 +149,8 @@
     legalSearch: document.getElementById("legalSearch"),
     legalStatusFilter: document.getElementById("legalStatusFilter"),
     legalCategoryFilter: document.getElementById("legalCategoryFilter"),
+    legalSlotGrid: document.getElementById("legalSlotGrid"),
+    saveLegalSlotsButton: document.getElementById("saveLegalSlotsButton"),
     membersTable: document.getElementById("membersTable"),
     memberDetail: document.getElementById("memberDetail"),
     memberPager: document.getElementById("memberPager"),
@@ -391,6 +401,7 @@
       state.events = Array.isArray(cached.events) ? cached.events : [];
       state.eventRegistrations = [];
       state.legal = Array.isArray(cached.legal) ? cached.legal : [];
+      state.legalSlotSettings = normalizeLegalSlotSettings(cached.legalSlotSettings);
       state.members = Array.isArray(cached.members) ? cached.members : [];
       state.lineAccounts = mergeLineAccountDefaults(cached.lineAccounts);
       state.staff = Array.isArray(cached.staff) ? cached.staff : [];
@@ -406,6 +417,7 @@
       savedAt: new Date().toISOString(),
       events: state.events,
       legal: state.legal,
+      legalSlotSettings: state.legalSlotSettings,
       members: state.members,
       lineAccounts: state.lineAccounts,
       staff: state.staff
@@ -487,9 +499,10 @@
       return;
     }
     els.syncStatus.textContent = "同步中";
-    const [events, legal, members, lineAccounts, staff] = await Promise.all([
+    const [events, legal, legalSlotSettings, members, lineAccounts, staff] = await Promise.all([
       AdminApi.listEvents(),
       AdminApi.listLegalConsultations(),
+      AdminApi.getLegalSlotSettings().catch(() => ({ disabledSlots: [] })),
       AdminApi.listMembers().catch(() => []),
       AdminApi.listLineAccounts().catch(() => []),
       AdminApi.listStaff()
@@ -499,6 +512,7 @@
     state.events = Array.isArray(events) ? events : [];
     state.eventRegistrations = [];
     state.legal = Array.isArray(legal) ? legal : [];
+    state.legalSlotSettings = normalizeLegalSlotSettings(legalSlotSettings);
     state.members = Array.isArray(members) ? members : [];
     state.lineAccounts = mergeLineAccountDefaults(lineAccounts);
     state.staff = Array.isArray(staff) ? staff : [];
@@ -600,8 +614,12 @@
       renderRegistrations();
     }
     if (view === "legal") {
-      const legal = await AdminApi.listLegalConsultations();
+      const [legal, legalSlotSettings] = await Promise.all([
+        AdminApi.listLegalConsultations(),
+        AdminApi.getLegalSlotSettings().catch(() => state.legalSlotSettings)
+      ]);
       state.legal = Array.isArray(legal) ? legal : [];
+      state.legalSlotSettings = normalizeLegalSlotSettings(legalSlotSettings);
       renderLegal();
     }
     if (view === "members") {
@@ -650,6 +668,63 @@
     renderMembers();
     renderLineAccounts();
     renderStaff();
+  }
+
+  function legalSlotKey(day, time) {
+    return `${day}-${time}`;
+  }
+
+  function normalizeLegalSlotSettings(settings = {}) {
+    const disabledSlots = Array.isArray(settings.disabledSlots) ? settings.disabledSlots : [];
+    return { disabledSlots: Array.from(new Set(disabledSlots.map(String))) };
+  }
+
+  function renderLegalSlotSettings() {
+    if (!els.legalSlotGrid) return;
+    const disabled = new Set(state.legalSlotSettings.disabledSlots || []);
+    els.legalSlotGrid.innerHTML = LEGAL_SLOT_SCHEDULE.map((group) => `
+      <article class="legal-slot-day">
+        <strong>${escapeHtml(group.label)}</strong>
+        <div class="legal-slot-options">
+          ${group.times.map((time) => {
+            const key = legalSlotKey(group.day, time);
+            const checked = !disabled.has(key);
+            return `
+              <label class="slot-toggle ${checked ? "is-open" : "is-closed"}">
+                <input type="checkbox" data-legal-slot="${escapeHtml(key)}" ${checked ? "checked" : ""} />
+                <span>${escapeHtml(time)}</span>
+              </label>
+            `;
+          }).join("")}
+        </div>
+      </article>
+    `).join("");
+  }
+
+  async function saveLegalSlotSettings() {
+    if (!els.legalSlotGrid) return;
+    const disabledSlots = Array.from(els.legalSlotGrid.querySelectorAll("[data-legal-slot]"))
+      .filter((input) => !input.checked)
+      .map((input) => input.dataset.legalSlot);
+    const originalText = els.saveLegalSlotsButton?.textContent || "儲存時段";
+    if (els.saveLegalSlotsButton) {
+      els.saveLegalSlotsButton.disabled = true;
+      els.saveLegalSlotsButton.textContent = "儲存中";
+    }
+    try {
+      const saved = await AdminApi.saveLegalSlotSettings({ disabledSlots });
+      state.legalSlotSettings = normalizeLegalSlotSettings(saved);
+      renderLegalSlotSettings();
+      els.syncStatus.textContent = "已同步";
+      writeCache();
+    } catch (error) {
+      alert(error.message || "儲存可預約時段失敗");
+    } finally {
+      if (els.saveLegalSlotsButton) {
+        els.saveLegalSlotsButton.disabled = false;
+        els.saveLegalSlotsButton.textContent = originalText;
+      }
+    }
   }
 
   function renderCases() {
@@ -1108,6 +1183,7 @@
   }
 
   function renderLegal() {
+    renderLegalSlotSettings();
     const keyword = els.legalSearch.value.trim();
     const status = els.legalStatusFilter.value;
     const category = els.legalCategoryFilter.value;
@@ -2198,6 +2274,13 @@
       if (restoreBtn) updateRegistrationStatus(restoreBtn.dataset.restoreReg, "registered");
     });
     [els.legalSearch, els.legalStatusFilter, els.legalCategoryFilter].forEach((el) => el.addEventListener("input", () => { resetPage("legal"); renderLegal(); }));
+    els.saveLegalSlotsButton?.addEventListener("click", saveLegalSlotSettings);
+    els.legalSlotGrid?.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-legal-slot]");
+      if (!input) return;
+      input.closest(".slot-toggle")?.classList.toggle("is-open", input.checked);
+      input.closest(".slot-toggle")?.classList.toggle("is-closed", !input.checked);
+    });
     [els.memberSearch, els.memberTagFilter, els.memberAttributeFilter, els.memberStatusFilter].forEach((el) => el.addEventListener("input", () => { resetPage("members"); renderMembers(); }));
     els.staffSearch.addEventListener("input", () => { resetPage("staff"); renderStaff(); });
     els.addCaseButton.addEventListener("click", () => openCaseForm());

@@ -109,6 +109,50 @@
               },
               "renameOutput": true,
               "outputKey": "legal.delete"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "legal.slotSettings.get",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "legal.slotSettings.get"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "legal.slotSettings.save",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "legal.slotSettings.save"
             }
           ]
         },
@@ -154,7 +198,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.map(item => ({\n  id: item.json.id,\n  appointmentId: prop(item, ['預約編號']),\n  name: prop(item, ['姓名']),\n  phone: prop(item, ['電話']),\n  appointmentDate: prop(item, ['預約日期', '預約日期時間']),\n  status: prop(item, ['狀態']),\n  statement: prop(item, ['事件陳述']),\n  createdAt: prop(item, ['建立時間', '建立日期']),\n  cancelReason: prop(item, ['取消原因']),\n  cancelledAt: prop(item, ['取消時間']),\n  case1999: prop(item, ['1999案號']),\n  category: prop(item, ['法扶項目']),\n  legalItem: prop(item, ['??', '??', '????', '??', '????', '????', '????']),\n  legalOtherItem: prop(item, ['??????', '??????'])\n})) } }];"
+        "jsCode": "function textFromValue(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(textFromValue).filter(Boolean).join('、');\n  if (value.name) return String(value.name);\n  if (value.plain_text) return String(value.plain_text);\n  if (value.title) return textFromValue(value.title);\n  if (value.rich_text) return textFromValue(value.rich_text);\n  if (value.select) return textFromValue(value.select);\n  if (value.status) return textFromValue(value.status);\n  if (value.multi_select) return textFromValue(value.multi_select);\n  if (value.relation) return (value.relation || []).map((v) => v.id).join(',');\n  if (value.date) return value.date.start || '';\n  if (value.phone_number) return value.phone_number || '';\n  if (value.number != null) return String(value.number);\n  if (value.checkbox != null) return String(value.checkbox);\n  if (value.url) return String(value.url);\n  return '';\n}\nfunction prop(item, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (item.json?.[name] != null) return textFromValue(item.json[name]).trim();\n    const p = item.json?.properties?.[name];\n    if (p != null) return textFromValue(p).trim();\n  }\n  const props = item.json?.properties || {};\n  for (const [key, value] of Object.entries(props)) {\n    if (wanted.some((name) => key.trim() === name || key.includes(name))) return textFromValue(value).trim();\n  }\n  return '';\n}\n\nreturn [{ json: { ok: true, data: items.filter(item => prop(item, ['\\u9810\\u7d04\\u7de8\\u865f']) !== '__LEGAL_SLOT_SETTINGS__').map(item => ({\n  id: item.json.id,\n  appointmentId: prop(item, ['預約編號']),\n  name: prop(item, ['姓名']),\n  phone: prop(item, ['電話']),\n  appointmentDate: prop(item, ['預約日期', '預約日期時間']),\n  status: prop(item, ['狀態']),\n  statement: prop(item, ['事件陳述']),\n  createdAt: prop(item, ['建立時間', '建立日期']),\n  cancelReason: prop(item, ['取消原因']),\n  cancelledAt: prop(item, ['取消時間']),\n  case1999: prop(item, ['1999案號']),\n  category: prop(item, ['法扶項目']),\n  legalItem: prop(item, ['\\u6c11\\u4e8b', '\\u5211\\u4e8b', '\\u884c\\u653f\\u8a34\\u8a1f', '\\u5bb6\\u4e8b', '\\u52de\\u8cc7\\u7cfe\\u7d1b', '\\u6d88\\u8cbb\\u7cfe\\u7d1b', '\\u5f37\\u5236\\u57f7\\u884c']),\n  legalOtherItem: prop(item, ['\\u5176\\u5b83\\u9805\\u76ee\\u540d\\u7a31', '\\u5176\\u4ed6\\u9805\\u76ee\\u540d\\u7a31'])\n})) } }];"
       },
       "id": "normalize-legal-consultations",
       "name": "Normalize Legal Consultations",
@@ -528,6 +572,201 @@
         -420,
         520
       ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2ccb3ad1d1cd8175aba6e21110f71145"
+        },
+        "returnAll": true,
+        "options": {},
+        "simple": false
+      },
+      "id": "query-legal-slot-settings",
+      "name": "Query Legal Slot Settings",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        -420,
+        520
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Admin Legal Consultation Webhook').first().json.body || {};\nconst data = body.data || {};\nconst SETTINGS_ID = '__LEGAL_SLOT_SETTINGS__';\nconst DEFAULT_DISABLED = [];\nfunction text(value) {\n  if (value == null) return '';\n  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);\n  if (Array.isArray(value)) return value.map(text).filter(Boolean).join('');\n  if (value.plain_text) return String(value.plain_text);\n  if (value.text?.content) return String(value.text.content);\n  if (value.name) return String(value.name);\n  if (value.title) return text(value.title);\n  if (value.rich_text) return text(value.rich_text);\n  if (value.select) return text(value.select);\n  return '';\n}\nfunction prop(json, names) {\n  const wanted = Array.isArray(names) ? names : [names];\n  for (const name of wanted) {\n    if (json[name] != null) return text(json[name]).trim();\n    if (json.properties?.[name] != null) return text(json.properties[name]).trim();\n  }\n  return '';\n}\nconst pages = $('Query Legal Slot Settings').all();\nconst existing = pages.find((item) => prop(item.json, ['\\u9810\\u7d04\\u7de8\\u865f']) === SETTINGS_ID);\nlet saved = {};\ntry { saved = JSON.parse(prop(existing?.json || {}, ['\\u4e8b\\u4ef6\\u9673\\u8ff0']) || '{}'); } catch (_) { saved = {}; }\nconst disabledSlots = Array.isArray(data.disabledSlots) ? data.disabledSlots.map(String) : Array.isArray(saved.disabledSlots) ? saved.disabledSlots.map(String) : DEFAULT_DISABLED;\nconst settings = { disabledSlots: Array.from(new Set(disabledSlots)), updatedAt: new Date().toISOString() };\nreturn [{ json: {\n  ok: true,\n  action: body.action,\n  isSave: body.action === 'legal.slotSettings.save',\n  pageId: existing?.json?.id || '',\n  shouldUpdate: Boolean(existing?.json?.id),\n  settings,\n  statement: JSON.stringify(settings)\n} }];"
+      },
+      "id": "prepare-legal-slot-settings",
+      "name": "Prepare Legal Slot Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isSave }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "is-legal-slot-save",
+      "name": "Is Legal Slot Settings Save",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        40,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.shouldUpdate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-legal-slot-settings-page",
+      "name": "Has Legal Slot Settings Page",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        260,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.pageId }}"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "預約編號|title",
+              "title": "={{ \"__LEGAL_SLOT_SETTINGS__\" }}"
+            },
+            {
+              "key": "事件陳述|rich_text",
+              "textContent": "={{ $json.statement }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "update-legal-slot-settings",
+      "name": "Update Legal Slot Settings",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        500,
+        340
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2ccb3ad1d1cd8175aba6e21110f71145"
+        },
+        "title": "={{ \"__LEGAL_SLOT_SETTINGS__\" }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "預約編號|title",
+              "title": "={{ \"__LEGAL_SLOT_SETTINGS__\" }}"
+            },
+            {
+              "key": "事件陳述|rich_text",
+              "textContent": "={{ $json.statement }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-legal-slot-settings",
+      "name": "Create Legal Slot Settings",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        500,
+        520
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "TUc2PAbFfQKWYUgA",
+          "name": "Notion-n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, data: $('Prepare Legal Slot Settings').first().json.settings } }}",
+        "options": {}
+      },
+      "id": "respond-legal-slot-settings",
+      "name": "Respond Legal Slot Settings",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        740,
+        520
+      ]
     }
   ],
   "connections": {
@@ -568,6 +807,20 @@
         [
           {
             "node": "Prepare Delete Legal Consultations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query Legal Slot Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Query Legal Slot Settings",
             "type": "main",
             "index": 0
           }
@@ -668,13 +921,93 @@
           }
         ]
       ]
+    },
+    "Query Legal Slot Settings": {
+      "main": [
+        [
+          {
+            "node": "Prepare Legal Slot Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Legal Slot Settings": {
+      "main": [
+        [
+          {
+            "node": "Is Legal Slot Settings Save",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Legal Slot Settings Save": {
+      "main": [
+        [
+          {
+            "node": "Has Legal Slot Settings Page",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Legal Slot Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Legal Slot Settings Page": {
+      "main": [
+        [
+          {
+            "node": "Update Legal Slot Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Legal Slot Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Legal Slot Settings": {
+      "main": [
+        [
+          {
+            "node": "Respond Legal Slot Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Legal Slot Settings": {
+      "main": [
+        [
+          {
+            "node": "Respond Legal Slot Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "admin-legal-consultation-replace-crud-v1",
+  "versionId": "admin-legal-consultation-slot-settings-v2",
   "id": "admin-legal-consultation",
   "tags": []
 }

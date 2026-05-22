@@ -141,6 +141,14 @@
     async listLegalConsultations() {
       return config.useMockData ? mock.legal : post(config.endpoints.legalList, { action: "legal.list" });
     },
+    async getLegalSlotSettings() {
+      if (config.useMockData) return { disabledSlots: [] };
+      return post(config.endpoints.legalList, { action: "legal.slotSettings.get" });
+    },
+    async saveLegalSlotSettings(payload) {
+      if (config.useMockData) return payload;
+      return post(config.endpoints.legalList, { action: "legal.slotSettings.save", data: payload });
+    },
     async saveLegalConsultation(payload) {
       if (config.useMockData) return mutateMock("legal", payload.id ? "update" : "create", payload);
       return post(config.endpoints.legalList, { action: payload.id ? "legal.update" : "legal.create", data: payload });

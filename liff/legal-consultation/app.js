@@ -149,12 +149,16 @@
     if (Array.isArray(body.slots)) {
       const availableSlots = body.slots.filter((slot) => slot.available !== false).map((slot) => slot.time);
       const bookedSlots = body.slots.filter((slot) => slot.available === false).map((slot) => slot.time);
-      return { availableSlots, bookedSlots };
+      const closedSlots = body.slots.filter((slot) => slot.closed === true).map((slot) => slot.time);
+      return { availableSlots, bookedSlots, closedSlots, notionUnavailable: Boolean(body.notionUnavailable), message: body.message || "" };
     }
 
     return {
       availableSlots: Array.isArray(body.availableSlots) ? body.availableSlots : allSlots,
-      bookedSlots: Array.isArray(body.bookedSlots) ? body.bookedSlots : []
+      bookedSlots: Array.isArray(body.bookedSlots) ? body.bookedSlots : [],
+      closedSlots: Array.isArray(body.closedSlots) ? body.closedSlots : [],
+      notionUnavailable: Boolean(body.notionUnavailable),
+      message: body.message || ""
     };
   }
 
@@ -162,18 +166,24 @@
     const allSlots = buildTimeSlots(dateValue);
     const available = new Set(availability.availableSlots || []);
     const booked = new Set(availability.bookedSlots || []);
+    const closed = new Set(availability.closedSlots || []);
 
     appointmentTime.innerHTML = "";
     appointmentTime.append(new Option("請選擇預約時間", ""));
 
     allSlots.forEach((time) => {
-      const isAvailable = available.has(time) && !booked.has(time);
-      const option = new Option(isAvailable ? slotLabel(dateValue, time) : `${slotLabel(dateValue, time)}（已預約）`, isAvailable ? time : "");
+      const isAvailable = available.has(time) && !booked.has(time) && !closed.has(time);
+      const label = closed.has(time) ? `${slotLabel(dateValue, time)}（未開放）` : booked.has(time) ? `${slotLabel(dateValue, time)}（已預約）` : slotLabel(dateValue, time);
+      const option = new Option(label, isAvailable ? time : "");
       option.disabled = !isAvailable;
       appointmentTime.append(option);
     });
 
-    const count = allSlots.filter((time) => available.has(time) && !booked.has(time)).length;
+    const count = allSlots.filter((time) => available.has(time) && !booked.has(time) && !closed.has(time)).length;
+    if (availability.notionUnavailable) {
+      setAvailabilitySummary(availability.message || "暫時只能顯示基本時段，無法確認已預約時段。", "error");
+      return;
+    }
     if (count > 0) {
       setAvailabilitySummary(`此日期尚有 ${count} 個可預約時段。`, "success");
       return;
