@@ -14,6 +14,7 @@
   ];
   const CASE_AREAS = ["中區", "東區", "西區", "南區", "北區", "西屯區", "南屯區", "北屯區", "豐原區", "大里區", "太平區", "清水區", "沙鹿區", "大甲區", "東勢區", "梧棲區", "烏日區", "神岡區", "大肚區", "大雅區", "后里區", "霧峰區", "潭子區", "龍井區", "外埔區", "和平區", "石岡區", "大安區", "新社區"];
   const EVENT_STATUSES = ["籌備中", "進行中", "已完成"];
+  const EVENT_SIGN_IN_ENTRY_URL = "https://tseng-service.pages.dev/liff/event-registration/";
   const LEGAL_STATUSES = [
     { value: "confirmed", label: "已預約" },
     { value: "cancelled", label: "已取消" }
@@ -443,7 +444,7 @@
       ? `<button class="secondary-button compact" type="button" data-inspect-case="${escapeHtml(id)}">放大檢視</button>`
       : "";
     const extra = type === "event"
-      ? `<button class="secondary-button compact" type="button" data-registration="${escapeHtml(id)}">報名設定</button>`
+      ? `<button class="secondary-button compact" type="button" data-registration="${escapeHtml(id)}">複製簽到入口</button>`
       : "";
     const close = type === "event"
       ? `<button class="icon-button" type="button" data-close-detail aria-label="關閉">×</button>`
@@ -885,9 +886,9 @@
     return html + '</div>';
   }
 
-  function renderCopyUrlButton(url) {
+  function renderCopyUrlButton(url, label = "點我複製") {
     if (!url) return "<strong>未設定</strong>";
-    return `<button class="secondary-button compact copy-url-button" type="button" data-copy-url="${escapeHtml(url)}">點我複製</button>`;
+    return `<button class="secondary-button compact copy-url-button" type="button" data-copy-url="${escapeHtml(url)}">${escapeHtml(label)}</button>`;
   }
 
   function updateCalendarNavLabel(ref) {
@@ -997,7 +998,7 @@
       { label: "負責人員", value: item.ownerName || item.owner || "未指派" },
       { label: "聯絡資訊", value: `${item.contact || ""} ${item.phone || ""}`.trim() },
       { label: "報名表單", value: item.registrationEnabled === "true" || item.registrationEnabled === true ? "開放報名" : "未開放" },
-      { label: "報名網址", value: renderCopyUrlButton(eventRegistrationUrl(item)), html: true },
+      { label: "簽到入口", value: renderCopyUrlButton(eventRegistrationUrl(item), "複製簽到入口"), html: true },
       { label: "報名截止", value: formatDateTime(item.registrationDeadline) },
       { label: "名額上限", value: item.registrationLimit },
       { label: "活動詳情", value: item.detail, multiline: true, wide: true }
@@ -1706,17 +1707,8 @@
 
   async function saveEventWithRegistration(item, data) {
     const enabled = data.registrationEnabled === "true" || data.registrationEnabled === true;
-    const payload = { ...item, ...data };
-    if (!enabled) {
-      payload.registrationUrl = "";
-    }
-    const saved = await AdminApi.saveEvent(payload);
-    const savedItem = saved && typeof saved === "object" ? { ...payload, ...saved } : payload;
-    const id = savedItem.id || item.id;
-    if (enabled && id && !savedItem.registrationUrl) {
-      await AdminApi.saveEvent({ ...savedItem, id, registrationEnabled: "true", registrationUrl: buildEventRegistrationUrl(id, savedItem.title, savedItem.date) });
-    }
-    return saved;
+    const payload = { ...item, ...data, registrationUrl: enabled ? eventRegistrationUrl() : "" };
+    return AdminApi.saveEvent(payload);
   }
 
   async function copyText(value, button) {
@@ -1757,50 +1749,22 @@
       { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "false", label: "不開放報名" }, { value: "true", label: "綁定預設活動報名表單" }], String(item.registrationEnabled === true ? "true" : item.registrationEnabled || "false")) },
       { name: "registrationDeadline", label: "報名截止時間", type: "datetime-local", value: datetimeForInput(item.registrationDeadline) },
       { name: "registrationLimit", label: "報名名額上限", type: "number", value: item.registrationLimit },
-      { name: "registrationUrl", label: "報名表單網址", type: "copy-url", value: eventRegistrationUrl(item), wide: true },
+      { name: "registrationUrl", label: "簽到入口", type: "copy-url", value: eventRegistrationUrl(), wide: true },
       { name: "registrationNote", label: "報名注意事項", type: "textarea", value: item.registrationNote },
       { name: "detail", label: "活動詳情", type: "textarea", value: item.detail }
     ], (data) => saveEventWithRegistration(item, data), item.id ? () => deleteItem("event", item.id) : null);
   }
 
-  function openEventRegistrationForm(item = {}) {
-    if (!item.id) {
-      alert("請先選擇一個活動，或先新增活動後再設定報名表單。");
-      return;
-    }
-    const registrationUrl = buildEventRegistrationUrl(item.id, item.title, item.date);
-    openModal("新增/設定報名表單", [
-      { name: "title", label: "活動主題", value: item.title, wide: true },
-      { name: "registrationEnabled", label: "報名表單", type: "select", options: selectOptions([{ value: "true", label: "開放報名" }, { value: "false", label: "不開放" }], String(item.registrationEnabled === false || item.registrationEnabled === "false" ? "false" : "true")) },
-      { name: "registrationDeadline", label: "報名截止時間", type: "datetime-local", value: datetimeForInput(item.registrationDeadline) },
-      { name: "registrationLimit", label: "報名名額上限", type: "number", value: item.registrationLimit },
-      { name: "registrationUrl", label: "報名表單網址", type: "copy-url", value: registrationUrl, wide: true },
-      { name: "registrationNote", label: "報名注意事項", type: "textarea", value: item.registrationNote }
-    ], (data) => saveEventWithRegistration(item, { ...data, registrationEnabled: data.registrationEnabled || "true" }), null);
+  function openEventRegistrationForm(_, button) {
+    copyText(eventRegistrationUrl(), button);
   }
 
-  function buildEventRegistrationUrl(eventId, eventName, eventDate) {
-    if (!eventId) return "";
-    const base = "https://tseng-service.pages.dev/liff/event-registration/";
-    const url = new URL(base);
-    url.searchParams.set("eventId", eventId);
-    if (eventName) url.searchParams.set("eventName", eventName);
-    if (eventDate) url.searchParams.set("eventDate", formatDateTime(eventDate));
-    return url.toString();
+  function buildEventRegistrationUrl() {
+    return EVENT_SIGN_IN_ENTRY_URL;
   }
 
-  function eventRegistrationUrl(item = {}) {
-    if (!item.registrationUrl) return buildEventRegistrationUrl(item.id, item.title, item.date);
-    if (!item.title && !item.date) return item.registrationUrl;
-
-    try {
-      const url = new URL(item.registrationUrl);
-      if (item.title) url.searchParams.set("eventName", item.title);
-      if (item.date) url.searchParams.set("eventDate", formatDateTime(item.date));
-      return url.toString();
-    } catch (_) {
-      return item.registrationUrl;
-    }
+  function eventRegistrationUrl() {
+    return buildEventRegistrationUrl();
   }
 
   function openLegalForm(item = {}) {
@@ -1929,7 +1893,7 @@
     const del = event.target.closest("[data-delete]");
     const registration = event.target.closest("[data-registration]");
     if (registration) {
-      openEventRegistrationForm(state.events.find((item) => item.id === registration.dataset.registration));
+      openEventRegistrationForm(state.events.find((item) => item.id === registration.dataset.registration), registration);
       return;
     }
     if (edit) {
@@ -2239,7 +2203,7 @@
     if (importBtn) importBtn.addEventListener("click", toggleImportPanel);
     bindImportEvents();
     els.addEventButton.addEventListener("click", () => openEventForm());
-    els.eventRegistrationButton.addEventListener("click", () => openEventRegistrationForm(state.events.find((item) => item.id === state.selected.eventId)));
+    els.eventRegistrationButton.addEventListener("click", (event) => openEventRegistrationForm(state.events.find((item) => item.id === state.selected.eventId), event.currentTarget));
     els.addStaffButton.addEventListener("click", () => openStaffForm());
     els.casesTable.addEventListener("click", (event) => {
       const row = event.target.closest("tr[data-id]");

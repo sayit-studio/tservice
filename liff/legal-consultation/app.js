@@ -16,22 +16,21 @@
   const appointmentDate = document.getElementById("appointmentDate");
   const appointmentTime = document.getElementById("appointmentTime");
   const availabilitySummary = document.getElementById("availabilitySummary");
+  const legalCategory = document.getElementById("legalCategory");
+  const legalItem = document.getElementById("legalItem");
+  const legalOtherField = document.getElementById("legalOtherField");
   const tabs = Array.from(document.querySelectorAll(".mode-tab"));
   const forms = Array.from(document.querySelectorAll("[data-form]"));
 
   const LEGAL_ITEM_MAP = {
-    "\u6c11\u4e8b": ["\u6c11\u4e8b\uff1a\u8eca\u798d", "\u6c11\u4e8b\uff1a\u50b5\u6b0a\u50b5\u52d9", "\u6c11\u4e8b\uff1a\u4e0d\u52d5\u7522", "\u6c11\u4e8b\uff1a\u5408\u7d04\u7cfe\u7d1b", "\u6c11\u4e8b\uff1a\u5176\u5b83"],
-    "\u5211\u4e8b": ["\u5211\u4e8b\uff1a\u8a50\u6b3a", "\u5211\u4e8b\uff1a\u80cc\u4fe1", "\u5211\u4e8b\uff1a\u507d\u9020\u6587\u66f8", "\u5211\u4e8b\uff1a\u6bd2\u54c1", "\u5211\u4e8b\uff1a\u59a8\u7919\u81ea\u7531", "\u5211\u4e8b\uff1a\u5176\u5b83"],
-    "\u884c\u653f\u8a34\u8a1f": ["\u884c\u653f\u8a34\u8a1f\uff1a\u4ea4\u901a\u88c1\u7f70", "\u884c\u653f\u8a34\u8a1f\uff1a\u7a05\u52d9", "\u884c\u653f\u8a34\u8a1f\uff1a\u570b\u8ce0", "\u884c\u653f\u8a34\u8a1f\uff1a\u516c\u52d9\u54e1\u7533\u8a34", "\u884c\u653f\u8a34\u8a1f\uff1a\u5176\u5b83"],
-    "\u5bb6\u4e8b": ["\u5bb6\u4e8b\uff1a\u96e2\u5a5a", "\u5bb6\u4e8b\uff1a\u76e3\u8b77\u6b0a", "\u5bb6\u4e8b\uff1a\u7e7c\u627f", "\u5bb6\u4e8b\uff1a\u89aa\u5b50\u7cfe\u7d1b", "\u5bb6\u4e8b\uff1a\u5176\u5b83"],
-    "\u52de\u8cc7\u7cfe\u7d1b": ["\u52de\u8cc7\u7cfe\u7d1b\uff1a\u8077\u696d\u50b7\u5bb3", "\u52de\u8cc7\u7cfe\u7d1b\uff1a\u85aa\u8cc7", "\u52de\u8cc7\u7cfe\u7d1b\uff1a\u8077\u707d", "\u52de\u8cc7\u7cfe\u7d1b\uff1a\u5176\u5b83"],
-    "\u6d88\u8cbb\u7cfe\u7d1b": ["\u6d88\u8cbb\u7cfe\u7d1b\uff1a\u7db2\u8def\u8cfc\u7269", "\u6d88\u8cbb\u7cfe\u7d1b\uff1a\u79df\u8cc3\u5408\u7d04", "\u6d88\u8cbb\u7cfe\u7d1b\uff1a\u91ab\u7642\u7cfe\u7d1b"],
-    "\u5f37\u5236\u57f7\u884c": ["\u5f37\u5236\u57f7\u884c\uff1a\u8072\u8acb\u5047\u6263\u62bc", "\u5f37\u5236\u57f7\u884c\uff1a\u5047\u8655\u5206", "\u5f37\u5236\u57f7\u884c\uff1a\u8655\u7406\u50b5\u52d9\u6e05\u511f", "\u5f37\u5236\u57f7\u884c\uff1a\u5176\u5b83"]
+    "民事": ["民事：車禍", "民事：債權債務", "民事：不動產", "民事：合約糾紛", "民事：其它"],
+    "刑事": ["刑事：詐欺", "刑事：背信", "刑事：偽造文書", "刑事：毒品", "刑事：妨礙自由", "刑事：其它"],
+    "行政訴訟": ["行政訴訟：交通裁罰", "行政訴訟：稅務", "行政訴訟：國賠", "行政訴訟：公務員申訴", "行政訴訟：其它"],
+    "家事": ["家事：離婚", "家事：監護權", "家事：繼承", "家事：親子糾紛", "家事：其它"],
+    "勞資糾紛": ["勞資糾紛：職業傷害", "勞資糾紛：薪資", "勞資糾紛：職災", "勞資糾紛：其它"],
+    "消費糾紛": ["消費糾紛：網路購物", "消費糾紛：租賃合約", "消費糾紛：醫療糾紛"],
+    "強制執行": ["強制執行：聲請假扣押", "強制執行：假處分", "強制執行：處理債務清償", "強制執行：其它"]
   };
-
-  const legalCategory = document.getElementById("legalCategory");
-  const legalItem = document.getElementById("legalItem");
-  const legalOtherField = document.getElementById("legalOtherField");
 
   const actionLabels = {
     book: "立即預約",
@@ -50,14 +49,14 @@
     noticeEl.hidden = false;
   }
 
-  function setAvailabilitySummary(message, tone) {
-    availabilitySummary.textContent = message;
-    availabilitySummary.dataset.tone = tone || "info";
-  }
-
   function hideNotice() {
     noticeEl.hidden = true;
     noticeEl.textContent = "";
+  }
+
+  function setAvailabilitySummary(message, tone) {
+    availabilitySummary.textContent = message;
+    availabilitySummary.dataset.tone = tone || "info";
   }
 
   function setMode(mode) {
@@ -80,27 +79,26 @@
     return `${year}-${month}-${day}`;
   }
 
-  function isWeekday(dateString) {
-    const day = new Date(`${dateString}T00:00:00`).getDay();
+  function dayOfWeek(dateString) {
+    return new Date(`${dateString}T00:00:00`).getDay();
+  }
+
+  function isBookableDay(dateString) {
+    const day = dayOfWeek(dateString);
     return day >= 1 && day <= 5;
   }
 
-  function buildTimeSlots() {
-    const slots = [];
-    const startHour = Number(config.bookingStartHour || 15);
-    const endHour = Number(config.bookingEndHour || 17);
-    const endMinute = Number(config.bookingEndMinute || 0);
-    const intervalMinutes = Number(config.bookingIntervalMinutes || 15);
-    const cursor = new Date(2000, 0, 1, startHour, 0, 0, 0);
-    const end = new Date(2000, 0, 1, endHour, endMinute, 0, 0);
+  function buildTimeSlots(dateString) {
+    if (!dateString) return [];
+    const configuredSlots = dayOfWeek(dateString) === 3 ? config.wednesdaySlots : config.weekdaySlots;
+    if (Array.isArray(configuredSlots) && configuredSlots.length) return configuredSlots;
+    const startHour = dayOfWeek(dateString) === 3 ? 10 : 15;
+    return [0, 15, 30, 45].map((minute) => `${String(startHour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+  }
 
-    while (cursor <= end) {
-      const hour = String(cursor.getHours()).padStart(2, "0");
-      const minute = String(cursor.getMinutes()).padStart(2, "0");
-      slots.push(`${hour}:${minute}`);
-      cursor.setMinutes(cursor.getMinutes() + intervalMinutes);
-    }
-    return slots;
+  function slotLabel(dateString, time) {
+    const dayText = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"][dayOfWeek(dateString)] || "";
+    return `${dayText} ${time}`;
   }
 
   function hasConfiguredWebhook() {
@@ -116,8 +114,8 @@
     const lineUserId = profile.userId || formData.lineUserId || "";
     if (!hasMemberWebhook() || !lineUserId) return;
 
-    const tags = ["LIFF 綁定", "法扶諮詢"];
-    if (stage === "legal_book_submit") tags.push("已填聯絡資料");
+    const tags = ["LIFF 綁定", "法律諮詢"];
+    if (stage === "legal_book_submit") tags.push("預約送出");
     if (stage === "legal_query_submit") tags.push("預約查詢");
     if (stage === "legal_cancel_submit") tags.push("預約取消");
 
@@ -145,8 +143,8 @@
     }
   }
 
-  function normalizeAvailability(body) {
-    const allSlots = buildTimeSlots();
+  function normalizeAvailability(body, dateValue) {
+    const allSlots = buildTimeSlots(dateValue);
 
     if (Array.isArray(body.slots)) {
       const availableSlots = body.slots.filter((slot) => slot.available !== false).map((slot) => slot.time);
@@ -160,25 +158,24 @@
     };
   }
 
-  function renderTimeOptions(availability) {
-    const allSlots = buildTimeSlots();
+  function renderTimeOptions(dateValue, availability) {
+    const allSlots = buildTimeSlots(dateValue);
     const available = new Set(availability.availableSlots || []);
     const booked = new Set(availability.bookedSlots || []);
 
     appointmentTime.innerHTML = "";
-    appointmentTime.append(new Option("請選擇時間", ""));
+    appointmentTime.append(new Option("請選擇預約時間", ""));
 
     allSlots.forEach((time) => {
       const isAvailable = available.has(time) && !booked.has(time);
-      const label = isAvailable ? time : `${time} 已額滿`;
-      const option = new Option(label, isAvailable ? time : "");
+      const option = new Option(isAvailable ? slotLabel(dateValue, time) : `${slotLabel(dateValue, time)}（已預約）`, isAvailable ? time : "");
       option.disabled = !isAvailable;
       appointmentTime.append(option);
     });
 
     const count = allSlots.filter((time) => available.has(time) && !booked.has(time)).length;
     if (count > 0) {
-      setAvailabilitySummary(`目前此日期尚有 ${count} 個可預約時段。`, "success");
+      setAvailabilitySummary(`此日期尚有 ${count} 個可預約時段。`, "success");
       return;
     }
     setAvailabilitySummary("此日期目前已無可預約時段，請選擇其他日期。", "error");
@@ -186,7 +183,7 @@
 
   async function fetchAvailability(dateValue) {
     if (!hasConfiguredWebhook()) {
-      return { availableSlots: buildTimeSlots(), bookedSlots: [] };
+      return { availableSlots: buildTimeSlots(dateValue), bookedSlots: [] };
     }
 
     const body = await submitToN8n({
@@ -197,7 +194,7 @@
       data: { appointmentDate: dateValue }
     });
 
-    return normalizeAvailability(body);
+    return normalizeAvailability(body, dateValue);
   }
 
   async function refreshTimeOptions() {
@@ -210,10 +207,10 @@
       return;
     }
 
-    if (!isWeekday(dateValue)) {
-      appointmentTime.append(new Option("僅開放週一至週五", ""));
+    if (!isBookableDay(dateValue)) {
+      appointmentTime.append(new Option("週六、週日不開放預約", ""));
       appointmentTime.value = "";
-      setAvailabilitySummary("週六、週日不開放預約。", "error");
+      setAvailabilitySummary("預約日期僅開放週一至週五。", "error");
       showNotice("預約日期僅開放週一至週五，請重新選擇。", "error");
       return;
     }
@@ -225,7 +222,7 @@
     try {
       const availability = await fetchAvailability(dateValue);
       state.availabilityByDate[dateValue] = availability;
-      renderTimeOptions(availability);
+      renderTimeOptions(dateValue, availability);
     } catch (error) {
       appointmentTime.innerHTML = "";
       appointmentTime.append(new Option("無法取得可預約時段", ""));
@@ -243,45 +240,54 @@
   }
 
   function updateLegalItems() {
-    if (!legalCategory || !legalItem) return;
     const items = LEGAL_ITEM_MAP[legalCategory.value] || [];
     legalItem.innerHTML = "";
-    legalItem.append(new Option(items.length ? "\u8acb\u9078\u64c7\u7d30\u9805" : "\u8acb\u5148\u9078\u64c7\u6cd5\u6276\u9805\u76ee", ""));
+    legalItem.append(new Option(items.length ? "請選擇細項" : "請先選擇諮詢類別", ""));
     items.forEach((item) => legalItem.append(new Option(item, item)));
-    if (legalOtherField) legalOtherField.hidden = true;
+    legalOtherField.hidden = true;
   }
 
   function toggleLegalOther() {
-    if (!legalOtherField || !legalItem) return;
-    legalOtherField.hidden = !legalItem.value.includes("??");
+    legalOtherField.hidden = !legalItem.value.includes("其它");
   }
 
   function formToObject(form) {
     const data = new FormData(form);
-    return Object.fromEntries(Array.from(data.entries()).map(([key, value]) => [key, String(value).trim()]));
+    const entries = [];
+    data.forEach((value, key) => {
+      if (value instanceof File) return;
+      entries.push([key, String(value).trim()]);
+    });
+    return Object.fromEntries(entries);
   }
 
   function validatePayload(payload, mode) {
-    if (mode === "book" && !isWeekday(payload.appointmentDate)) {
-      return "預約日期僅開放週一至週五。";
-    }
-    if (mode === "book" && (!payload.legalCategory || !payload.legalItem)) {
-      return "???????????";
-    }
     if (mode === "book") {
+      if (!isBookableDay(payload.appointmentDate)) return "預約日期僅開放週一至週五。";
+      if (!payload.appointmentTime) return "請選擇可預約時段。";
+      if (!payload.legalCategory || !payload.legalItem) return "請選擇諮詢類別與細項。";
+
       const availability = state.availabilityByDate[payload.appointmentDate];
       if (availability && !availability.availableSlots.includes(payload.appointmentTime)) {
-        return "此時段目前已額滿，請改選其他可預約時段。";
+        return "此時段目前已被預約，請改選其他可預約時段。";
       }
     }
-    if (mode === "query" && !payload.appointmentId) {
-      return "請填寫預約編號。";
+
+    if ((mode === "query" || mode === "cancel") && !payload.appointmentId) {
+      return "請填寫預約諮詢編號。";
     }
     return "";
   }
 
   function buildPayload(mode, form) {
     const profile = state.profile || {};
+    const data = formToObject(form);
+    if (mode === "book") {
+      data.appointmentDateTime = `${data.appointmentDate}T${data.appointmentTime}:00+08:00`;
+      data.appointmentSlotLabel = slotLabel(data.appointmentDate, data.appointmentTime);
+      data.consultationType = "法律諮詢";
+    }
+
     return {
       action: mode,
       actionLabel: actionLabels[mode],
@@ -289,20 +295,36 @@
       submittedAt: new Date().toISOString(),
       teamLineTarget: config.teamLineTarget || "",
       data: {
-        ...formToObject(form),
+        ...data,
         lineUserId: profile.userId || "",
         lineDisplayName: profile.displayName || ""
       }
     };
   }
 
-  async function submitToN8n(payload) {
-    const response = await fetch(config.webhookBaseUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+  function appendFiles(formData, form, inputName) {
+    const input = form.elements[inputName];
+    if (!input || !input.files) return;
+    Array.from(input.files).forEach((file) => {
+      formData.append(inputName, file, file.name);
     });
+  }
 
+  async function submitToN8n(payload, form) {
+    const options = { method: "POST" };
+
+    if (payload.action === "book" && form) {
+      const formData = new FormData();
+      formData.append("payload", JSON.stringify(payload));
+      appendFiles(formData, form, "photoFiles");
+      appendFiles(formData, form, "caseFiles");
+      options.body = formData;
+    } else {
+      options.headers = { "Content-Type": "application/json" };
+      options.body = JSON.stringify(payload);
+    }
+
+    const response = await fetch(config.webhookBaseUrl, options);
     let body = {};
     try {
       body = await response.json();
@@ -310,9 +332,9 @@
       body = {};
     }
 
-    if (!response.ok) {
+    if (!response.ok || body.ok === false) {
       const error = new Error(body.message || "系統暫時無法處理，請稍後再試。");
-      error.status = response.status;
+      error.status = response.status || body.statusCode;
       error.body = body;
       throw error;
     }
@@ -334,7 +356,7 @@
       liff.closeWindow();
       return;
     }
-    showNotice("此頁面已完成送出。", "success");
+    showNotice("流程已完成，可關閉此頁面。", "success");
   }
 
   async function handleSubmit(event) {
@@ -351,22 +373,24 @@
     }
 
     submitButton.disabled = true;
-    submitButton.textContent = "處理中";
+    submitButton.textContent = "送出中";
     hideNotice();
 
     try {
       const payload = buildPayload(mode, form);
       await captureMember(`legal_${mode}_submit`, payload.data);
-      const result = await submitToN8n(payload);
+      const result = await submitToN8n(payload, form);
       const titleMap = {
         book: "預約已送出",
-        query: "查詢已送出",
+        query: "查詢完成",
         cancel: "取消申請已送出"
       };
-      const fallbackText = "系統已收到資料。";
+      const fallbackText = mode === "book" && result.appointmentId
+        ? `預約諮詢編號：${result.appointmentId}`
+        : "系統已收到資料。";
       finishFlow(titleMap[mode], result.message || fallbackText);
     } catch (error) {
-      if (mode === "book" && error.status === 409 && payloadData.appointmentDate) {
+      if (mode === "book" && (error.status === 409 || error.body?.statusCode === 409) && payloadData.appointmentDate) {
         showNotice(error.message || "此時段剛被預約，請改選其他可預約時段。", "error");
         await refreshTimeOptions();
         return;
@@ -380,7 +404,7 @@
 
   async function initLiff() {
     if (!window.liff || !config.liffId || config.liffId.includes("請填入")) {
-      setStatus("本機預覽", "warn");
+      setStatus("測試模式", "warn");
       showNotice("尚未設定 LIFF ID，目前可先測試表單畫面與 n8n 送出格式。", "info");
       return;
     }
@@ -394,7 +418,7 @@
       }
       state.profile = await liff.getProfile();
       captureMember("legal_liff_open");
-      setStatus("表單已就緒", "success");
+      setStatus("LINE 已連線", "success");
     } catch (error) {
       setStatus("LINE 連線失敗", "error");
       showNotice("LIFF 初始化失敗，請確認 LIFF ID、Endpoint URL 與 LINE Login 設定。", "error");
@@ -410,8 +434,8 @@
   });
 
   appointmentDate.addEventListener("change", refreshTimeOptions);
-  if (legalCategory) legalCategory.addEventListener("change", updateLegalItems);
-  if (legalItem) legalItem.addEventListener("change", toggleLegalOther);
+  legalCategory.addEventListener("change", updateLegalItems);
+  legalItem.addEventListener("change", toggleLegalOther);
   closeButton.addEventListener("click", closeLiffWindow);
 
   updateLegalItems();

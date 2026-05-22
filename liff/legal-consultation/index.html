@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>法律諮詢預約系統</title>
-    <meta name="description" content="法律諮詢立即預約、預約查詢與取消預約" />
+    <title>法律諮詢預約</title>
+    <meta name="description" content="法律諮詢預約、查詢與取消" />
     <link rel="stylesheet" href="./styles.css" />
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   </head>
@@ -28,28 +28,28 @@
 
       <form class="panel" id="bookingForm" data-form="book">
         <div class="panel-head">
-          <h2>立即預約法律諮詢</h2>
-          <p>預約時段為週一至週五，自下午 3 點起，每 15 分鐘一個預約點。</p>
+          <h2>法律諮詢預約表單</h2>
+          <p>週一、二、四、五為下午 3:00 至 4:00；週三為上午 10:00 至 11:00。每 15 分鐘一個名額。</p>
         </div>
 
         <label class="field">
-          <span>陳情人姓名</span>
+          <span>姓名</span>
           <input name="name" autocomplete="name" required maxlength="40" placeholder="請輸入姓名" />
         </label>
 
         <label class="field">
-          <span>聯絡電話</span>
+          <span>連絡電話</span>
           <input name="phone" inputmode="tel" autocomplete="tel" required maxlength="20" placeholder="09xxxxxxxx" />
         </label>
 
         <div class="grid-2">
           <label class="field">
-            <span>預約日期</span>
+            <span>指定預約日期</span>
             <input name="appointmentDate" id="appointmentDate" type="date" required />
           </label>
 
           <label class="field">
-            <span>預約時間</span>
+            <span>指定預約時間</span>
             <select name="appointmentTime" id="appointmentTime" required>
               <option value="">請先選擇日期</option>
             </select>
@@ -60,35 +60,52 @@
 
         <div class="grid-2">
           <label class="field">
-            <span>&#x6cd5;&#x6276;&#x9805;&#x76ee;</span>
+            <span>諮詢類別</span>
             <select name="legalCategory" id="legalCategory" required>
-              <option value="">&#x8acb;&#x9078;&#x64c7;&#x6cd5;&#x6276;&#x9805;&#x76ee;</option>
-              <option>&#x6c11;&#x4e8b;</option>
-              <option>&#x5211;&#x4e8b;</option>
-              <option>&#x884c;&#x653f;&#x8a34;&#x8a1f;</option>
-              <option>&#x5bb6;&#x4e8b;</option>
-              <option>&#x52de;&#x8cc7;&#x7cfe;&#x7d1b;</option>
-              <option>&#x6d88;&#x8cbb;&#x7cfe;&#x7d1b;</option>
-              <option>&#x5f37;&#x5236;&#x57f7;&#x884c;</option>
+              <option value="">請選擇諮詢類別</option>
+              <option>民事</option>
+              <option>刑事</option>
+              <option>行政訴訟</option>
+              <option>家事</option>
+              <option>勞資糾紛</option>
+              <option>消費糾紛</option>
+              <option>強制執行</option>
             </select>
           </label>
 
           <label class="field">
-            <span>&#x7d30;&#x9805;</span>
+            <span>細項</span>
             <select name="legalItem" id="legalItem" required>
-              <option value="">&#x8acb;&#x5148;&#x9078;&#x64c7;&#x6cd5;&#x6276;&#x9805;&#x76ee;</option>
+              <option value="">請先選擇諮詢類別</option>
             </select>
           </label>
         </div>
 
         <label class="field" id="legalOtherField" hidden>
-          <span>&#x5176;&#x5b83;&#x9805;&#x76ee;&#x88dc;&#x5145;</span>
-          <input name="legalOtherItem" maxlength="80" placeholder="&#x8acb;&#x88dc;&#x5145;&#x8aaa;&#x660e;&#x5176;&#x5b83;&#x9805;&#x76ee;&#x540d;&#x7a31;" />
+          <span>其它項目補充</span>
+          <input name="legalOtherItem" maxlength="80" placeholder="請補充說明其它項目名稱" />
         </label>
 
         <label class="field">
-          <span>簡單事件陳述</span>
-          <textarea name="statement" rows="5" required maxlength="800" placeholder="請簡述需要諮詢的事件。"></textarea>
+          <span>案件詳細說明</span>
+          <textarea name="statement" rows="5" required maxlength="1200" placeholder="請描述需要諮詢的案件內容。"></textarea>
+        </label>
+
+        <label class="field">
+          <span>1999案號</span>
+          <input name="case1999" maxlength="80" placeholder="若無可留空" />
+        </label>
+
+        <label class="field">
+          <span>提供照片資訊</span>
+          <input name="photoFiles" type="file" accept="image/*" multiple />
+          <small>可上傳與案件相關的照片，單檔建議 20MB 以下。</small>
+        </label>
+
+        <label class="field">
+          <span>上傳案件文件</span>
+          <input name="caseFiles" type="file" multiple />
+          <small>可上傳 PDF、圖片或其他案件文件，單檔建議 20MB 以下。</small>
         </label>
 
         <label class="checkline">
@@ -102,12 +119,12 @@
       <form class="panel" id="queryForm" data-form="query" hidden>
         <div class="panel-head">
           <h2>預約資訊查詢</h2>
-          <p>查詢結果將由 LINE OA 回覆，例如「您已預約成功，日期與時間如下」。</p>
+          <p>請輸入預約諮詢編號查詢目前預約狀態。</p>
         </div>
 
         <label class="field">
-          <span>預約編號</span>
-          <input name="appointmentId" required maxlength="40" placeholder="例如 LAW-20260423-001" />
+          <span>預約諮詢編號</span>
+          <input name="appointmentId" required maxlength="40" placeholder="例如 1150522001" />
         </label>
 
         <button class="primary-action" type="submit">查詢預約</button>
@@ -116,12 +133,12 @@
       <form class="panel" id="cancelForm" data-form="cancel" hidden>
         <div class="panel-head">
           <h2>取消預約</h2>
-          <p>民眾取消預約後，系統會主動通知服務同仁。</p>
+          <p>取消後系統會通知服務同仁。</p>
         </div>
 
         <label class="field">
-          <span>預約編號</span>
-          <input name="appointmentId" required maxlength="40" placeholder="例如 LAW-20260423-001" />
+          <span>預約諮詢編號</span>
+          <input name="appointmentId" required maxlength="40" placeholder="例如 1150522001" />
         </label>
 
         <label class="field">
