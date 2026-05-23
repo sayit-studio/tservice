@@ -442,7 +442,7 @@
         refreshBtn.textContent = "更新中";
         await loadTargetVotes();
         const data = normalizeResults(await api("/vote-results"));
-        $("totalVoters").textContent = configuredTotalVoters ?? data.totalVoters;
+        const $tv = $("totalVoters"); if ($tv) $tv.textContent = configuredTotalVoters ?? data.totalVoters;
         $("votedCount").textContent = data.votedCount;
         renderList("chairmanList", data.chairman);
         renderList("repList", data.rep);
