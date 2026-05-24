@@ -268,7 +268,7 @@
     let targetVotes = Number(localStorage.getItem(TARGET_STORAGE_KEY)) || DEFAULT_TARGET_VOTES;
     let targetVotesByName = {};
     let configuredTotalVoters = null;
-    const POLL_MS = 5000;
+    const POLL_MS = 999999999; // 暫時停用自動更新，如需重新啟用請改回 5000
     const TARGET_REFRESH_MS = 60000;
     let isRefreshing = false;
     let lastTargetLoadAt = 0;
