@@ -751,9 +751,11 @@ body{
     <div class="query-box">
       <div class="query-box-title">🔍 輸入案件編號查詢辦理進度</div>
       <div class="query-row">
-        <input type="text" id="queryInput" placeholder="SVC-YYYYMMDD-XXXX"
-          maxlength="22"
-          oninput="this.value=this.value.toUpperCase()"
+        <input type="text" id="queryInput" placeholder="例如：1150529001"
+          maxlength="10"
+          inputmode="numeric"
+          autocomplete="off"
+          oninput="this.value=this.value.replace(/\D/g,'').slice(0,10)"
           onkeydown="if(event.key==='Enter')queryCase()">
         <button class="btn-query" id="queryBtn" onclick="queryCase()">
           <div class="spinner"></div>
@@ -1079,6 +1081,147 @@ async function queryCase(){
   }
 }
 
+const PETITION_CATEGORIES = ['醫療院所','市府單位','法律諮詢','一般請託','學籍安排','法律服務','府外單位','車禍','人事案','違章建築'];
+function setupPetitionFilters(){
+  const catTabs=document.querySelector('.cat-tabs');
+  if(catTabs){
+    catTabs.innerHTML=[
+      `<button class="cat-tab active" onclick="setCat(this,'')">全部</button>`,
+      ...PETITION_CATEGORIES.map((cat)=>`<button class="cat-tab" onclick="setCat(this,'${cat}')">${cat} <span id="cnt-${cat}"></span></button>`)
+    ].join('');
+  }
+  const statusFilter=document.getElementById('statusFilter');
+  if(statusFilter){
+    statusFilter.innerHTML=[
+      '<option value="">全部</option>',
+      '<option value="處理中">處理中</option>',
+      '<option value="已結案">已結案</option>',
+      '<option value="不受理">不受理</option>',
+      '<option value="完成結案">完成結案</option>'
+    ].join('');
+  }
+  const queryInput=document.getElementById('queryInput');
+  if(queryInput){
+    queryInput.placeholder='例如：1150529001';
+    queryInput.maxLength=10;
+    queryInput.inputMode='numeric';
+    queryInput.autocomplete='off';
+  }
+  const queryError=document.getElementById('queryError');
+  if(queryError) queryError.textContent='查無此案件編號，請確認編號是否正確，例如：1150529001';
+}
+
+async function loadList(){
+  const tbody=document.getElementById('petitionTbody');
+  tbody.innerHTML='<tr><td colspan="5"><div class="loading-row"><div class="loading-spinner"></div>載入中...</div></td></tr>';
+  document.getElementById('pagination').innerHTML='';
+  try{
+    const params=new URLSearchParams({page:currentPage});
+    if(currentCat)params.append('category',currentCat);
+    if(currentStatus)params.append('status',currentStatus);
+    const res=await fetch(WEBHOOK_LIST+'?'+params.toString());
+    const data=await res.json();
+    if(!res.ok || !data.success)throw new Error(data.message||'list failed');
+    updateCatCounts(data.categories||{});
+    renderTable(data.items||[]);
+    renderPagination(data.page||1,data.totalPages||1,data.total||0);
+  }catch(e){
+    tbody.innerHTML='<tr><td colspan="5"><div class="empty-row">載入失敗，請稍後再試</div></td></tr>';
+  }
+}
+function updateCatCounts(cats){
+  document.querySelectorAll('[id^="cnt-"]').forEach(el=>{el.textContent='';});
+  Object.keys(cats||{}).forEach(k=>{
+    const el=document.getElementById('cnt-'+k);
+    if(el)el.textContent=cats[k]>0?'('+cats[k]+')':'';
+  });
+}
+function renderTable(items){
+  const tbody=document.getElementById('petitionTbody');
+  if(!items||items.length===0){tbody.innerHTML='<tr><td colspan="5"><div class="empty-row">目前沒有公開案件</div></td></tr>';return;}
+  tbody.innerHTML=items.map(item=>`
+    <tr>
+      <td class="td-id">${escHtml(item.caseId||'--')}</td>
+      <td><span class="type-badge">${escHtml(item.caseType||'--')}</span></td>
+      <td class="td-title">${escHtml(item.title||'--')}</td>
+      <td class="td-date">${escHtml(item.date||'--')}</td>
+      <td><span class="badge badge-${escHtml(item.status||'')}">${escHtml(item.status||'--')}</span></td>
+    </tr>`).join('');
+}
+function renderPagination(page,totalPages,total){
+  const el=document.getElementById('pagination');
+  if(totalPages<=1){el.innerHTML=`<span class="page-info">共${total} 筆</span>`;return;}
+  let html=`<button class="page-btn" onclick="goPage(${page-1})" ${page<=1?'disabled':''}>上一頁</button>`;
+  for(let i=1;i<=totalPages;i++){
+    if(totalPages>7&&i>2&&i<totalPages-1&&Math.abs(i-page)>1){if(i===3||i===totalPages-2)html+=`<span class="page-info">...</span>`;continue;}
+    html+=`<button class="page-btn ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html+=`<button class="page-btn" onclick="goPage(${page+1})" ${page>=totalPages?'disabled':''}>下一頁</button>`;
+  html+=`<span class="page-info">共${total} 筆</span>`;
+  el.innerHTML=html;
+}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+async function queryCase(){
+  const input=document.getElementById('queryInput').value.trim();
+  const errEl=document.getElementById('queryError');
+  const resultEl=document.getElementById('queryResult');
+  errEl.classList.remove('show');
+  resultEl.classList.remove('show');
+
+  if(!input){errEl.textContent='請輸入案件編號，例如：1150529001';errEl.classList.add('show');return;}
+  if(!/^\d{10}$/.test(input)){errEl.textContent='案件編號格式不正確，請輸入 10 碼數字，例如：1150529001';errEl.classList.add('show');return;}
+
+  const btn=document.getElementById('queryBtn');
+  btn.classList.add('is-loading');btn.disabled=true;
+
+  try{
+    const res=await fetch(WEBHOOK_QUERY+'?caseId='+encodeURIComponent(input));
+    const data=await res.json();
+    if(!res.ok || !data.found){
+      errEl.textContent='查無此案件編號，請確認編號是否正確，例如：1150529001';
+      errEl.classList.add('show');return;
+    }
+    document.getElementById('qr-id').textContent=data.caseId||'--';
+    document.getElementById('qr-title').textContent=data.title||'--';
+    document.getElementById('qr-type').textContent=data.caseType||'--';
+    document.getElementById('qr-area').textContent=data.caseArea||'--';
+    document.getElementById('qr-date').textContent=data.date||'--';
+
+    const statusEl=document.getElementById('qr-status');
+    statusEl.textContent=data.status||'--';
+    statusEl.className='badge badge-'+(data.status||'');
+
+    const summaryEl=document.getElementById('qr-summary');
+    summaryEl.textContent=data.summary||'';
+    summaryEl.className='qr-text'+(data.summary?'':' empty');
+    if(!data.summary)summaryEl.textContent='目前尚無公開摘要。';
+
+    const replyEl=document.getElementById('qr-reply');
+    replyEl.textContent=data.reply||'';
+    replyEl.className='qr-text'+(data.reply?'':' empty');
+    document.getElementById('qr-reply-wrap').style.display=data.reply?'block':'none';
+
+    const allImgs=[...(data.beforeImages||[]),...(data.afterImages||[])];
+    const imgWrap=document.getElementById('qr-images-wrap');
+    const imgContainer=document.getElementById('qr-images');
+    if(allImgs.length>0){
+      imgContainer.innerHTML=allImgs.map(url=>`<img src="${escHtml(url)}" alt="案件圖片" loading="lazy">`).join('');
+      imgWrap.style.display='block';
+    }else{
+      imgWrap.style.display='none';
+    }
+
+    resultEl.classList.add('show');
+    resultEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){
+    errEl.textContent='查詢失敗，請稍後再試';errEl.classList.add('show');
+  }finally{
+    btn.classList.remove('is-loading');btn.disabled=false;
+  }
+}
+
+setupPetitionFilters();
 loadStats();
 </script>
 </body>

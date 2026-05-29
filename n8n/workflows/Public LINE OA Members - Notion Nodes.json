@@ -6,7 +6,9 @@
         "httpMethod": "POST",
         "path": "line-oa-members",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {
+          "allowedOrigins": "https://tseng-service.pages.dev"
+        }
       },
       "id": "line-oa-members-webhook",
       "name": "LINE OA Members Webhook",
@@ -272,7 +274,27 @@
         "respondWith": "json",
         "responseBody": "={{ $json.ok === false || $json.noOperation ? $json : { ok: true, processed: 1, action: \"saved\" } }}",
         "options": {
-          "responseCode": "={{ $json.statusCode || 200 }}"
+          "responseCode": "={{ $json.statusCode || 200 }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://tseng-service.pages.dev"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "OPTIONS, POST"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
         }
       },
       "id": "line-oa-members-response",
@@ -390,7 +412,7 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
